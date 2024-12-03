@@ -7,7 +7,7 @@ import { handleRequestMkcol } from "./mkcol";
 import { handleRequestMove } from "./move";
 import { handleRequestPropfind } from "./propfind";
 import { handleRequestPut } from "./put";
-import { RequestHandlerParams } from "./utils";
+import { RequestHandlerParams, requireAuth } from "./utils";
 import { handleRequestPost } from "./post";
 
 async function handleRequestOptions() {
@@ -44,11 +44,7 @@ export const onRequest: PagesFunction<{
   const request: Request = context.request;
   if (request.method === "OPTIONS") return handleRequestOptions();
 
-  const skipAuth =
-    env.WEBDAV_PUBLIC_READ &&
-    ["GET", "HEAD", "PROPFIND"].includes(request.method);
-
-  if (!skipAuth) {
+  if (requireAuth(context)) {
     if (!env.WEBDAV_USERNAME || !env.WEBDAV_PASSWORD)
       return new Response("WebDAV protocol is not enabled", { status: 403 });
 

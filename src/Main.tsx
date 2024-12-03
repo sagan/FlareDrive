@@ -157,8 +157,8 @@ function Main({
     () =>
       (search
         ? files.filter((file) =>
-            file.key.toLowerCase().includes(search.toLowerCase())
-          )
+          file.key.toLowerCase().includes(search.toLowerCase())
+        )
         : files
       ).sort((a, b) => (isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0)),
     [files, search]
@@ -221,8 +221,8 @@ function Main({
         }}
         onRename={async () => {
           if (multiSelected?.length !== 1) return;
-          const newName = window.prompt("Rename to:");
-          if (!newName) return;
+          const newName = window.prompt("Rename to:", multiSelected[0]);
+          if (!newName || newName === multiSelected[0]) return;
           await copyPaste(multiSelected[0], cwd + newName, true);
           fetchFiles();
         }}

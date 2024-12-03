@@ -23,6 +23,27 @@ export function notFound() {
   return new Response("Not found", { status: 404 });
 }
 
+export function requireAuth(context: any): boolean {
+  const { env, params, request } = context;
+  if( env.WEBDAV_PUBLIC_READ && ["GET", "HEAD", "PROPFIND"].includes(request.method)) {
+    return false
+  }
+  if( env.PUBLIC_PREFIX ) {
+    const publicPrefixes = (env.PUBLIC_PREFIX as string || "").split(/\s*,\s*/).map(prefix => {
+      if(prefix.startsWith("/")) {
+        prefix = prefix.substring(1)
+      }
+      return prefix
+    })
+    const pathSegments = (params.path || []) as String[];
+    const path = decodeURIComponent(pathSegments.join("/"));
+    if( publicPrefixes.some(prefix => path === prefix || path.startsWith(prefix + "/")) ) {
+      return false
+    }
+  }
+  return true
+}
+
 export function parseBucketPath(context: any): [R2Bucket, string] {
   const { request, env, params } = context;
   const url = new URL(request.url);
