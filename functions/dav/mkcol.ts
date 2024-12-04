@@ -13,9 +13,10 @@ export async function handleRequestMkcol({
 
   // Check if the parent directory exists
   const parentPath = path.replace(/(\/|^)[^/]*$/, "");
-  const parentDir =
-    parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
-  if (parentDir === null) return new Response("Conflict", { status: 409 });
+  const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
+  if (parentDir === null) {
+    return new Response("Conflict", { status: 409 });
+  }
 
   await bucket.put(path, "", {
     httpMetadata: { contentType: "application/x-directory" },

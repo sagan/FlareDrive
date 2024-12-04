@@ -1,9 +1,5 @@
-import {
-  listAll,
-  RequestHandlerParams,
-  ROOT_OBJECT,
-  WEBDAV_ENDPOINT,
-} from "./utils";
+import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { WEBDAV_ENDPOINT } from "../../lib/commons";
 
 type DavProperties = {
   creationdate: string | undefined;
@@ -26,23 +22,12 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     getcontenttype: object.httpMetadata?.contentType,
     getetag: object.etag,
     getlastmodified: object.uploaded.toUTCString(),
-    resourcetype:
-      object.httpMetadata?.contentType === "application/x-directory"
-        ? "<collection />"
-        : "",
+    resourcetype: object.httpMetadata?.contentType === "application/x-directory" ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
   };
 }
 
-async function findChildren({
-  bucket,
-  path,
-  depth,
-}: {
-  bucket: R2Bucket;
-  path: string;
-  depth: string;
-}) {
+async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: string; depth: string }) {
   if (!["1", "infinity"].includes(depth)) return [];
 
   const objects: Array<R2Object> = [];
@@ -55,11 +40,7 @@ async function findChildren({
   return objects;
 }
 
-export async function handleRequestPropfind({
-  bucket,
-  path,
-  request,
-}: RequestHandlerParams) {
+export async function handleRequestPropfind({ bucket, path, request }: RequestHandlerParams) {
   const responseTemplate = `<?xml version="1.0" encoding="utf-8" ?>
 <multistatus xmlns="DAV:" xmlns:fd="flaredrive">
 {{items}}
@@ -67,9 +48,7 @@ export async function handleRequestPropfind({
 
   const rootObject = path === "" ? ROOT_OBJECT : await bucket.head(path);
   if (!rootObject) return new Response("Not found", { status: 404 });
-  const isDirectory =
-    rootObject === ROOT_OBJECT ||
-    rootObject.httpMetadata?.contentType === "application/x-directory";
+  const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === "application/x-directory";
   const depth = request.headers.get("Depth") ?? "infinity";
 
   const children = !isDirectory
@@ -84,7 +63,7 @@ export async function handleRequestPropfind({
     const properties = fromR2Object(child);
     return `
   <response>
-    <href>${encodeURI(`${WEBDAV_ENDPOINT}${child.key}`)}</href>
+    <href>${`${WEBDAV_ENDPOINT}${encodeURI(child.key)}`}</href>
     <propstat>
       <prop>
         ${Object.entries(properties)

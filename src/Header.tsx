@@ -6,10 +6,12 @@ function Header({
   search,
   onSearchChange,
   setShowProgressDialog,
+  fetchFiles,
 }: {
   search: string;
   onSearchChange: (newSearch: string) => void;
   setShowProgressDialog: (show: boolean) => void;
+  fetchFiles: () => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -18,6 +20,7 @@ function Header({
       <InputBase
         size="small"
         fullWidth
+        type="search"
         placeholder="Search…"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
@@ -40,6 +43,10 @@ function Header({
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
+        <MenuItem onClick={() => {
+          setAnchorEl(null);
+          fetchFiles();
+        }}>Refresh</MenuItem>
         <MenuItem>View as</MenuItem>
         <MenuItem>Sort by</MenuItem>
         <MenuItem

@@ -6,12 +6,15 @@ import {
   Snackbar,
   Stack,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
+import { type FileItem } from "./FileGrid";
+import { fetchPath } from "./app/transfer";
 
 const globalStyles = (
   <GlobalStyles styles={{ "html, body, #root": { height: "100%" } }} />
@@ -22,9 +25,35 @@ const theme = createTheme({
 });
 
 function App() {
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [multiSelected, setMultiSelected] = useState<string[]>([]);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pathname } = location;
+  const cwd = decodeURI(pathname.slice(1)); // removing preceding "/"
+  const setCwd = useCallback((cwd: string) => {
+    navigate("/" + encodeURI(cwd));
+  }, [navigate])
+
+  const fetchFiles = useCallback(() => {
+    setLoading(true);
+    fetchPath(cwd)
+      .then((files) => {
+        setFiles(files);
+        setMultiSelected([]);
+      })
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [cwd, setError]);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -33,11 +62,12 @@ function App() {
       <TransferQueueProvider>
         <Stack sx={{ height: "100%" }}>
           <Header
-            search={search}
+            search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
             setShowProgressDialog={setShowProgressDialog}
           />
-          <Main search={search} onError={setError} />
+          <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search} files={files}
+            multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
         </Stack>
         <Snackbar
           autoHideDuration={5000}

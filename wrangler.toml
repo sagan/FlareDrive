@@ -1,0 +1,28 @@
+# start local dev:
+#   npm i
+#   npm run build
+#   npm run cfdev
+# It's using Wrangler: https://developers.cloudflare.com/workers/wrangler/
+# wrangler.toml: https://developers.cloudflare.com/workers/wrangler/configuration/
+name = "flaredrive"
+pages_build_output_dir = "dist"
+
+# Environment Variables are available only in the build phase of the website
+# Any changes need re-deploy (re-build) to make effect
+[vars]
+WEBDAV_USERNAME = "root"
+WEBDAV_PASSWORD = "pass"
+# comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed.
+# E.g. "http://127.0.0.1:8788/dav/public/foo.png"
+PUBLIC_PREFIX = "public"
+
+# Change bucket_name to the real one
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "bucket"
+
+# Bind cloudflare KV
+# https://developers.cloudflare.com/kv/api/read-key-value-pairs/
+[[kv_namespaces]]
+binding = "KV"
+id = "kv_id"

@@ -1,19 +1,13 @@
 import { Home as HomeIcon } from "@mui/icons-material";
-import {
-  Box,
-  Breadcrumbs,
-  Button,
-  CircularProgress,
-  Link,
-  Typography,
-} from "@mui/material";
+import { Box, Breadcrumbs, Button, CircularProgress, Link, Typography } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
-import { copyPaste, fetchPath } from "./app/transfer";
+import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
+import { WEBDAV_ENDPOINT, basename, cleanPath, trimPrefixSuffix } from "../lib/commons";
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -30,14 +24,8 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PathBreadcrumb({
-  path,
-  onCwdChange,
-}: {
-  path: string;
-  onCwdChange: (newCwd: string) => void;
-}) {
-  const parts = path.replace(/\/$/, "").split("/");
+function PathBreadcrumb({ path, onCwdChange }: { path: string; onCwdChange: (newCwd: string) => void }) {
+  const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
   return (
     <Breadcrumbs separator="›" sx={{ padding: 1 }}>
@@ -71,13 +59,7 @@ function PathBreadcrumb({
   );
 }
 
-function DropZone({
-  children,
-  onDrop,
-}: {
-  children: React.ReactNode;
-  onDrop: (files: FileList) => void;
-}) {
+function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -110,44 +92,38 @@ function DropZone({
 }
 
 function Main({
+  cwd,
+  setCwd,
+  loading,
   search,
-  onError,
+  files,
+  multiSelected,
+  setMultiSelected,
+  fetchFiles,
 }: {
+  cwd: string;
+  setCwd: (cwd: string) => void;
+  loading: boolean;
   search: string;
-  onError: (error: Error) => void;
+  files: FileItem[];
+  multiSelected: string[];
+  setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
+  fetchFiles: () => void;
 }) {
-  const [cwd, setCwd] = React.useState("");
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [multiSelected, setMultiSelected] = useState<string[] | null>(null);
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
 
-  const fetchFiles = useCallback(() => {
-    fetchPath(cwd)
-      .then((files) => {
-        setFiles(files);
-        setMultiSelected(null);
-      })
-      .catch(onError)
-      .finally(() => setLoading(false));
-  }, [cwd, onError]);
-
-  useEffect(() => setLoading(true), [cwd]);
-
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
-
-  useEffect(() => {
-    if (!transferQueue.length) return;
+    if (!transferQueue.length) {
+      return;
+    }
     const lastFile = transferQueue[transferQueue.length - 1];
-    if (["pending", "in-progress"].includes(lastFile.status))
+    if (["pending", "in-progress"].includes(lastFile.status)) {
       setLastUploadKey(lastFile.remoteKey);
-    else if (lastUploadKey) {
+    } else if (lastUploadKey) {
       fetchFiles();
       setLastUploadKey(null);
     }
@@ -155,30 +131,27 @@ function Main({
 
   const filteredFiles = useMemo(
     () =>
-      (search
-        ? files.filter((file) =>
-          file.key.toLowerCase().includes(search.toLowerCase())
-        )
-        : files
-      ).sort((a, b) => (isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0)),
+      (search ? files.filter((file) => file.key.toLowerCase().includes(search.toLowerCase())) : files).sort((a, b) =>
+        isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0
+      ),
     [files, search]
   );
 
   const handleMultiSelect = useCallback((key: string) => {
     setMultiSelected((multiSelected) => {
-      if (multiSelected === null) {
+      if (multiSelected.length == 0) {
         return [key];
       } else if (multiSelected.includes(key)) {
         const newSelected = multiSelected.filter((k) => k !== key);
-        return newSelected.length ? newSelected : null;
+        return newSelected.length ? newSelected : [];
       }
       return [...multiSelected, key];
     });
   }, []);
 
   return (
-    <React.Fragment>
-      {cwd && <PathBreadcrumb path={cwd} onCwdChange={setCwd} />}
+    <>
+      <PathBreadcrumb path={cwd} onCwdChange={setCwd} />
       {loading ? (
         <Centered>
           <CircularProgress />
@@ -186,9 +159,7 @@ function Main({
       ) : (
         <DropZone
           onDrop={async (files) => {
-            uploadEnqueue(
-              ...Array.from(files).map((file) => ({ file, basedir: cwd }))
-            );
+            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
           }}
         >
           <FileGrid
@@ -200,45 +171,64 @@ function Main({
           />
         </DropZone>
       )}
-      {multiSelected === null && (
-        <UploadFab onClick={() => setShowUploadDrawer(true)} />
-      )}
-      <UploadDrawer
-        open={showUploadDrawer}
-        setOpen={setShowUploadDrawer}
-        cwd={cwd}
-        onUpload={fetchFiles}
-      />
+      {multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
+      <UploadDrawer open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
       <MultiSelectToolbar
         multiSelected={multiSelected}
-        onClose={() => setMultiSelected(null)}
+        onClose={() => setMultiSelected([])}
         onDownload={() => {
-          if (multiSelected?.length !== 1) return;
+          if (multiSelected.length !== 1) {
+            return;
+          }
           const a = document.createElement("a");
-          a.href = `/webdav/${encodeKey(multiSelected[0])}`;
+          a.href = `${WEBDAV_ENDPOINT}${encodeKey(multiSelected[0])}`;
           a.download = multiSelected[0].split("/").pop()!;
           a.click();
         }}
         onRename={async () => {
-          if (multiSelected?.length !== 1) return;
-          const newName = window.prompt("Rename to:", multiSelected[0]);
-          if (!newName || newName === multiSelected[0]) return;
-          await copyPaste(multiSelected[0], cwd + newName, true);
+          const oldName = basename(multiSelected[0]);
+          const newName = window.prompt("Rename to:", oldName);
+          if (!newName || oldName === newName) {
+            return;
+          }
+          await copyPaste(cwd + oldName, cwd + newName, true);
           fetchFiles();
         }}
+        onMove={async () => {
+          let dir = cwd ? cleanPath(cwd) : "/";
+          let newdir = window.prompt("Move files to:", dir);
+          if (!newdir) {
+            return;
+          }
+          newdir = cleanPath(newdir);
+          if (newdir == dir) {
+            return;
+          }
+          for (const file of multiSelected) {
+            const name = basename(file);
+            const src = cwd + name;
+            const dst = trimPrefixSuffix(newdir + "/" + name, "/");
+            await copyPaste(src, dst, true);
+          }
+          fetchFiles();
+          return;
+        }}
         onDelete={async () => {
-          if (!multiSelected?.length) return;
-          const filenames = multiSelected
-            .map((key) => key.replace(/\/$/, "").split("/").pop())
-            .join("\n");
+          if (multiSelected.length == 0) {
+            return;
+          }
+          const filenames = multiSelected.map((key) => key.replace(/\/$/, "").split("/").pop()).join("\n");
           const confirmMessage = "Delete the following file(s) permanently?";
-          if (!window.confirm(`${confirmMessage}\n${filenames}`)) return;
-          for (const key of multiSelected)
-            await fetch(`/webdav/${encodeKey(key)}`, { method: "DELETE" });
+          if (!window.confirm(`${confirmMessage}\n${filenames}`)) {
+            return;
+          }
+          for (const key of multiSelected) {
+            await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}`, { method: "DELETE" });
+          }
           fetchFiles();
         }}
       />
-    </React.Fragment>
+    </>
   );
 }
 

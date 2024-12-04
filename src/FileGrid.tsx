@@ -7,7 +7,8 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { humanReadableSize } from "./app/utils";
+import { humanReadableSize } from "../lib/commons";
+import { WEBDAV_ENDPOINT } from "../lib/commons";
 
 export interface FileItem {
   key: string;
@@ -38,7 +39,7 @@ function FileGrid({
 }: {
   files: FileItem[];
   onCwdChange: (newCwd: string) => void;
-  multiSelected: string[] | null;
+  multiSelected: string[];
   onMultiSelect: (key: string) => void;
   emptyMessage?: React.ReactNode;
 }) {
@@ -49,15 +50,15 @@ function FileGrid({
       {files.map((file) => (
         <Grid item key={file.key} xs={12} sm={6} md={4} lg={3} xl={2}>
           <ListItemButton
-            selected={multiSelected?.includes(file.key)}
+            selected={multiSelected.includes(file.key)}
             onClick={() => {
-              if (multiSelected !== null) {
+              if (multiSelected.length > 0) {
                 onMultiSelect(file.key);
               } else if (isDirectory(file)) {
                 onCwdChange(file.key + "/");
               } else
                 window.open(
-                  `/webdav/${encodeKey(file.key)}`,
+                  `${WEBDAV_ENDPOINT}${encodeKey(file.key)}`,
                   "_blank",
                   "noopener,noreferrer"
                 );
@@ -71,7 +72,7 @@ function FileGrid({
             <ListItemIcon>
               {file.customMetadata?.thumbnail ? (
                 <img
-                  src={`/webdav/_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`}
+                  src={`${WEBDAV_ENDPOINT}_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`}
                   alt={file.key}
                   style={{ width: 36, height: 36, objectFit: "cover" }}
                 />
@@ -87,7 +88,7 @@ function FileGrid({
                 textOverflow: "ellipsis",
               }}
               secondary={
-                <React.Fragment>
+                <>
                   <Box
                     sx={{
                       display: "inline-block",
@@ -98,7 +99,7 @@ function FileGrid({
                     {new Date(file.uploaded).toLocaleString()}
                   </Box>
                   {!isDirectory(file) && humanReadableSize(file.size)}
-                </React.Fragment>
+                </>
               }
             />
           </ListItemButton>

@@ -1,4 +1,5 @@
-import { notFound, parseBucketPath } from "./utils";
+import { FdCfFunc, checkAuth, notFound } from "../commons";
+import { parseBucketPath } from "./utils";
 import { handleRequestCopy } from "./copy";
 import { handleRequestDelete } from "./delete";
 import { handleRequestGet } from "./get";
@@ -20,10 +21,7 @@ async function handleMethodNotAllowed() {
   return new Response(null, { status: 405 });
 }
 
-const HANDLERS: Record<
-  string,
-  (context: RequestHandlerParams) => Promise<Response>
-> = {
+const HANDLERS: Record<string, (context: RequestHandlerParams) => Promise<Response>> = {
   PROPFIND: handleRequestPropfind,
   MKCOL: handleRequestMkcol,
   HEAD: handleRequestHead,
@@ -35,35 +33,24 @@ const HANDLERS: Record<
   DELETE: handleRequestDelete,
 };
 
-export const onRequest: PagesFunction<{
-  WEBDAV_USERNAME: string;
-  WEBDAV_PASSWORD: string;
-  WEBDAV_PUBLIC_READ?: string;
-}> = async function (context) {
+export const onRequest: FdCfFunc = async function (context) {
   const env = context.env;
   const request: Request = context.request;
-  if (request.method === "OPTIONS") return handleRequestOptions();
+  if (request.method === "OPTIONS") {
+    return handleRequestOptions();
+  }
 
   if (requireAuth(context)) {
-    if (!env.WEBDAV_USERNAME || !env.WEBDAV_PASSWORD)
-      return new Response("WebDAV protocol is not enabled", { status: 403 });
-
-    const auth = request.headers.get("Authorization");
-    if (!auth) {
-      return new Response("Unauthorized", {
-        status: 401,
-        headers: { "WWW-Authenticate": `Basic realm="WebDAV"` },
-      });
+    const failResponse = checkAuth(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+    if (failResponse) {
+      return failResponse;
     }
-    const expectedAuth = `Basic ${btoa(
-      `${env.WEBDAV_USERNAME}:${env.WEBDAV_PASSWORD}`
-    )}`;
-    if (auth !== expectedAuth)
-      return new Response("Unauthorized", { status: 401 });
   }
 
   const [bucket, path] = parseBucketPath(context);
-  if (!bucket) return notFound();
+  if (!bucket) {
+    return notFound();
+  }
 
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? handleMethodNotAllowed;

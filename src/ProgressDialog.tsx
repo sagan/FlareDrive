@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import { TransferTask, useTransferQueue } from "./app/transferQueue";
-import { humanReadableSize } from "./app/utils";
+import { humanReadableSize } from "../lib/commons";
 import {
   CheckCircleOutline as CheckCircleOutlineIcon,
   ErrorOutline as ErrorOutlineIcon,

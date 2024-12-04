@@ -1,11 +1,7 @@
-import { notFound } from "./utils";
+import { notFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
-export async function handleRequestPostCreateMultipart({
-  bucket,
-  path,
-  request,
-}: RequestHandlerParams) {
+export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
   const thumbnail = request.headers.get("fd-thumbnail");
   const customMetadata = thumbnail ? { thumbnail } : undefined;
 
@@ -18,14 +14,12 @@ export async function handleRequestPostCreateMultipart({
   return new Response(JSON.stringify({ key, uploadId }));
 }
 
-export async function handleRequestPostCompleteMultipart({
-  bucket,
-  path,
-  request,
-}: RequestHandlerParams) {
+export async function handleRequestPostCompleteMultipart({ bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
   const uploadId = new URLSearchParams(url.search).get("uploadId");
-  if (!uploadId) return notFound();
+  if (!uploadId) {
+    return notFound();
+  }
   const multipartUpload = bucket.resumeMultipartUpload(path, uploadId);
 
   const completeBody: { parts: Array<any> } = await request.json();
@@ -40,11 +34,7 @@ export async function handleRequestPostCompleteMultipart({
   }
 }
 
-export const handleRequestPost = async function ({
-  bucket,
-  path,
-  request,
-}: RequestHandlerParams) {
+export const handleRequestPost = async function ({ bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
 

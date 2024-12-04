@@ -1,45 +1,53 @@
 import pLimit from "p-limit";
 
-import { notFound } from "./utils";
-import { listAll, RequestHandlerParams, WEBDAV_ENDPOINT } from "./utils";
+import { WEBDAV_ENDPOINT } from "../../lib/commons";
+import { notFound } from "../commons";
+import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
-export async function handleRequestCopy({
-  bucket,
-  path,
-  request,
-}: RequestHandlerParams) {
+export async function handleRequestCopy({ bucket, path, request }: RequestHandlerParams) {
   const dontOverwrite = request.headers.get("Overwrite") === "F";
   const destinationHeader = request.headers.get("Destination");
-  if (destinationHeader === null)
+  if (destinationHeader === null) {
     return new Response("Bad Request", { status: 400 });
+  }
 
   const src = await bucket.get(path);
-  if (src === null) return notFound();
+  if (src === null) {
+    return notFound();
+  }
 
   const destPathname = new URL(destinationHeader).pathname;
   const decodedPathname = decodeURIComponent(destPathname).replace(/\/$/, "");
-  if (!decodedPathname.startsWith(WEBDAV_ENDPOINT))
+  if (!decodedPathname.startsWith(WEBDAV_ENDPOINT)) {
     return new Response("Bad Request", { status: 400 });
+  }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
 
   if (
     destination === path ||
-    (src.httpMetadata?.contentType === "application/x-directory" &&
-      destination.startsWith(path + "/"))
-  )
+    (src.httpMetadata?.contentType === "application/x-directory" && destination.startsWith(path + "/"))
+  ) {
     return new Response("Bad Request", { status: 400 });
+  }
 
   // Check if the destination already exists
   const destinationExists = await bucket.head(destination);
-  if (dontOverwrite && destinationExists)
+  if (dontOverwrite && destinationExists) {
     return new Response("Precondition Failed", { status: 412 });
+  }
+  // Make sure destination parent dir exists.
+  const destinationParent = destination.replace(/(\/|^)[^/]*$/, "");
+  const destinationParentDir = destinationParent === "" ? ROOT_OBJECT : await bucket.head(destinationParent);
+  if (destinationParentDir === null) {
+    return new Response("Conflict", { status: 409 });
+  }
+
   await bucket.put(destination, src.body, {
     httpMetadata: src.httpMetadata,
     customMetadata: src.customMetadata,
   });
 
-  const isDirectory =
-    src.httpMetadata?.contentType === "application/x-directory";
+  const isDirectory = src.httpMetadata?.contentType === "application/x-directory";
   if (isDirectory) {
     const depth = request.headers.get("Depth") ?? "infinity";
     switch (depth) {

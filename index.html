@@ -2,13 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.png" />
+    <title></title>
+    <script>
+      (function () {
+        window.__SITENAME__ = `%SITENAME%`;
+        document.title = window.__SITENAME__;
+      })();
+    </script>
+    <link rel="icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Cloudflare R2 file manager" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>Flare Drive</title>
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <script type="module" src="/src/index.tsx"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
