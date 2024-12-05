@@ -1,3 +1,10 @@
+import {
+  responseBadRequest,
+  responseConflict,
+  responseCreated,
+  responseMethodNotAllowed,
+  responsePreconditionsFailed,
+} from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 async function handleRequestPutMultipart({ bucket, path, request }: RequestHandlerParams) {
@@ -6,7 +13,7 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   const uploadId = new URLSearchParams(url.search).get("uploadId");
   const partNumberStr = new URLSearchParams(url.search).get("partNumber");
   if (!uploadId || !partNumberStr || !request.body) {
-    return new Response("Bad Request", { status: 400 });
+    return responseBadRequest();
   }
   const multipartUpload = bucket.resumeMultipartUpload(path, uploadId);
 
@@ -25,7 +32,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   }
 
   if (request.url.endsWith("/")) {
-    return new Response("Method Not Allowed", { status: 405 });
+    return responseMethodNotAllowed();
   }
 
   // Check if the parent directory exists
@@ -33,7 +40,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
     const parentPath = path.replace(/(\/|^)[^/]*$/, "");
     const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
     if (parentDir === null) {
-      return new Response("Conflict", { status: 409 });
+      return responseConflict();
     }
   }
 
@@ -47,7 +54,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   });
 
   if (!result) {
-    return new Response("Preconditions failed", { status: 412 });
+    return responsePreconditionsFailed();
   }
-  return new Response("", { status: 201 });
+  return responseCreated();
 }

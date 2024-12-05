@@ -1,4 +1,4 @@
-import { notFound } from "../commons";
+import { responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
@@ -18,7 +18,7 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
   const url = new URL(request.url);
   const uploadId = new URLSearchParams(url.search).get("uploadId");
   if (!uploadId) {
-    return notFound();
+    return responseNotFound();
   }
   const multipartUpload = bucket.resumeMultipartUpload(path, uploadId);
 
@@ -30,7 +30,7 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
       headers: { etag: object.httpEtag },
     });
   } catch (error: any) {
-    return new Response(error.message, { status: 400 });
+    return responseBadRequest(error.message);
   }
 }
 
@@ -46,5 +46,5 @@ export const handleRequestPost = async function ({ bucket, path, request }: Requ
     return handleRequestPostCompleteMultipart({ bucket, path, request });
   }
 
-  return new Response("Method not allowed", { status: 405 });
+  return responseMethodNotAllowed();
 };

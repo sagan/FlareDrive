@@ -6,6 +6,8 @@
     <script>
       (function () {
         window.__SITENAME__ = `%SITENAME%`;
+        // https://v3.vitejs.dev/guide/env-and-mode.html
+        window.__DEV__ = `%DEV%` === "true";
         document.title = window.__SITENAME__;
       })();
     </script>

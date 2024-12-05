@@ -7,8 +7,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { humanReadableSize } from "../lib/commons";
-import { WEBDAV_ENDPOINT } from "../lib/commons";
+import { humanReadableSize, WEBDAV_ENDPOINT } from "../lib/commons";
 
 export interface FileItem {
   key: string;

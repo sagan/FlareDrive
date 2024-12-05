@@ -1,5 +1,6 @@
 import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
 import { WEBDAV_ENDPOINT } from "../../lib/commons";
+import { responseNotFound } from "../commons";
 
 type DavProperties = {
   creationdate: string | undefined;
@@ -28,8 +29,9 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
 }
 
 async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: string; depth: string }) {
-  if (!["1", "infinity"].includes(depth)) return [];
-
+  if (!["1", "infinity"].includes(depth)) {
+    return [];
+  }
   const objects: Array<R2Object> = [];
 
   const prefix = path === "" ? path : `${path}/`;
@@ -47,7 +49,9 @@ export async function handleRequestPropfind({ bucket, path, request }: RequestHa
 </multistatus>`;
 
   const rootObject = path === "" ? ROOT_OBJECT : await bucket.head(path);
-  if (!rootObject) return new Response("Not found", { status: 404 });
+  if (!rootObject) {
+    return responseNotFound();
+  }
   const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === "application/x-directory";
   const depth = request.headers.get("Depth") ?? "infinity";
 

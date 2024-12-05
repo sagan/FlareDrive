@@ -6,9 +6,11 @@ export interface ShareObject {
    */
   state: number;
   /**
-   * share expires unix timestamp (seconds)
+   * optional. share expires unix timestamp (seconds)
+   * It's set as KV key expiration metadata. Howver, the KV API has no way to get this value after set.
+   * So we also store it as a data field.
    */
-  expires: number;
+  expiration?: number;
 }
 
 export function basename(path: string): string {
@@ -53,5 +55,18 @@ export function cleanPath(path: string): string {
     return path;
   }
   path = trimSuffix(path, "/");
+  return path;
+}
+
+export function path2Key(path: string): string {
+  path = trimPrefixSuffix(path.trim(), "/");
+  return path;
+}
+
+export function path2Prefix(path: string): string {
+  path = trimPrefixSuffix(path.trim(), "/");
+  if (path) {
+    path += "/";
+  }
   return path;
 }

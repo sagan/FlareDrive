@@ -1,4 +1,11 @@
-# start local dev:
+# To use this file:
+# Rename this file to wrangler.toml.
+# If using wrangler.toml, you must treat your wrangler.toml as the source of truth for
+# CloudFlare Pages project configuration when deploying to CloudFlare.
+# Any misconfiguration (e.g. a R2 / KV binding resource doesn't exist in CloudFlare account)
+# will make CloudFlare pages throw a building error:
+#   "Error: Failed to publish your Function. Got error: Unknown internal error occurred."
+# Start local dev environment:
 #   npm i
 #   npm run build
 #   npm run cfdev
@@ -10,6 +17,8 @@ pages_build_output_dir = "dist"
 # Environment Variables are available only in the build phase of the website
 # Any changes need re-deploy (re-build) to make effect
 [vars]
+# Uncomment to mark as local dev environment: enable CORS for functions
+#DEV = "1"
 WEBDAV_USERNAME = "root"
 WEBDAV_PASSWORD = "pass"
 # comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed.

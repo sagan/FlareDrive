@@ -1,25 +1,32 @@
 import pLimit from "p-limit";
 
 import { WEBDAV_ENDPOINT } from "../../lib/commons";
-import { notFound } from "../commons";
+import {
+  responseBadRequest,
+  responseConflict,
+  responseCreated,
+  responseNoContent,
+  responseNotFound,
+  responsePreconditionsFailed,
+} from "../commons";
 import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 export async function handleRequestCopy({ bucket, path, request }: RequestHandlerParams) {
   const dontOverwrite = request.headers.get("Overwrite") === "F";
   const destinationHeader = request.headers.get("Destination");
   if (destinationHeader === null) {
-    return new Response("Bad Request", { status: 400 });
+    return responseBadRequest();
   }
 
   const src = await bucket.get(path);
   if (src === null) {
-    return notFound();
+    return responseNotFound();
   }
 
   const destPathname = new URL(destinationHeader).pathname;
   const decodedPathname = decodeURIComponent(destPathname).replace(/\/$/, "");
   if (!decodedPathname.startsWith(WEBDAV_ENDPOINT)) {
-    return new Response("Bad Request", { status: 400 });
+    return responseBadRequest();
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
 
@@ -27,19 +34,19 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
     destination === path ||
     (src.httpMetadata?.contentType === "application/x-directory" && destination.startsWith(path + "/"))
   ) {
-    return new Response("Bad Request", { status: 400 });
+    return responseBadRequest();
   }
 
   // Check if the destination already exists
   const destinationExists = await bucket.head(destination);
   if (dontOverwrite && destinationExists) {
-    return new Response("Precondition Failed", { status: 412 });
+    return responsePreconditionsFailed();
   }
   // Make sure destination parent dir exists.
   const destinationParent = destination.replace(/(\/|^)[^/]*$/, "");
   const destinationParentDir = destinationParent === "" ? ROOT_OBJECT : await bucket.head(destinationParent);
   if (destinationParentDir === null) {
-    return new Response("Conflict", { status: 409 });
+    return responseConflict();
   }
 
   await bucket.put(destination, src.body, {
@@ -73,13 +80,13 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
         break;
       }
       default:
-        return new Response("Bad Request", { status: 400 });
+        return responseBadRequest();
     }
   }
 
   if (destinationExists) {
-    return new Response(null, { status: 204 });
+    return responseNoContent();
   } else {
-    return new Response("", { status: 201 });
+    return responseCreated();
   }
 }

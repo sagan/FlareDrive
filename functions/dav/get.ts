@@ -1,4 +1,4 @@
-import { notFound } from "../commons";
+import { responseNotFound, responsePreconditionsFailed } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestGet({ bucket, path, request }: RequestHandlerParams) {
@@ -7,10 +7,10 @@ export async function handleRequestGet({ bucket, path, request }: RequestHandler
     range: request.headers,
   });
   if (obj === null) {
-    return notFound();
+    return responseNotFound();
   }
   if (!("body" in obj)) {
-    return new Response("Preconditions failed", { status: 412 });
+    return responsePreconditionsFailed();
   }
 
   const headers = new Headers();

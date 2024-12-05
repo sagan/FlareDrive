@@ -1,4 +1,4 @@
-import { FdCfFunc, checkAuth, notFound } from "../commons";
+import { FdCfFunc, checkAuthFailure, responseMethodNotAllowed, responseNotFound } from "../commons";
 import { parseBucketPath } from "./utils";
 import { handleRequestCopy } from "./copy";
 import { handleRequestDelete } from "./delete";
@@ -15,10 +15,6 @@ async function handleRequestOptions() {
   return new Response(null, {
     headers: { Allow: Object.keys(HANDLERS).join(", ") },
   });
-}
-
-async function handleMethodNotAllowed() {
-  return new Response(null, { status: 405 });
 }
 
 const HANDLERS: Record<string, (context: RequestHandlerParams) => Promise<Response>> = {
@@ -41,7 +37,7 @@ export const onRequest: FdCfFunc = async function (context) {
   }
 
   if (requireAuth(context)) {
-    const failResponse = checkAuth(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+    const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
     if (failResponse) {
       return failResponse;
     }
@@ -49,10 +45,10 @@ export const onRequest: FdCfFunc = async function (context) {
 
   const [bucket, path] = parseBucketPath(context);
   if (!bucket) {
-    return notFound();
+    return responseNotFound();
   }
 
   const method: string = (context.request as Request).method;
-  const handler = HANDLERS[method] ?? handleMethodNotAllowed;
+  const handler = HANDLERS[method] ?? responseMethodNotAllowed;
   return handler({ bucket, path, request: context.request });
 };
