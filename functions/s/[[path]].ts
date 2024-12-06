@@ -7,6 +7,7 @@ import {
   joinPathSegments,
   responsePreconditionsFailed,
   responseNoContent,
+  responseBadRequest,
 } from "../commons";
 import { type ShareObject, path2Key, path2Prefix, trimPrefix } from "../../lib/commons";
 
@@ -30,7 +31,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   return jsonResponse(shares);
 };
 
-// PUT: add a new share
+// PUT: add a new or update a existing share
 export const onRequestPut: FdCfFunc = async function (context) {
   const { request, env, params } = context;
   if (!env.KV) {
@@ -41,14 +42,19 @@ export const onRequestPut: FdCfFunc = async function (context) {
     return failResponse;
   }
   const path = path2Key(joinPathSegments(params.path as string[]));
+  if (!path) {
+    return responseBadRequest();
+  }
   const shareObject: ShareObject = await request.json();
   const options: KVNamespacePutOptions = {};
   if (shareObject.expiration) {
     options.expiration = shareObject.expiration;
   }
+  if (!shareObject.key) {
+    shareObject.key = path;
+  }
   await env.KV.put(SHARE_KEY_PREFIX + path, JSON.stringify(shareObject), options);
-
-  return responseNotFound();
+  return responseNoContent();
 };
 
 // DELETE: delete a new share
@@ -88,11 +94,11 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (requestMeta) {
     return jsonResponse(data);
   }
-  if (!data || !data.state) {
+  if (!data) {
     return responseNotFound();
   }
 
-  const obj = await env.BUCKET.get(path, {
+  const obj = await env.BUCKET.get(data.key, {
     onlyIf: request.headers,
     range: request.headers,
   });

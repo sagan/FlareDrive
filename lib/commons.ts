@@ -1,10 +1,11 @@
 export const WEBDAV_ENDPOINT = "/dav/";
+export const SHARE_ENDPOINT = "/s/";
 
 export interface ShareObject {
   /**
-   * state: 1 - shared.
+   * file key.
    */
-  state: number;
+  key: string;
   /**
    * optional. share expires unix timestamp (seconds)
    * It's set as KV key expiration metadata. Howver, the KV API has no way to get this value after set.
@@ -69,4 +70,8 @@ export function path2Prefix(path: string): string {
     path += "/";
   }
   return path;
+}
+
+export function key2Path(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
 }
