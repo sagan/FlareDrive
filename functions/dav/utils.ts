@@ -1,7 +1,18 @@
+import { Permission, trimPrefixSuffix } from "../../lib/commons";
+import { type FdCfFuncContext } from "../commons";
+
 export interface RequestHandlerParams {
   bucket: R2Bucket;
   path: string;
   request: Request;
+  /**
+   * Current request target file permission
+   */
+  permission: Permission;
+  /**
+   * whether current request authenticated
+   */
+  authed: boolean;
 }
 
 export const ROOT_OBJECT = {
@@ -17,28 +28,32 @@ export const ROOT_OBJECT = {
   etag: undefined,
 };
 
-export function requireAuth(context: any): boolean {
-  const { env, params, request } = context;
-  if (env.WEBDAV_PUBLIC_READ && ["GET", "HEAD", "PROPFIND"].includes(request.method)) {
-    return false;
+function testPathHasPrefix(path: string, prefixesCsv: string): boolean {
+  const prefixes = prefixesCsv.split(/\s*,\s*/).map((prefix) => trimPrefixSuffix(prefix, "/"));
+  if (prefixes.some((prefix) => path === prefix || path.startsWith(prefix + "/"))) {
+    return true;
   }
-  if (env.PUBLIC_PREFIX) {
-    const publicPrefixes = ((env.PUBLIC_PREFIX as string) || "").split(/\s*,\s*/).map((prefix) => {
-      if (prefix.startsWith("/")) {
-        prefix = prefix.substring(1);
-      }
-      return prefix;
-    });
-    const pathSegments = (params.path || []) as String[];
-    const path = decodeURIComponent(pathSegments.join("/"));
-    if (publicPrefixes.some((prefix) => path === prefix || path.startsWith(prefix + "/"))) {
-      return false;
-    }
-  }
-  return true;
+  return false;
 }
 
-export function parseBucketPath(context: any): [R2Bucket, string] {
+export function checkPermission(context: FdCfFuncContext): Permission {
+  const { env, params, request } = context;
+  const pathSegments = (params.path || []) as String[];
+  const path = decodeURIComponent(pathSegments.join("/"));
+  if (env.PUBLIC_DIR_PREFIX && ["GET", "HEAD", "PROPFIND"].includes(request.method)) {
+    if (testPathHasPrefix(path, env.PUBLIC_DIR_PREFIX)) {
+      return Permission.OpenDir;
+    }
+  }
+  if (env.PUBLIC_PREFIX && ["GET", "HEAD"].includes(request.method)) {
+    if (testPathHasPrefix(path, env.PUBLIC_PREFIX)) {
+      return Permission.OpenFile;
+    }
+  }
+  return Permission.RequireAuth;
+}
+
+export function parseBucketPath(context: FdCfFuncContext): [R2Bucket, string] {
   const { request, env, params } = context;
   const url = new URL(request.url);
 
@@ -46,7 +61,7 @@ export function parseBucketPath(context: any): [R2Bucket, string] {
   const path = decodeURIComponent(pathSegments.join("/"));
   const driveid = url.hostname.replace(/\..*/, "");
 
-  return [env[driveid] || env["BUCKET"], path];
+  return [(env[driveid] as R2Bucket) || env.BUCKET, path];
 }
 
 export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: boolean = false) {

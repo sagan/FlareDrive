@@ -1,5 +1,5 @@
 import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
-import { WEBDAV_ENDPOINT } from "../../lib/commons";
+import { HEADER_AUTHED, HEADER_PERMISSION, WEBDAV_ENDPOINT } from "../../lib/commons";
 import { responseNotFound } from "../commons";
 
 type DavProperties = {
@@ -42,7 +42,7 @@ async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: s
   return objects;
 }
 
-export async function handleRequestPropfind({ bucket, path, request }: RequestHandlerParams) {
+export async function handleRequestPropfind({ bucket, path, request, permission, authed }: RequestHandlerParams) {
   const responseTemplate = `<?xml version="1.0" encoding="utf-8" ?>
 <multistatus xmlns="DAV:" xmlns:fd="flaredrive">
 {{items}}
@@ -82,6 +82,10 @@ export async function handleRequestPropfind({ bucket, path, request }: RequestHa
 
   return new Response(responseTemplate.replace("{{items}}", items.join("")), {
     status: 207,
-    headers: { "Content-Type": "application/xml" },
+    headers: {
+      "Content-Type": "application/xml",
+      [HEADER_PERMISSION]: `${permission}`,
+      [HEADER_AUTHED]: `${authed ? 1 : 0}`,
+    },
   });
 }

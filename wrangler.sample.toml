@@ -21,9 +21,12 @@ pages_build_output_dir = "dist"
 #DEV = "1"
 WEBDAV_USERNAME = "root"
 WEBDAV_PASSWORD = "pass"
-# comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed.
+# comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed (read)
 # E.g. "http://127.0.0.1:8788/dav/public/foo.png"
-PUBLIC_PREFIX = "public"
+PUBLIC_PREFIX = "public_files"
+# Similar to PUBLIC_PREFIX.
+# Additionally, pathes of these prefixs allow publicly dir browsing
+PUBLIC_DIR_PREFIX = "public"
 
 # Change bucket_name to the real one
 [[r2_buckets]]

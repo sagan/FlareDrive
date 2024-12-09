@@ -30,12 +30,14 @@ export function isDirectory(file: FileItem) {
 }
 
 function FileGrid({
+  authed,
   files,
   onCwdChange,
   multiSelected,
   onMultiSelect,
   emptyMessage,
 }: {
+  authed: boolean;
   files: FileItem[];
   onCwdChange: (newCwd: string) => void;
   multiSelected: string[];
@@ -69,7 +71,7 @@ function FileGrid({
             sx={{ userSelect: "none" }}
           >
             <ListItemIcon>
-              {file.customMetadata?.thumbnail ? (
+              {authed && file.customMetadata?.thumbnail ? (
                 <img
                   src={`${WEBDAV_ENDPOINT}_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`}
                   alt={file.key}

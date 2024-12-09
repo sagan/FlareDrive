@@ -1,13 +1,17 @@
 import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
 import { useState } from "react";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
+import LoginIcon from '@mui/icons-material/Login';
+import PersonIcon from '@mui/icons-material/Person';
 
 function Header({
+  authed,
   search,
   onSearchChange,
   setShowProgressDialog,
   fetchFiles,
 }: {
+  authed: boolean;
   search: string;
   onSearchChange: (newSearch: string) => void;
   setShowProgressDialog: (show: boolean) => void;
@@ -58,6 +62,9 @@ function Header({
           Progress
         </MenuItem>
       </Menu>
+      <IconButton title={authed ? "Authorized" : "Unauthorized"}>
+        {authed ? <PersonIcon /> : <LoginIcon />}
+      </IconButton>
     </Toolbar>
   );
 }

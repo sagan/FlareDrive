@@ -1,13 +1,15 @@
 import { Home as HomeIcon } from "@mui/icons-material";
-import { Box, Breadcrumbs, Button, CircularProgress, Link, Typography } from "@mui/material";
+import { Box, Breadcrumbs, Button, CircularProgress, IconButton, Link, Typography } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import PublicIcon from '@mui/icons-material/Public';
 
+import { Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
 import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
-import { WEBDAV_ENDPOINT, basename, cleanPath, trimPrefixSuffix } from "../lib/commons";
+import { PreventDefaultEventCb } from "./commons";
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -24,8 +26,17 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PathBreadcrumb({ path, onCwdChange }: { path: string; onCwdChange: (newCwd: string) => void }) {
+function PathBreadcrumb({ permission, path, onCwdChange }: {
+  permission: Permission;
+  path: string;
+  onCwdChange: (newCwd: string) => void
+}) {
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
+
+  let cwdHref = "/" + key2Path(path)
+  if (!cwdHref.endsWith("/")) {
+    cwdHref += "/"
+  }
 
   return (
     <Breadcrumbs separator="›" sx={{ padding: 1 }}>
@@ -55,6 +66,11 @@ function PathBreadcrumb({ path, onCwdChange }: { path: string; onCwdChange: (new
           </Link>
         )
       )}
+      {permission == Permission.OpenDir && <IconButton color="primary"
+        title="Dir Permalink: this dir can be publicly accessed (read)"
+        href={cwdHref} onClick={PreventDefaultEventCb}>
+        <PublicIcon />
+      </IconButton>}
     </Breadcrumbs>
   );
 }
@@ -96,6 +112,8 @@ function Main({
   setCwd,
   loading,
   search,
+  permission,
+  authed,
   files,
   multiSelected,
   setMultiSelected,
@@ -105,6 +123,8 @@ function Main({
   setCwd: (cwd: string) => void;
   loading: boolean;
   search: string;
+  permission: Permission;
+  authed: boolean;
   files: FileItem[];
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
@@ -115,6 +135,10 @@ function Main({
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
+
+  useEffect(() => {
+    document.title = cwd ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
+  }, [cwd]);
 
   useEffect(() => {
     if (!transferQueue.length) {
@@ -151,7 +175,7 @@ function Main({
 
   return (
     <>
-      <PathBreadcrumb path={cwd} onCwdChange={setCwd} />
+      <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
       {loading ? (
         <Centered>
           <CircularProgress />
@@ -163,6 +187,7 @@ function Main({
           }}
         >
           <FileGrid
+            authed={authed}
             files={filteredFiles}
             onCwdChange={(newCwd: string) => setCwd(newCwd)}
             multiSelected={multiSelected}
@@ -171,7 +196,7 @@ function Main({
           />
         </DropZone>
       )}
-      {multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
+      {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
       <MultiSelectToolbar
         multiSelected={multiSelected}

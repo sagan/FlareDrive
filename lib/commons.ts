@@ -1,6 +1,26 @@
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
 
+export const HEADER_AUTHED = "X-Authed";
+
+export const HEADER_PERMISSION = "X-Permission";
+
+export enum Permission {
+  /**
+   * Request target file is open (can be anonymously read)
+   */
+  OpenFile = 0,
+  /**
+   * Request target file belongs to an open dir,
+   * the whole dir with all inside files can be anonymously read / listed)
+   */
+  OpenDir = 1,
+  /**
+   * Request target file requires authentication for reading
+   */
+  RequireAuth = 3,
+}
+
 export interface ShareObject {
   /**
    * file key.
@@ -61,6 +81,7 @@ export function cleanPath(path: string): string {
 
 export function path2Key(path: string): string {
   path = trimPrefixSuffix(path.trim(), "/");
+  path = decodeURI(path);
   return path;
 }
 

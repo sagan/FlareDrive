@@ -8,7 +8,7 @@ import {
 } from "@mui/icons-material";
 import LinkIcon from '@mui/icons-material/Link';
 import DoneIcon from '@mui/icons-material/Done';
-import { WEBDAV_ENDPOINT } from "../lib/commons";
+import { WEBDAV_ENDPOINT, key2Path } from "../lib/commons";
 
 function MultiSelectToolbar({
   multiSelected,
@@ -32,7 +32,7 @@ function MultiSelectToolbar({
     setCopied("");
   }, [multiSelected])
 
-  const link = multiSelected.length === 1 ? location.origin + WEBDAV_ENDPOINT + multiSelected[0] : "";
+  const link = multiSelected.length === 1 ? location.origin + WEBDAV_ENDPOINT + key2Path(multiSelected[0]) : "";
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -89,11 +89,9 @@ function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            <>
-              {multiSelected.length === 1 && <MenuItem onClick={onRename}>Rename</MenuItem>}
-              <MenuItem onClick={onMove}>Move</MenuItem>
-              <MenuItem>Share</MenuItem>
-            </>
+            {multiSelected.length === 1 && <MenuItem onClick={onRename}>Rename</MenuItem>}
+            <MenuItem onClick={onMove}>Move</MenuItem>
+            <MenuItem>Share</MenuItem>
           </Menu>
         )}
       </Toolbar>

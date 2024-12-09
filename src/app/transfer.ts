@@ -1,8 +1,8 @@
 import pLimit from "p-limit";
 
+import { escapeRegExp, WEBDAV_ENDPOINT, Permission, HEADER_PERMISSION, HEADER_AUTHED } from "../../lib/commons";
 import { encodeKey, FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
-import { escapeRegExp, WEBDAV_ENDPOINT } from "../../lib/commons";
 
 export async function fetchPath(path: string) {
   const res = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(path)}`, {
@@ -10,8 +10,15 @@ export async function fetchPath(path: string) {
     headers: { Depth: "1" },
   });
 
-  if (!res.ok) throw new Error("Failed to fetch");
-  if (!res.headers.get("Content-Type")?.includes("application/xml")) throw new Error("Invalid response");
+  if (!res.ok) {
+    throw new Error("Failed to fetch");
+  }
+  if (!res.headers.get("Content-Type")?.includes("application/xml")) {
+    throw new Error("Invalid response");
+  }
+
+  const authed = !!parseInt(res.headers.get(HEADER_AUTHED) || "");
+  const permission: Permission = parseInt(res.headers.get(HEADER_PERMISSION) || "") || Permission.RequireAuth;
 
   const parser = new DOMParser();
   const text = await res.text();
@@ -39,7 +46,7 @@ export async function fetchPath(path: string) {
         customMetadata: { thumbnail },
       } as FileItem;
     });
-  return items;
+  return { permission, authed, items };
 }
 
 const THUMBNAIL_SIZE = 144;

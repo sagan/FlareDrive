@@ -1,11 +1,18 @@
-export type FdCfFunc = PagesFunction<{
-  WEBDAV_USERNAME: string;
-  WEBDAV_PASSWORD: string;
-  WEBDAV_PUBLIC_READ?: string;
-  PUBLIC_PREFIX?: string;
-  BUCKET: R2Bucket;
-  KV?: KVNamespace;
-}>;
+export type FdCfFuncContext = EventContext<
+  {
+    WEBDAV_USERNAME: string;
+    WEBDAV_PASSWORD: string;
+    PUBLIC_PREFIX?: string;
+    PUBLIC_DIR_PREFIX?: string;
+    BUCKET: R2Bucket;
+    KV?: KVNamespace;
+    [key: string]: any;
+  },
+  string, // params key type
+  Record<string, unknown> // data type
+>;
+
+export type FdCfFunc = (context: FdCfFuncContext) => Response | Promise<Response>;
 
 export function joinPathSegments(path: string[]): string {
   return (path || []).map(decodeURI).join("/");

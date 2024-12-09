@@ -16,8 +16,8 @@ const backend = {
 export default defineConfig({
   server: {
     proxy: {
-      "/dav": backend,
-      "/s": backend,
+      "/dav/": backend,
+      "/s/": backend,
     },
   },
   plugins: [react()],
