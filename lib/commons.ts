@@ -5,16 +5,25 @@ export const HEADER_AUTHED = "X-Authed";
 
 export const HEADER_PERMISSION = "X-Permission";
 
+export const HEADER_INAPP = "X-In-App";
+
+export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
+
+/**
+ * Sent back by server. The client sent "Authorization" header value.
+ */
+export const HEADER_AUTH = "X-Auth";
+
 export enum Permission {
   /**
    * Request target file is open (can be anonymously read)
    */
-  OpenFile = 0,
+  OpenFile = 1,
   /**
    * Request target file belongs to an open dir,
    * the whole dir with all inside files can be anonymously read / listed)
    */
-  OpenDir = 1,
+  OpenDir = 2,
   /**
    * Request target file requires authentication for reading
    */
@@ -95,4 +104,31 @@ export function path2Prefix(path: string): string {
 
 export function key2Path(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
+}
+
+/**
+ * Convert str to int. If str is null / undefined / empty / invalid (NaN), return defaultValue
+ * @param str
+ * @param defaultValue Optional, default is 0 (zero).
+ * @returns
+ */
+export function str2int(str?: string | undefined | null, defaultValue = 0): number {
+  if (!str) {
+    return defaultValue;
+  }
+  const value = parseInt(str);
+  if (isNaN(value)) {
+    return defaultValue;
+  }
+  return value;
+}
+
+export function isHttpsOrLocalOrigin(origin: string): boolean {
+  return (
+    origin.startsWith("https://") ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:") ||
+    origin === "http://localhost" ||
+    origin === "http://127.0.0.1"
+  );
 }

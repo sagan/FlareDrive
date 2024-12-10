@@ -8,11 +8,11 @@ export interface RequestHandlerParams {
   /**
    * Current request target file permission
    */
-  permission: Permission;
+  permission?: Permission;
   /**
    * whether current request authenticated
    */
-  authed: boolean;
+  authed?: boolean;
 }
 
 export const ROOT_OBJECT = {
@@ -37,18 +37,14 @@ function testPathHasPrefix(path: string, prefixesCsv: string): boolean {
 }
 
 export function checkPermission(context: FdCfFuncContext): Permission {
-  const { env, params, request } = context;
+  const { env, params } = context;
   const pathSegments = (params.path || []) as String[];
   const path = decodeURIComponent(pathSegments.join("/"));
-  if (env.PUBLIC_DIR_PREFIX && ["GET", "HEAD", "PROPFIND"].includes(request.method)) {
-    if (testPathHasPrefix(path, env.PUBLIC_DIR_PREFIX)) {
-      return Permission.OpenDir;
-    }
+  if (env.PUBLIC_DIR_PREFIX && testPathHasPrefix(path, env.PUBLIC_DIR_PREFIX)) {
+    return Permission.OpenDir;
   }
-  if (env.PUBLIC_PREFIX && ["GET", "HEAD"].includes(request.method)) {
-    if (testPathHasPrefix(path, env.PUBLIC_PREFIX)) {
-      return Permission.OpenFile;
-    }
+  if (env.PUBLIC_PREFIX && testPathHasPrefix(path, env.PUBLIC_PREFIX)) {
+    return Permission.OpenFile;
   }
   return Permission.RequireAuth;
 }

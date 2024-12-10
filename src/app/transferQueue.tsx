@@ -47,8 +47,10 @@ export function useUploadEnqueue() {
 }
 
 export function TransferQueueProvider({
+  auth,
   children,
 }: {
+  auth: string | null;
   children: React.ReactNode;
 }) {
   const [transferTasks, _setTransferTasks] = useState<TransferTask[]>([]);
@@ -98,6 +100,7 @@ export function TransferQueueProvider({
     taskProcessing.current = taskToProcess;
     setTransferTasks(currentTaskUpdater({ status: "in-progress" }));
     processTransferTask({
+      auth,
       task: taskToProcess,
       onTaskProgress: ({ loaded }) => {
         setTransferTasks(currentTaskUpdater({ loaded }));

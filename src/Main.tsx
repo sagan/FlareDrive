@@ -66,11 +66,21 @@ function PathBreadcrumb({ permission, path, onCwdChange }: {
           </Link>
         )
       )}
-      {permission == Permission.OpenDir && <IconButton color="primary"
-        title="Dir Permalink: this dir can be publicly accessed (read)"
-        href={cwdHref} onClick={PreventDefaultEventCb}>
-        <PublicIcon />
-      </IconButton>}
+      {permission !== Permission.RequireAuth && <Button sx={{
+        minWidth: 0,
+        padding: 0,
+      }}
+        title={
+          permission === Permission.OpenDir
+            ? "Public Dir Permalink: this dir can be publicly accessed (read)"
+            : "Files inside this dir can be publicly accessed (read), but dir browsing is not available"
+        }
+        {...(permission === Permission.OpenDir ? {
+          href: cwdHref,
+          onClick: PreventDefaultEventCb,
+        } : {})}>
+        <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
+      </Button>}
     </Breadcrumbs>
   );
 }
@@ -114,6 +124,7 @@ function Main({
   search,
   permission,
   authed,
+  auth,
   files,
   multiSelected,
   setMultiSelected,
@@ -125,6 +136,7 @@ function Main({
   search: string;
   permission: Permission;
   authed: boolean;
+  auth: string | null;
   files: FileItem[];
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
@@ -188,6 +200,7 @@ function Main({
         >
           <FileGrid
             authed={authed}
+            auth={auth}
             files={filteredFiles}
             onCwdChange={(newCwd: string) => setCwd(newCwd)}
             multiSelected={multiSelected}

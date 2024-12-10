@@ -1,3 +1,4 @@
+import { HEADER_FD_THUMBNAIL } from "../../lib/commons";
 import {
   responseBadRequest,
   responseConflict,
@@ -44,7 +45,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
     }
   }
 
-  const thumbnail = request.headers.get("fd-thumbnail");
+  const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
   const customMetadata = thumbnail ? { thumbnail } : undefined;
 
   const result = await bucket.put(path, request.body, {

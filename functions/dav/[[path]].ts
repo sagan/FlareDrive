@@ -39,10 +39,13 @@ export const onRequest: FdCfFunc = async function (context) {
 
   const authFailResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   const permission = checkPermission(context);
-  if (permission == Permission.RequireAuth) {
-    if (authFailResponse) {
-      return authFailResponse;
-    }
+  if (
+    authFailResponse &&
+    (permission == Permission.RequireAuth ||
+      (permission == Permission.OpenDir && !["GET", "HEAD", "PROPFIND"].includes(request.method)) ||
+      (permission == Permission.OpenFile && !["GET", "HEAD"].includes(request.method)))
+  ) {
+    return authFailResponse;
   }
 
   const [bucket, path] = parseBucketPath(context);

@@ -4,6 +4,7 @@ export type FdCfFuncContext = EventContext<
     WEBDAV_PASSWORD: string;
     PUBLIC_PREFIX?: string;
     PUBLIC_DIR_PREFIX?: string;
+    SITENAME?: string;
     BUCKET: R2Bucket;
     KV?: KVNamespace;
     [key: string]: any;
@@ -89,7 +90,7 @@ export function checkAuthFailure(request: Request, user: string, pass: string): 
     return new Response("WebDAV protocol is not enabled", { status: 403 });
   }
 
-  const auth = request.headers.get("Authorization");
+  const auth = new URL(request.url).searchParams.get("auth") || request.headers.get("Authorization");
   if (!auth) {
     return new Response("Unauthorized", {
       status: 401,

@@ -89,8 +89,14 @@ function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            {multiSelected.length === 1 && <MenuItem onClick={onRename}>Rename</MenuItem>}
-            <MenuItem onClick={onMove}>Move</MenuItem>
+            {multiSelected.length === 1 && <MenuItem onClick={() => {
+              setAnchorEl(null)
+              onRename()
+            }}>Rename</MenuItem>}
+            <MenuItem onClick={() => {
+              setAnchorEl(null)
+              onMove()
+            }}>Move</MenuItem>
             <MenuItem>Share</MenuItem>
           </Menu>
         )}

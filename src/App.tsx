@@ -10,12 +10,14 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Permission } from "../lib/commons";
+import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
 import { type FileItem } from "./FileGrid";
 import { fetchPath } from "./app/transfer";
+
 
 const globalStyles = (
   <GlobalStyles styles={{ "html, body, #root": { height: "100%" } }} />
@@ -32,8 +34,9 @@ function App() {
   const [error, setError] = useState<Error | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState(() => !!localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
   const [permission, setPermission] = useState<Permission>(Permission.RequireAuth);
+  const [auth, setAuth] = useState<string | null>(null)
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,18 +48,28 @@ function App() {
 
   const fetchFiles = useCallback(() => {
     setLoading(true);
-    fetchPath(cwd)
-      .then(({ permission, authed, items }) => {
-        setPermission(permission)
-        setAuthed(authed)
-        setFiles(items);
-        setMultiSelected([]);
-      })
-      .catch(e => {
-        setFiles([])
-        setError(e)
-      })
-      .finally(() => setLoading(false));
+    const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
+    fetchPath(cwd, savedAuth).then(({ permission, authed, auth, items }) => {
+      setPermission(permission)
+      setAuthed(authed)
+      setFiles(items);
+      setMultiSelected([]);
+      if (auth) {
+        setAuth(auth)
+        if (auth !== localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
+          localStorage.setItem(LOCAL_STORAGE_KEY_AUTH, auth)
+        }
+      }
+    }).catch(e => {
+      setFiles([])
+      setError(e)
+      if (`${e}`.includes("satus=401")) {
+        setAuth(null)
+        if (savedAuth && savedAuth === localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
+          localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
+        }
+      }
+    }).finally(() => setLoading(false));
   }, [cwd, setError]);
 
   useEffect(() => {
@@ -67,7 +80,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {globalStyles}
-      <TransferQueueProvider>
+      <TransferQueueProvider auth={auth}>
         <Stack sx={{ height: "100%" }}>
           <Header
             authed={authed} search={search} fetchFiles={fetchFiles}
@@ -75,7 +88,7 @@ function App() {
             setShowProgressDialog={setShowProgressDialog}
           />
           <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-            permission={permission} authed={authed} files={files}
+            permission={permission} authed={authed} auth={auth} files={files}
             multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
         </Stack>
         <Snackbar

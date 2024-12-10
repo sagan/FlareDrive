@@ -31,6 +31,7 @@ export function isDirectory(file: FileItem) {
 
 function FileGrid({
   authed,
+  auth,
   files,
   onCwdChange,
   multiSelected,
@@ -38,6 +39,7 @@ function FileGrid({
   emptyMessage,
 }: {
   authed: boolean;
+  auth: string | null;
   files: FileItem[];
   onCwdChange: (newCwd: string) => void;
   multiSelected: string[];
@@ -59,7 +61,7 @@ function FileGrid({
                 onCwdChange(file.key + "/");
               } else
                 window.open(
-                  `${WEBDAV_ENDPOINT}${encodeKey(file.key)}`,
+                  `${WEBDAV_ENDPOINT}${encodeKey(file.key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`,
                   "_blank",
                   "noopener,noreferrer"
                 );
@@ -73,7 +75,8 @@ function FileGrid({
             <ListItemIcon>
               {authed && file.customMetadata?.thumbnail ? (
                 <img
-                  src={`${WEBDAV_ENDPOINT}_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`}
+                  src={`${WEBDAV_ENDPOINT}_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png` +
+                    `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`}
                   alt={file.key}
                   style={{ width: 36, height: 36, objectFit: "cover" }}
                 />

@@ -1,25 +1,39 @@
 import pLimit from "p-limit";
 
-import { escapeRegExp, WEBDAV_ENDPOINT, Permission, HEADER_PERMISSION, HEADER_AUTHED } from "../../lib/commons";
+import {
+  escapeRegExp,
+  str2int,
+  Permission,
+  WEBDAV_ENDPOINT,
+  HEADER_PERMISSION,
+  HEADER_AUTHED,
+  HEADER_INAPP,
+  HEADER_AUTH,
+  HEADER_FD_THUMBNAIL,
+} from "../../lib/commons";
 import { encodeKey, FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
 
-export async function fetchPath(path: string) {
+export async function fetchPath(path: string, auth?: string | null) {
   const res = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(path)}`, {
     method: "PROPFIND",
-    headers: { Depth: "1" },
+    headers: {
+      Depth: "1",
+      [HEADER_INAPP]: "1",
+      ...(auth ? { Authorization: auth } : {}),
+    },
   });
 
   if (!res.ok) {
-    throw new Error("Failed to fetch");
+    throw new Error(`Failed to fetch: status=${res.status}`);
   }
   if (!res.headers.get("Content-Type")?.includes("application/xml")) {
     throw new Error("Invalid response");
   }
 
-  const authed = !!parseInt(res.headers.get(HEADER_AUTHED) || "");
-  const permission: Permission = parseInt(res.headers.get(HEADER_PERMISSION) || "") || Permission.RequireAuth;
-
+  auth = res.headers.get(HEADER_AUTH);
+  const authed = !!str2int(res.headers.get(HEADER_AUTHED));
+  const permission: Permission = str2int(res.headers.get(HEADER_PERMISSION), Permission.RequireAuth);
   const parser = new DOMParser();
   const text = await res.text();
   const document = parser.parseFromString(text, "application/xml");
@@ -46,7 +60,7 @@ export async function fetchPath(path: string) {
         customMetadata: { thumbnail },
       } as FileItem;
     });
-  return { permission, authed, items };
+  return { permission, authed, auth, items };
 }
 
 const THUMBNAIL_SIZE = 144;
@@ -232,9 +246,11 @@ export async function createFolder(cwd: string) {
 }
 
 export async function processTransferTask({
+  auth,
   task,
   onTaskProgress,
 }: {
+  auth: string | null;
   task: TransferTask;
   onTaskProgress?: (event: { loaded: number; total: number }) => void;
 }) {
@@ -252,6 +268,9 @@ export async function processTransferTask({
         await fetch(thumbnailUploadUrl, {
           method: "PUT",
           body: thumbnailBlob,
+          headers: {
+            ...(auth ? { Authorization: auth } : {}),
+          },
         });
         thumbnailDigest = digestHex;
       } catch (error) {
@@ -262,8 +281,10 @@ export async function processTransferTask({
     }
   }
 
-  const headers: { "fd-thumbnail"?: string } = {};
-  if (thumbnailDigest) headers["fd-thumbnail"] = thumbnailDigest;
+  const headers: { [key: string]: string } = {
+    ...(auth ? { Authorization: auth } : {}),
+    ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
+  };
   if (file.size >= SIZE_LIMIT) {
     return await multipartUpload(remoteKey, file, {
       headers,

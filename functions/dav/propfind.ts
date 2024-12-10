@@ -1,6 +1,14 @@
-import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
-import { HEADER_AUTHED, HEADER_PERMISSION, WEBDAV_ENDPOINT } from "../../lib/commons";
+import {
+  HEADER_AUTH,
+  HEADER_AUTHED,
+  HEADER_INAPP,
+  HEADER_PERMISSION,
+  isHttpsOrLocalOrigin,
+  str2int,
+  WEBDAV_ENDPOINT,
+} from "../../lib/commons";
 import { responseNotFound } from "../commons";
+import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 type DavProperties = {
   creationdate: string | undefined;
@@ -80,12 +88,26 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
   </response>`;
   });
 
+  let sentBackAuthHeader: string | null = null;
+  if (
+    authed &&
+    str2int(request.headers.get(HEADER_INAPP)) &&
+    isHttpsOrLocalOrigin(request.headers.get("Origin") || "")
+  ) {
+    sentBackAuthHeader = request.headers.get("Authorization");
+  }
+
   return new Response(responseTemplate.replace("{{items}}", items.join("")), {
     status: 207,
     headers: {
       "Content-Type": "application/xml",
       [HEADER_PERMISSION]: `${permission}`,
       [HEADER_AUTHED]: `${authed ? 1 : 0}`,
+      ...(sentBackAuthHeader
+        ? {
+            [HEADER_AUTH]: sentBackAuthHeader,
+          }
+        : {}),
     },
   });
 }

@@ -16,6 +16,7 @@ const backend = {
 export default defineConfig({
   server: {
     proxy: {
+      "/api/": backend,
       "/dav/": backend,
       "/s/": backend,
     },

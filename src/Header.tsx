@@ -18,6 +18,7 @@ function Header({
   fetchFiles: () => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>
@@ -31,7 +32,7 @@ function Header({
         sx={{
           backgroundColor: "whitesmoke",
           borderRadius: "999px",
-          padding: "8px 16px",
+          padding: "5px 16px",
         }}
       />
       <IconButton
@@ -62,9 +63,27 @@ function Header({
           Progress
         </MenuItem>
       </Menu>
-      <IconButton title={authed ? "Authorized" : "Unauthorized"}>
+      <IconButton title={authed ? "Authorized" : "Unauthorized. Click to sign in"}
+        onClick={(e) => {
+          if (authed) {
+            setAnchorEl2(e.currentTarget)
+          } else {
+            location.reload()
+          }
+        }}
+      >
         {authed ? <PersonIcon /> : <LoginIcon />}
       </IconButton>
+      <Menu
+        anchorEl={anchorEl2}
+        open={Boolean(anchorEl2)}
+        onClose={() => setAnchorEl2(null)}
+      >
+        <MenuItem onClick={async () => {
+          setAnchorEl2(null);
+          location.href = "/api/signout"
+        }}>Sign out</MenuItem>
+      </Menu>
     </Toolbar>
   );
 }
