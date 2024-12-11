@@ -1,6 +1,13 @@
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
 
+export const KEY_PREFIX_PRIVATE = ".flaredrive/";
+
+/**
+ * ".flaredrive/thumbnails/"
+ */
+export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
+
 export const HEADER_AUTHED = "X-Authed";
 
 export const HEADER_PERMISSION = "X-Permission";
@@ -44,7 +51,7 @@ export interface ShareObject {
 }
 
 export function basename(path: string): string {
-  return path.split(/[\\/]/).pop() as string;
+  return path.split(/[\\/]/).pop()!;
 }
 
 export function humanReadableSize(size: number) {
@@ -131,4 +138,11 @@ export function isHttpsOrLocalOrigin(origin: string): boolean {
     origin === "http://localhost" ||
     origin === "http://127.0.0.1"
   );
+}
+
+export function extname(path: string): string {
+  if (!path.includes(".")) {
+    return "";
+  }
+  return "." + path.split(".").pop();
 }

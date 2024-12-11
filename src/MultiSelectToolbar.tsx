@@ -8,19 +8,18 @@ import {
 } from "@mui/icons-material";
 import LinkIcon from '@mui/icons-material/Link';
 import DoneIcon from '@mui/icons-material/Done';
-import { WEBDAV_ENDPOINT, key2Path } from "../lib/commons";
 
 function MultiSelectToolbar({
   multiSelected,
   onClose,
-  onDownload,
+  getLink,
   onRename,
   onMove,
   onDelete,
 }: {
   multiSelected: string[];
   onClose: () => void;
-  onDownload: () => void;
+  getLink: (file: string) => string;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
@@ -32,7 +31,7 @@ function MultiSelectToolbar({
     setCopied("");
   }, [multiSelected])
 
-  const link = multiSelected.length === 1 ? location.origin + WEBDAV_ENDPOINT + key2Path(multiSelected[0]) : "";
+  const link = multiSelected.length === 1 ? getLink(multiSelected[0]) : ""
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -66,10 +65,13 @@ function MultiSelectToolbar({
         </IconButton>
         <IconButton
           color="primary"
-          disabled={
-            multiSelected.length !== 1 || multiSelected[0].endsWith("/")
-          }
-          onClick={onDownload}
+          disabled={!link || link.endsWith("/")}
+          onClick={() => {
+            const a = document.createElement("a");
+            a.href = link;
+            a.download = (new URL(link).pathname).split("/").pop()!;
+            a.click();
+          }}
         >
           <DownloadIcon />
         </IconButton>

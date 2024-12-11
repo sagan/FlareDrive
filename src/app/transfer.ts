@@ -4,12 +4,14 @@ import {
   escapeRegExp,
   str2int,
   Permission,
+  extname,
   WEBDAV_ENDPOINT,
   HEADER_PERMISSION,
   HEADER_AUTHED,
   HEADER_INAPP,
   HEADER_AUTH,
   HEADER_FD_THUMBNAIL,
+  KEY_PREFIX_THUMBNAIL,
 } from "../../lib/commons";
 import { encodeKey, FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
@@ -214,22 +216,28 @@ export async function multipartUpload(
   const completeParams = new URLSearchParams({ uploadId });
   const response = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}?${completeParams}`, {
     method: "POST",
+    headers: {
+      ...(headers.Authorization ? { Authorization: headers.Authorization } : {}),
+    },
     body: JSON.stringify({ parts: uploadedParts }),
   });
   if (!response.ok) throw new Error(await response.text());
   return response;
 }
 
-export async function copyPaste(source: string, target: string, move = false) {
+export async function copyPaste(source: string, target: string, auth: string | null, move = false) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(source)}`;
   const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${encodeKey(target)}`, window.location.href);
   await fetch(uploadUrl, {
     method: move ? "MOVE" : "COPY",
-    headers: { Destination: destinationUrl.href },
+    headers: {
+      Destination: destinationUrl.href,
+      ...(auth ? { Authorization: auth } : {}),
+    },
   });
 }
 
-export async function createFolder(cwd: string) {
+export async function createFolder(cwd: string, auth: string | null) {
   try {
     const folderName = window.prompt("Folder name");
     if (!folderName) return;
@@ -239,7 +247,12 @@ export async function createFolder(cwd: string) {
     }
     const folderKey = `${cwd}${folderName}`;
     const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(folderKey)}`;
-    await fetch(uploadUrl, { method: "MKCOL" });
+    await fetch(uploadUrl, {
+      method: "MKCOL",
+      headers: {
+        ...(auth ? { Authorization: auth } : {}),
+      },
+    });
   } catch (error) {
     console.log(`Create folder failed`);
   }
@@ -263,7 +276,7 @@ export async function processTransferTask({
       const thumbnailBlob = await generateThumbnail(file);
       const digestHex = await blobDigest(thumbnailBlob);
 
-      const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}_$flaredrive$/thumbnails/${digestHex}.png`;
+      const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}${extname(file.name)}`;
       try {
         await fetch(thumbnailUploadUrl, {
           method: "PUT",

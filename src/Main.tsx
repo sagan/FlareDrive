@@ -210,31 +210,29 @@ function Main({
         </DropZone>
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
-      <UploadDrawer open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
+      <UploadDrawer auth={auth} open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
       <MultiSelectToolbar
         multiSelected={multiSelected}
-        onClose={() => setMultiSelected([])}
-        onDownload={() => {
-          if (multiSelected.length !== 1) {
-            return;
+        getLink={(file: string) => {
+          let link = location.origin + WEBDAV_ENDPOINT + key2Path(file);
+          if (auth && permission == Permission.RequireAuth) {
+            link += "?auth=" + encodeURIComponent(auth)
           }
-          const a = document.createElement("a");
-          a.href = `${WEBDAV_ENDPOINT}${encodeKey(multiSelected[0])}`;
-          a.download = multiSelected[0].split("/").pop()!;
-          a.click();
+          return link
         }}
+        onClose={() => setMultiSelected([])}
         onRename={async () => {
           const oldName = basename(multiSelected[0]);
           const newName = window.prompt("Rename to:", oldName);
           if (!newName || oldName === newName) {
             return;
           }
-          await copyPaste(cwd + oldName, cwd + newName, true);
+          await copyPaste(cwd + oldName, cwd + newName, auth, true);
           fetchFiles();
         }}
         onMove={async () => {
           let dir = cwd ? cleanPath(cwd) : "/";
-          let newdir = window.prompt("Move files to:", dir);
+          let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
           if (!newdir) {
             return;
           }
@@ -242,11 +240,14 @@ function Main({
           if (newdir == dir) {
             return;
           }
+          if (!newdir.endsWith("/")) {
+            newdir += "/"
+          }
           for (const file of multiSelected) {
             const name = basename(file);
             const src = cwd + name;
-            const dst = trimPrefixSuffix(newdir + "/" + name, "/");
-            await copyPaste(src, dst, true);
+            const dst = trimPrefixSuffix(newdir + name, "/");
+            await copyPaste(src, dst, auth, true);
           }
           fetchFiles();
           return;
@@ -261,7 +262,12 @@ function Main({
             return;
           }
           for (const key of multiSelected) {
-            await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}`, { method: "DELETE" });
+            await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}`, {
+              method: "DELETE",
+              headers: {
+                ...(auth ? { Authorization: auth } : {}),
+              },
+            });
           }
           fetchFiles();
         }}

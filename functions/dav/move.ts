@@ -7,5 +7,5 @@ export async function handleRequestMove({ bucket, path, request }: RequestHandle
   if (response.status >= 400) {
     return response;
   }
-  return handleRequestDelete({ bucket, path, request });
+  return handleRequestDelete({ bucket, path, request }, true);
 }

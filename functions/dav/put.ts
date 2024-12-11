@@ -1,4 +1,4 @@
-import { HEADER_FD_THUMBNAIL } from "../../lib/commons";
+import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE } from "../../lib/commons";
 import {
   responseBadRequest,
   responseConflict,
@@ -37,7 +37,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   }
 
   // Check if the parent directory exists
-  if (!path.startsWith("_$flaredrive$/")) {
+  if (!path.startsWith(KEY_PREFIX_PRIVATE)) {
     const parentPath = path.replace(/(\/|^)[^/]*$/, "");
     const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
     if (parentDir === null) {

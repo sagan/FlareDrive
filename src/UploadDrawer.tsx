@@ -55,11 +55,13 @@ export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
 );
 
 function UploadDrawer({
+  auth,
   open,
   setOpen,
   cwd,
   onUpload,
 }: {
+  auth: string | null;
   open: boolean;
   setOpen: (open: boolean) => void;
   cwd: string;
@@ -136,7 +138,7 @@ function UploadDrawer({
               caption="Create Folder"
               onClick={async () => {
                 setOpen(false);
-                await createFolder(cwd);
+                await createFolder(cwd, auth);
                 onUpload();
               }}
             />

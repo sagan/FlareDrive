@@ -11,8 +11,10 @@
 #   npm run cfdev
 # It's using Wrangler: https://developers.cloudflare.com/workers/wrangler/
 # wrangler.toml: https://developers.cloudflare.com/workers/wrangler/configuration/
+compatibility_date = "2024-11-06"
 name = "flaredrive"
 pages_build_output_dir = "dist"
+
 
 # Environment Variables are available only in the build phase of the website
 # Any changes need re-deploy (re-build) to make effect

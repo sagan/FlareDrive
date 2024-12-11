@@ -61,8 +61,10 @@ function App() {
         }
       }
     }).catch(e => {
-      setFiles([])
+      setFiles([]);
+      setMultiSelected([])
       setError(e)
+      setPermission(Permission.RequireAuth)
       if (`${e}`.includes("satus=401")) {
         setAuth(null)
         if (savedAuth && savedAuth === localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
@@ -83,7 +85,7 @@ function App() {
       <TransferQueueProvider auth={auth}>
         <Stack sx={{ height: "100%" }}>
           <Header
-            authed={authed} search={search} fetchFiles={fetchFiles}
+            permission={permission} authed={authed} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
             setShowProgressDialog={setShowProgressDialog}
           />

@@ -1,22 +1,27 @@
 import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
+import { Permission } from "../lib/commons";
 
 function Header({
+  permission,
   authed,
   search,
   onSearchChange,
   setShowProgressDialog,
   fetchFiles,
 }: {
+  permission: Permission;
   authed: boolean;
   search: string;
   onSearchChange: (newSearch: string) => void;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
 }) {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
 
@@ -67,6 +72,8 @@ function Header({
         onClick={(e) => {
           if (authed) {
             setAnchorEl2(e.currentTarget)
+          } else if (permission === Permission.OpenDir) {
+            navigate("/")
           } else {
             location.reload()
           }

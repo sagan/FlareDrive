@@ -1,4 +1,4 @@
-import { Permission, trimPrefixSuffix } from "../../lib/commons";
+import { KEY_PREFIX_PRIVATE, Permission, trimPrefixSuffix } from "../../lib/commons";
 import { type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
@@ -72,7 +72,7 @@ export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: b
     });
 
     for await (const obj of r2Objects.objects) {
-      if (!obj.key.startsWith("_$flaredrive$/")) {
+      if (!obj.key.startsWith(KEY_PREFIX_PRIVATE)) {
         yield obj;
       }
     }
