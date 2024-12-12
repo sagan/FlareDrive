@@ -8,6 +8,10 @@ export const KEY_PREFIX_PRIVATE = ".flaredrive/";
  */
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 
+export const MIME_DIR = "application/x-directory";
+
+export const MIME_XML = "application/xml";
+
 export const HEADER_AUTHED = "X-Authed";
 
 export const HEADER_PERMISSION = "X-Permission";
@@ -44,7 +48,7 @@ export interface ShareObject {
   key: string;
   /**
    * optional. share expires unix timestamp (seconds)
-   * It's set as KV key expiration metadata. Howver, the KV API has no way to get this value after set.
+   * It's set as KV key expiration option. However, the KV API has no way to get this value after set.
    * So we also store it as a data field.
    */
   expiration?: number;
@@ -98,14 +102,6 @@ export function cleanPath(path: string): string {
 export function path2Key(path: string): string {
   path = trimPrefixSuffix(path.trim(), "/");
   path = decodeURI(path);
-  return path;
-}
-
-export function path2Prefix(path: string): string {
-  path = trimPrefixSuffix(path.trim(), "/");
-  if (path) {
-    path += "/";
-  }
   return path;
 }
 

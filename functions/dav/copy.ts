@@ -1,7 +1,8 @@
 import pLimit from "p-limit";
 
-import { WEBDAV_ENDPOINT } from "../../lib/commons";
+import { MIME_DIR, WEBDAV_ENDPOINT } from "../../lib/commons";
 import {
+  listAll,
   responseBadRequest,
   responseConflict,
   responseCreated,
@@ -9,7 +10,7 @@ import {
   responseNotFound,
   responsePreconditionsFailed,
 } from "../commons";
-import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 export async function handleRequestCopy({ bucket, path, request }: RequestHandlerParams) {
   const dontOverwrite = request.headers.get("Overwrite") === "F";
@@ -30,10 +31,7 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
 
-  if (
-    destination === path ||
-    (src.httpMetadata?.contentType === "application/x-directory" && destination.startsWith(path + "/"))
-  ) {
+  if (destination === path || (src.httpMetadata?.contentType === MIME_DIR && destination.startsWith(path + "/"))) {
     return responseBadRequest();
   }
 
@@ -54,7 +52,7 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
     customMetadata: src.customMetadata,
   });
 
-  const isDirectory = src.httpMetadata?.contentType === "application/x-directory";
+  const isDirectory = src.httpMetadata?.contentType === MIME_DIR;
   if (isDirectory) {
     const depth = request.headers.get("Depth") ?? "infinity";
     switch (depth) {

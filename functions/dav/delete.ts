@@ -1,6 +1,6 @@
-import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, extname } from "../../lib/commons";
-import { responseNoContent, responseNotFound } from "../commons";
-import { listAll, RequestHandlerParams } from "./utils";
+import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, MIME_DIR, extname } from "../../lib/commons";
+import { listAll, responseNoContent, responseNotFound } from "../commons";
+import { RequestHandlerParams } from "./utils";
 
 /**
  * delete key file from R2 bucket
@@ -30,7 +30,7 @@ export async function handleRequestDelete({ bucket, path }: RequestHandlerParams
     if (deletedObj === null) {
       return responseNotFound();
     }
-    if (deletedObj.httpMetadata?.contentType !== "application/x-directory") {
+    if (deletedObj.httpMetadata?.contentType !== MIME_DIR) {
       return responseNoContent();
     }
   }

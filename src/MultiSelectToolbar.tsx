@@ -10,19 +10,23 @@ import LinkIcon from '@mui/icons-material/Link';
 import DoneIcon from '@mui/icons-material/Done';
 
 function MultiSelectToolbar({
+  readonly,
   multiSelected,
   onClose,
   getLink,
   onRename,
   onMove,
   onDelete,
+  onShare,
 }: {
+  readonly: boolean
   multiSelected: string[];
   onClose: () => void;
   getLink: (file: string) => string;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
+  onShare: (filekey: string) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [copied, setCopied] = useState("")
@@ -75,7 +79,7 @@ function MultiSelectToolbar({
         >
           <DownloadIcon />
         </IconButton>
-        <IconButton color="primary" onClick={onDelete}>
+        <IconButton disabled={readonly} color="primary" onClick={onDelete}>
           <DeleteIcon />
         </IconButton>
         <IconButton
@@ -91,15 +95,18 @@ function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            {multiSelected.length === 1 && <MenuItem onClick={() => {
+            {multiSelected.length === 1 && <MenuItem disabled={readonly} onClick={() => {
               setAnchorEl(null)
               onRename()
             }}>Rename</MenuItem>}
-            <MenuItem onClick={() => {
+            <MenuItem disabled={readonly} onClick={() => {
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>
-            <MenuItem>Share</MenuItem>
+            {multiSelected.length === 1 && <MenuItem disabled={readonly} onClick={() => {
+              setAnchorEl(null)
+              onShare(multiSelected[0])
+            }}>Share</MenuItem>}
           </Menu>
         )}
       </Toolbar>

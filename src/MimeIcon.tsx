@@ -1,3 +1,4 @@
+import { MIME_DIR } from "../lib/commons";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import CodeIcon from "@mui/icons-material/Code";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -23,7 +24,7 @@ function MimeIcon({ contentType }: { contentType: string }) {
     <FolderZipOutlinedIcon fontSize="large" />
   ) : contentType.startsWith("text/") ? (
     <CodeIcon fontSize="large" />
-  ) : contentType === "application/x-directory" ? (
+  ) : contentType === MIME_DIR ? (
     <FolderIcon fontSize="large" />
   ) : (
     fallbackIcon

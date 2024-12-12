@@ -12,6 +12,7 @@ import {
   HEADER_AUTH,
   HEADER_FD_THUMBNAIL,
   KEY_PREFIX_THUMBNAIL,
+  MIME_XML,
 } from "../../lib/commons";
 import { encodeKey, FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
@@ -29,7 +30,7 @@ export async function fetchPath(path: string, auth?: string | null) {
   if (!res.ok) {
     throw new Error(`Failed to fetch: status=${res.status}`);
   }
-  if (!res.headers.get("Content-Type")?.includes("application/xml")) {
+  if (!res.headers.get("Content-Type")?.includes(MIME_XML)) {
     throw new Error("Invalid response");
   }
 
@@ -38,7 +39,7 @@ export async function fetchPath(path: string, auth?: string | null) {
   const permission: Permission = str2int(res.headers.get(HEADER_PERMISSION), Permission.RequireAuth);
   const parser = new DOMParser();
   const text = await res.text();
-  const document = parser.parseFromString(text, "application/xml");
+  const document = parser.parseFromString(text, MIME_XML);
   const items: FileItem[] = Array.from(document.querySelectorAll("response"))
     .filter(
       (response) =>
@@ -294,7 +295,7 @@ export async function processTransferTask({
     }
   }
 
-  const headers: { [key: string]: string } = {
+  const headers: Record<string, string> = {
     ...(auth ? { Authorization: auth } : {}),
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };

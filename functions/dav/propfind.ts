@@ -4,11 +4,13 @@ import {
   HEADER_INAPP,
   HEADER_PERMISSION,
   isHttpsOrLocalOrigin,
+  MIME_DIR,
+  MIME_XML,
   str2int,
   WEBDAV_ENDPOINT,
 } from "../../lib/commons";
-import { responseNotFound } from "../commons";
-import { listAll, RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { findChildren, responseNotFound } from "../commons";
+import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 type DavProperties = {
   creationdate: string | undefined;
@@ -31,23 +33,9 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     getcontenttype: object.httpMetadata?.contentType,
     getetag: object.etag,
     getlastmodified: object.uploaded.toUTCString(),
-    resourcetype: object.httpMetadata?.contentType === "application/x-directory" ? "<collection />" : "",
+    resourcetype: object.httpMetadata?.contentType === MIME_DIR ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
   };
-}
-
-async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: string; depth: string }) {
-  if (!["1", "infinity"].includes(depth)) {
-    return [];
-  }
-  const objects: Array<R2Object> = [];
-
-  const prefix = path === "" ? path : `${path}/`;
-  for await (const object of listAll(bucket, prefix, depth === "infinity")) {
-    objects.push(object);
-  }
-
-  return objects;
 }
 
 export async function handleRequestPropfind({ bucket, path, request, permission, authed }: RequestHandlerParams) {
@@ -60,7 +48,7 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
   if (!rootObject) {
     return responseNotFound();
   }
-  const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === "application/x-directory";
+  const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === MIME_DIR;
   const depth = request.headers.get("Depth") ?? "infinity";
 
   const children = !isDirectory
@@ -100,7 +88,7 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
   return new Response(responseTemplate.replace("{{items}}", items.join("")), {
     status: 207,
     headers: {
-      "Content-Type": "application/xml",
+      "Content-Type": MIME_XML,
       [HEADER_PERMISSION]: `${permission}`,
       [HEADER_AUTHED]: `${authed ? 1 : 0}`,
       ...(sentBackAuthHeader

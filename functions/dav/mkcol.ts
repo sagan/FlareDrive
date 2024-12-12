@@ -1,3 +1,4 @@
+import { MIME_DIR } from "../../lib/commons";
 import { responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
@@ -16,7 +17,7 @@ export async function handleRequestMkcol({ bucket, path, request }: RequestHandl
   }
 
   await bucket.put(path, "", {
-    httpMetadata: { contentType: "application/x-directory" },
+    httpMetadata: { contentType: MIME_DIR },
   });
 
   return responseCreated();

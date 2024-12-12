@@ -1,3 +1,5 @@
+import { KEY_PREFIX_PRIVATE } from "../lib/commons";
+
 export type FdCfFuncContext = EventContext<
   {
     WEBDAV_USERNAME: string;
@@ -14,10 +16,6 @@ export type FdCfFuncContext = EventContext<
 >;
 
 export type FdCfFunc = (context: FdCfFuncContext) => Response | Promise<Response>;
-
-export function joinPathSegments(path: string[]): string {
-  return (path || []).map(decodeURI).join("/");
-}
 
 /**
  * Return 404 Not Found response
@@ -77,6 +75,14 @@ export function jsonResponse(obj: any) {
   });
 }
 
+export function htmlResponse(html: string) {
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html",
+    },
+  });
+}
+
 /**
  * If authentication fails, return a failure response.
  * Otherwise return null.
@@ -103,4 +109,40 @@ export function checkAuthFailure(request: Request, user: string, pass: string): 
     return new Response("Unauthorized", { status: 401 });
   }
   return null;
+}
+
+export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: boolean = false) {
+  let cursor: string | undefined = undefined;
+  do {
+    var r2Objects = await bucket.list({
+      prefix: prefix,
+      delimiter: isRecursive ? undefined : "/",
+      cursor: cursor,
+      // @ts-ignore
+      include: ["httpMetadata", "customMetadata"],
+    });
+
+    for await (const obj of r2Objects.objects) {
+      if (!obj.key.startsWith(KEY_PREFIX_PRIVATE)) {
+        yield obj;
+      }
+    }
+    if (r2Objects.truncated) {
+      cursor = r2Objects.cursor;
+    }
+  } while (r2Objects.truncated);
+}
+
+export async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: string; depth: string }) {
+  if (!["1", "infinity"].includes(depth)) {
+    return [];
+  }
+  const objects: Array<R2Object> = [];
+
+  const prefix = path === "" ? path : `${path}/`;
+  for await (const object of listAll(bucket, prefix, depth === "infinity")) {
+    objects.push(object);
+  }
+
+  return objects;
 }

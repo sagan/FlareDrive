@@ -7,7 +7,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, WEBDAV_ENDPOINT } from "../lib/commons";
+import { extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, MIME_DIR, WEBDAV_ENDPOINT } from "../lib/commons";
 
 export interface FileItem {
   key: string;
@@ -26,7 +26,7 @@ export function encodeKey(key: string) {
 }
 
 export function isDirectory(file: FileItem) {
-  return file.httpMetadata?.contentType === "application/x-directory";
+  return file.httpMetadata?.contentType === MIME_DIR;
 }
 
 function FileGrid({

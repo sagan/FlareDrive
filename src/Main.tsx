@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PublicIcon from '@mui/icons-material/Public';
 
 import { Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
+import { PreventDefaultEventCb } from "./commons";
 import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
+import ShareDialog from "./ShareDialog";
 import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
-import { PreventDefaultEventCb } from "./commons";
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -144,6 +145,7 @@ function Main({
 }) {
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(""); // sharing file key
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
@@ -212,6 +214,7 @@ function Main({
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer auth={auth} open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
       <MultiSelectToolbar
+        readonly={!authed}
         multiSelected={multiSelected}
         getLink={(file: string) => {
           let link = location.origin + WEBDAV_ENDPOINT + key2Path(file);
@@ -220,6 +223,7 @@ function Main({
           }
           return link
         }}
+        onShare={(filekey: string) => setSharing(filekey)}
         onClose={() => setMultiSelected([])}
         onRename={async () => {
           const oldName = basename(multiSelected[0]);
@@ -272,6 +276,7 @@ function Main({
           fetchFiles();
         }}
       />
+      {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={!!sharing} onClose={() => setSharing("")} />}
     </>
   );
 }
