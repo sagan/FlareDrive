@@ -6,6 +6,8 @@ export const PreventDefaultEventCb: React.EventHandler<SyntheticEvent> = functio
 
 export const LOCAL_STORAGE_KEY_AUTH = "auth";
 
+export const SHARES_FOLDER_KEY = ".shares";
+
 /**
  * Generate a cryptographically strong password of format /[a-zA-Z0-9]{length}/
  */

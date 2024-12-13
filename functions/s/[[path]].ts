@@ -1,4 +1,5 @@
 // share file api
+import { matchPattern } from "browser-extension-url-match";
 import {
   FdCfFunc,
   checkAuthFailure,
@@ -9,8 +10,9 @@ import {
   responseBadRequest,
   findChildren,
   htmlResponse,
+  responseForbidden,
 } from "../commons";
-import { type ShareObject, path2Key, trimPrefix, MIME_DIR } from "../../lib/commons";
+import { type ShareObject, path2Key, trimPrefix, MIME_DIR, ShareRefererMode } from "../../lib/commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -112,6 +114,26 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (!data || !data.key) {
     return responseNotFound();
   }
+  if (data.refererMode) {
+    const referMatch = matchPatternsWithUrl(data.refererList || [], request.headers.get("Referer") || "");
+    let block = false;
+    switch (data.refererMode) {
+      case ShareRefererMode.WhitelistMode:
+        block = !referMatch;
+        break;
+      case ShareRefererMode.BlackListMode:
+        block = referMatch;
+        break;
+      default:
+        block = true;
+        break;
+    }
+    console.log("match", data.refererList, request.headers.get("Referer"), referMatch, data.refererMode, block);
+    if (block) {
+      return responseForbidden();
+    }
+  }
+
   const filekey = data.key + (relpath ? "/" + relpath : "");
   const obj = await env.BUCKET.get(filekey, {
     onlyIf: request.headers,
@@ -430,4 +452,19 @@ function encodeHtml(str: string): string {
   return str.replace(/[&<>"']/g, function (m) {
     return map[m];
   });
+}
+
+function matchPatternsWithUrl(patterns: string[], url: string): boolean {
+  let i = patterns.indexOf("");
+  if (i != -1) {
+    if (!url) {
+      return true;
+    }
+    patterns = patterns.splice(i, 1);
+  }
+  const matcher = matchPattern(patterns);
+  if (!matcher.valid) {
+    return false;
+  }
+  return matcher.match(url);
 }

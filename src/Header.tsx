@@ -5,6 +5,7 @@ import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import { Permission } from "../lib/commons";
+import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
 
 function Header({
   permission,
@@ -88,6 +89,7 @@ function Header({
       >
         <MenuItem onClick={async () => {
           setAnchorEl2(null);
+          localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
           location.href = "/api/signout"
         }}>Sign out</MenuItem>
       </Menu>

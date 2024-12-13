@@ -8,16 +8,31 @@ import {
 } from "@mui/material";
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import ShareIcon from '@mui/icons-material/Share';
 
-import { Permission } from "../lib/commons";
-import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
+import { MIME_DIR, path2Key, Permission } from "../lib/commons";
+import { LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
 import { type FileItem } from "./FileGrid";
 import { fetchPath } from "./app/transfer";
+import ShareManager from "./ShareManager";
+import { listShares } from "./app/share";
+import { PathBreadcrumb } from "./components";
 
+const systemFolders: FileItem[] = [
+  {
+    key: SHARES_FOLDER_KEY,
+    name: "Shared files",
+    system: true,
+    icon: ShareIcon,
+    size: 0,
+    uploaded: "",
+    httpMetadata: { contentType: MIME_DIR },
+  }
+]
 
 const globalStyles = (
   <GlobalStyles styles={{ "html, body, #root": { height: "100%" } }} />
@@ -33,27 +48,37 @@ function App() {
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [authed, setAuthed] = useState(() => !!localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
+  const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
   const [permission, setPermission] = useState<Permission>(Permission.RequireAuth);
-  const [auth, setAuth] = useState<string | null>(null)
+
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { pathname } = location;
-  const cwd = decodeURI(pathname.slice(1)); // removing preceding "/"
+  const cwd = path2Key(location.pathname)
   const setCwd = useCallback((cwd: string) => {
     navigate("/" + encodeURI(cwd));
   }, [navigate])
 
   const fetchFiles = useCallback(() => {
     setLoading(true);
+    setMultiSelected([]);
+    console.log("fetch", cwd)
     const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
+    if (cwd == SHARES_FOLDER_KEY) {
+      listShares(savedAuth).then(setShares).catch(e => {
+        setShares([])
+        setError(e)
+      }).finally(() => setLoading(false))
+      return
+    }
     fetchPath(cwd, savedAuth).then(({ permission, authed, auth, items }) => {
       setPermission(permission)
-      setAuthed(authed)
+      if (!cwd) {
+        items = [...systemFolders, ...items]
+      }
       setFiles(items);
-      setMultiSelected([]);
       if (auth) {
         setAuth(auth)
         if (auth !== localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
@@ -62,7 +87,6 @@ function App() {
       }
     }).catch(e => {
       setFiles([]);
-      setMultiSelected([])
       setError(e)
       setPermission(Permission.RequireAuth)
       if (`${e}`.includes("satus=401")) {
@@ -85,13 +109,18 @@ function App() {
       <TransferQueueProvider auth={auth}>
         <Stack sx={{ height: "100%" }}>
           <Header
-            permission={permission} authed={authed} search={search} fetchFiles={fetchFiles}
+            permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
             setShowProgressDialog={setShowProgressDialog}
           />
-          <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-            permission={permission} authed={authed} auth={auth} files={files}
-            multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+          <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
+          {
+            cwd === SHARES_FOLDER_KEY
+              ? <ShareManager fetchFiles={fetchFiles} auth={auth} shares={shares} loading={loading} />
+              : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
+                permission={permission} authed={!!auth} auth={auth} files={files}
+                multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+          }
         </Stack>
         <Snackbar
           autoHideDuration={5000}

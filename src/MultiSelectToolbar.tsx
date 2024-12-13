@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { IconButton, Menu, MenuItem, Slide, Toolbar } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -7,7 +7,7 @@ import {
   MoreHoriz as MoreHorizIcon,
 } from "@mui/icons-material";
 import LinkIcon from '@mui/icons-material/Link';
-import DoneIcon from '@mui/icons-material/Done';
+import { CopyButton } from "./components";
 
 function MultiSelectToolbar({
   readonly,
@@ -29,11 +29,6 @@ function MultiSelectToolbar({
   onShare: (filekey: string) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [copied, setCopied] = useState("")
-
-  useEffect(() => {
-    setCopied("");
-  }, [multiSelected])
 
   const link = multiSelected.length === 1 ? getLink(multiSelected[0]) : ""
 
@@ -54,19 +49,7 @@ function MultiSelectToolbar({
         <IconButton color="primary" onClick={onClose}>
           <CloseIcon />
         </IconButton>
-        <IconButton
-          href={link}
-          title={link && link == copied ? "Link Copied" : "Copy Link"}
-          color="primary"
-          disabled={!link}
-          onClick={(e) => {
-            e.preventDefault();
-            navigator.clipboard.writeText(link);
-            setCopied(link);
-          }}
-        >
-          {link && link == copied ? <DoneIcon /> : <LinkIcon />}
-        </IconButton>
+        <CopyButton color="primary" href={link} isIcon={true} text={link}><LinkIcon /></CopyButton>
         <IconButton
           color="primary"
           disabled={!link || link.endsWith("/")}

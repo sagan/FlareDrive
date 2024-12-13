@@ -10,6 +10,15 @@ import MimeIcon from "./MimeIcon";
 import { extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, MIME_DIR, WEBDAV_ENDPOINT } from "../lib/commons";
 
 export interface FileItem {
+  /**
+   * system (special) folder
+   */
+  system?: boolean;
+  /**
+   * Alternative display name for system folder
+   */
+  name?: string;
+  icon?: React.FunctionComponent;
   key: string;
   size: number;
   uploaded: string;
@@ -50,30 +59,38 @@ function FileGrid({
     emptyMessage
   ) : (
     <Grid container sx={{ paddingBottom: "48px" }}>
-      {files.map((file) => (
-        <Grid item key={file.key} xs={12} sm={6} md={4} lg={3} xl={2}>
+      {files.map((file) => {
+        const IconComponent = file.icon
+        return <Grid item key={file.key} xs={12} sm={6} md={4} lg={3} xl={2}>
           <ListItemButton
             selected={multiSelected.includes(file.key)}
             onClick={() => {
               if (multiSelected.length > 0) {
+                if (file.system) {
+                  return
+                }
                 onMultiSelect(file.key);
               } else if (isDirectory(file)) {
                 onCwdChange(file.key + "/");
-              } else
+              } else {
                 window.open(
                   `${WEBDAV_ENDPOINT}${encodeKey(file.key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`,
                   "_blank",
                   "noopener,noreferrer"
                 );
+              }
             }}
             onContextMenu={(e) => {
               e.preventDefault();
+              if (file.system) {
+                return
+              }
               onMultiSelect(file.key);
             }}
             sx={{ userSelect: "none" }}
           >
             <ListItemIcon>
-              {authed && file.customMetadata?.thumbnail ? (
+              {(authed && file.customMetadata?.thumbnail ? (
                 <img
                   src={`${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}${extname(file.key)}`
                     + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`}
@@ -81,11 +98,10 @@ function FileGrid({
                   style={{ width: 36, height: 36, objectFit: "cover" }}
                 />
               ) : (
-                <MimeIcon contentType={file.httpMetadata.contentType} />
-              )}
+                IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}
             </ListItemIcon>
             <ListItemText
-              primary={extractFilename(file.key)}
+              primary={file.name || extractFilename(file.key)}
               primaryTypographyProps={{
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -100,7 +116,7 @@ function FileGrid({
                       marginRight: 1,
                     }}
                   >
-                    {new Date(file.uploaded).toLocaleString()}
+                    {file.system ? file.key : new Date(file.uploaded).toLocaleString()}
                   </Box>
                   {!isDirectory(file) && humanReadableSize(file.size)}
                 </>
@@ -108,7 +124,7 @@ function FileGrid({
             />
           </ListItemButton>
         </Grid>
-      ))}
+      })}
     </Grid>
   );
 }

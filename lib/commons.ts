@@ -41,6 +41,12 @@ export enum Permission {
   RequireAuth = 3,
 }
 
+export enum ShareRefererMode {
+  NoLimit = 0,
+  WhitelistMode = 1,
+  BlackListMode = 2,
+}
+
 export interface ShareObject {
   /**
    * file key.
@@ -52,6 +58,21 @@ export interface ShareObject {
    * So we also store it as a data field.
    */
   expiration?: number;
+
+  /**
+   * Referer white or black list.
+   * An empty string matches with no referer or empty referer.
+   */
+  refererList?: string[];
+
+  /**
+   * Referer restriction mode. By default is no limit.
+   */
+  refererMode?: ShareRefererMode;
+}
+
+export function dirname(path: string): string {
+  return path.split(/[\\/]/).slice(0, -1).join("/");
 }
 
 export function basename(path: string): string {

@@ -1,90 +1,14 @@
-import { Home as HomeIcon } from "@mui/icons-material";
-import { Box, Breadcrumbs, Button, CircularProgress, IconButton, Link, Typography } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import PublicIcon from '@mui/icons-material/Public';
-
+import { Box, CircularProgress, } from "@mui/material";
 import { Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
-import { PreventDefaultEventCb } from "./commons";
 import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
+import { Centered } from "./components";
 import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
 
-function Centered({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100%",
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-function PathBreadcrumb({ permission, path, onCwdChange }: {
-  permission: Permission;
-  path: string;
-  onCwdChange: (newCwd: string) => void
-}) {
-  const parts = path ? path.replace(/\/$/, "").split("/") : [];
-
-  let cwdHref = "/" + key2Path(path)
-  if (!cwdHref.endsWith("/")) {
-    cwdHref += "/"
-  }
-
-  return (
-    <Breadcrumbs separator="›" sx={{ padding: 1 }}>
-      <Button
-        onClick={() => onCwdChange("")}
-        sx={{
-          minWidth: 0,
-          padding: 0,
-        }}
-      >
-        <HomeIcon />
-      </Button>
-      {parts.map((part, index) =>
-        index === parts.length - 1 ? (
-          <Typography key={index} color="text.primary">
-            {part}
-          </Typography>
-        ) : (
-          <Link
-            key={index}
-            component="button"
-            onClick={() => {
-              onCwdChange(parts.slice(0, index + 1).join("/") + "/");
-            }}
-          >
-            {part}
-          </Link>
-        )
-      )}
-      {permission !== Permission.RequireAuth && <Button sx={{
-        minWidth: 0,
-        padding: 0,
-      }}
-        title={
-          permission === Permission.OpenDir
-            ? "Public Dir Permalink: this dir can be publicly accessed (read)"
-            : "Files inside this dir can be publicly accessed (read), but dir browsing is not available"
-        }
-        {...(permission === Permission.OpenDir ? {
-          href: cwdHref,
-          onClick: PreventDefaultEventCb,
-        } : {})}>
-        <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
-      </Button>}
-    </Breadcrumbs>
-  );
-}
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
   const [dragging, setDragging] = useState(false);
@@ -169,9 +93,8 @@ function Main({
 
   const filteredFiles = useMemo(
     () =>
-      (search ? files.filter((file) => file.key.toLowerCase().includes(search.toLowerCase())) : files).sort((a, b) =>
-        isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0
-      ),
+      (search ? files.filter((file) => (file.name || file.key).toLowerCase().includes(search.toLowerCase())) : files)
+        .sort((a, b) => isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0),
     [files, search]
   );
 
@@ -189,7 +112,6 @@ function Main({
 
   return (
     <>
-      <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
       {loading ? (
         <Centered>
           <CircularProgress />

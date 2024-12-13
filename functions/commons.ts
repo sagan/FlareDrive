@@ -61,6 +61,13 @@ export function responseCreated(): Response {
 }
 
 /**
+ * Return 403 Forbidden response
+ */
+export function responseForbidden(msg?: string): Response {
+  return new Response(msg || "Forbidden", { status: 403 });
+}
+
+/**
  * Return 405 Method Not Allowed response
  */
 export function responseMethodNotAllowed(): Response {
@@ -93,7 +100,7 @@ export function htmlResponse(html: string) {
  */
 export function checkAuthFailure(request: Request, user: string, pass: string): Response | null {
   if (!user || !pass) {
-    return new Response("WebDAV protocol is not enabled", { status: 403 });
+    return responseForbidden("WebDAV protocol is not enabled");
   }
 
   const auth = new URL(request.url).searchParams.get("auth") || request.headers.get("Authorization");
