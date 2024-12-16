@@ -68,6 +68,19 @@ export function responseForbidden(msg?: string): Response {
 }
 
 /**
+ * Return 302 Found redirection response
+ * @param url
+ */
+export function responseRedirect(url: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: url,
+    },
+  });
+}
+
+/**
  * Return 405 Method Not Allowed response
  */
 export function responseMethodNotAllowed(): Response {
@@ -98,16 +111,16 @@ export function htmlResponse(html: string) {
  * @param pass
  * @returns
  */
-export function checkAuthFailure(request: Request, user: string, pass: string): Response | null {
+export function checkAuthFailure(request: Request, user: string, pass: string, realm = "WebDAV"): Response | null {
   if (!user || !pass) {
-    return responseForbidden("WebDAV protocol is not enabled");
+    return responseForbidden();
   }
 
   const auth = new URL(request.url).searchParams.get("auth") || request.headers.get("Authorization");
   if (!auth) {
     return new Response("Unauthorized", {
       status: 401,
-      headers: { "WWW-Authenticate": `Basic realm="WebDAV"` },
+      headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
     });
   }
 

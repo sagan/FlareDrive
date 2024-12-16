@@ -79,9 +79,10 @@ export function PathBreadcrumb({ permission, path, onCwdChange }: {
   );
 }
 
-export function CopyButton({ disabled, isIcon, get, text, children, ...others }: {
+export function CopyButton({ disabled, isIcon, isLink, get, text, children, ...others }: {
   disabled?: boolean;
   isIcon?: boolean;
+  isLink?: boolean;
   children?: any;
   text: string | (() => string);
   [key: string]: any;
@@ -93,7 +94,9 @@ export function CopyButton({ disabled, isIcon, get, text, children, ...others }:
     setOpen(false);
   }, []);
 
-  const isDisabled = disabled !== undefined ? disabled : !text
+  const isDisabled = disabled !== undefined ? disabled : !text;
+
+  const Component: React.FC<Record<string, any>> = isIcon ? IconButton : Button;
 
   const onCopy = React.useCallback((e: SyntheticEvent) => {
     e.preventDefault();
@@ -116,10 +119,11 @@ export function CopyButton({ disabled, isIcon, get, text, children, ...others }:
       disableTouchListener
       title="Copied"
     >
-      {
-        isIcon ? <IconButton disabled={isDisabled} onClick={onCopy} {...others}>{children || "Copy"}</IconButton> :
-          <Button disabled={isDisabled} onClick={onCopy} {...others}>{children || "Copy"}</Button>
-      }
+      <Component disabled={isDisabled} onClick={onCopy}
+        {...(isLink && typeof text == "string" ? { href: text } : {})}
+        {...others}>
+        {children || "Copy"}
+      </Component>
     </Tooltip>
   </ClickAwayListener>
 }

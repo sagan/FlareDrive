@@ -10,7 +10,7 @@ export async function handleRequestGet({ bucket, path, request }: RequestHandler
   });
   if (obj === null) {
     if (path.startsWith(KEY_PREFIX_THUMBNAIL)) {
-      return fallbackIconResponse(path);
+      return fallbackIconResponse(new URL(request.url).searchParams.get("ext") || "");
     }
     return responseNotFound();
   }

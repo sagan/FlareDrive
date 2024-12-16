@@ -18,8 +18,8 @@ pages_build_output_dir = "dist"
 
 # Environment Variables are available only in the build phase of the website
 # Any changes need re-deploy (re-build) to make effect
-# Note: in local dev mode, some front side env must also be set in ".env.local":
-#   SITENAME
+# Note: in local dev mode, the below front end env must also be set in ".env.local":
+#   SITENAME, SHORT_SITENAME
 [vars]
 # Uncomment to mark as local dev environment: enable CORS for functions
 #DEV = "1"
@@ -32,6 +32,7 @@ PUBLIC_PREFIX = "public_files"
 # Additionally, pathes of these prefixs allow publicly dir browsing
 PUBLIC_DIR_PREFIX = "public"
 SITENAME = "MyDrive"
+SHORT_SITENAME = "Drive"
 
 # Change bucket_name to the real one
 [[r2_buckets]]

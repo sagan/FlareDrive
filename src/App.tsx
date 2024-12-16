@@ -11,7 +11,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 
 import { MIME_DIR, path2Key, Permission } from "../lib/commons";
-import { LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY } from "./commons";
+import { dirUrlPath, LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
@@ -56,9 +56,10 @@ function App() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const cwd = path2Key(location.pathname)
+  const dirkey = path2Key(location.pathname)
+  const cwd = dirkey + "/"
   const setCwd = useCallback((cwd: string) => {
-    navigate("/" + encodeURI(cwd));
+    navigate(dirUrlPath(cwd));
   }, [navigate])
 
   const fetchFiles = useCallback(() => {
@@ -66,16 +67,16 @@ function App() {
     setMultiSelected([]);
     console.log("fetch", cwd)
     const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
-    if (cwd == SHARES_FOLDER_KEY) {
+    if (dirkey == SHARES_FOLDER_KEY) {
       listShares(savedAuth).then(setShares).catch(e => {
         setShares([])
         setError(e)
       }).finally(() => setLoading(false))
       return
     }
-    fetchPath(cwd, savedAuth).then(({ permission, authed, auth, items }) => {
+    fetchPath(dirkey, savedAuth).then(({ permission, auth, items }) => {
       setPermission(permission)
-      if (!cwd) {
+      if (!dirkey) {
         items = [...systemFolders, ...items]
       }
       setFiles(items);
@@ -115,8 +116,8 @@ function App() {
           />
           <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
           {
-            cwd === SHARES_FOLDER_KEY
-              ? <ShareManager fetchFiles={fetchFiles} auth={auth} shares={shares} loading={loading} />
+            dirkey === SHARES_FOLDER_KEY
+              ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
               : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
                 permission={permission} authed={!!auth} auth={auth} files={files}
                 multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />

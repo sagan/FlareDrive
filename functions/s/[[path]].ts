@@ -11,8 +11,9 @@ import {
   findChildren,
   htmlResponse,
   responseForbidden,
+  responseRedirect,
 } from "../commons";
-import { type ShareObject, path2Key, trimPrefix, MIME_DIR, ShareRefererMode } from "../../lib/commons";
+import { type ShareObject, path2Key, trimPrefix, MIME_DIR, ShareRefererMode, trimSuffix, cut } from "../../lib/commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -114,6 +115,13 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (!data || !data.key) {
     return responseNotFound();
   }
+  if (data.auth) {
+    const [user, pass] = cut(data.auth, ":");
+    const failRespose = checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
+    if (failRespose) {
+      return failRespose;
+    }
+  }
   if (data.refererMode) {
     const referMatch = matchPatternsWithUrl(data.refererList || [], request.headers.get("Referer") || "");
     let block = false;
@@ -134,7 +142,12 @@ export const onRequestGet: FdCfFunc = async function (context) {
     }
   }
 
-  const filekey = data.key + (relpath ? "/" + relpath : "");
+  const isDir = data.key.endsWith("/");
+  if (!isDir && relpath) {
+    return responseNotFound();
+  }
+
+  const filekey = trimSuffix(data.key, "/") + (relpath ? "/" + relpath : "");
   const obj = await env.BUCKET.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
@@ -143,12 +156,21 @@ export const onRequestGet: FdCfFunc = async function (context) {
     return responseNotFound();
   }
   if (obj.httpMetadata?.contentType === MIME_DIR) {
+    if (!url.pathname.endsWith("/")) {
+      url.pathname += "/";
+      return responseRedirect(url.href);
+    }
     const files = await findChildren({
       bucket: context.env.BUCKET,
       path: filekey,
       depth: "1",
     });
-    return htmlResponse(indexPage(context.env.SITENAME, sharekey + (relpath ? "/" + relpath : ""), !relpath, files));
+    return htmlResponse(
+      indexPage(context.env.SITENAME, data.desc || "", sharekey + (relpath ? "/" + relpath : ""), !relpath, files)
+    );
+  } else if (url.pathname.endsWith("/")) {
+    // target is file, but the request path ends with "/"
+    return responseNotFound();
   }
   if (!("body" in obj)) {
     return responsePreconditionsFailed();
@@ -166,7 +188,13 @@ export const onRequestHead: FdCfFunc = async function (context) {
   });
 };
 
-function indexPage(sitename: string | undefined, dir: string, isRoot: boolean, items: R2Object[]): string {
+function indexPage(
+  sitename: string | undefined,
+  desc: string,
+  dir: string,
+  isRoot: boolean,
+  items: R2Object[]
+): string {
   const title = sitename ? `${dir} - ${sitename}` : `${dir}`;
   // from Chrome file:// url dir index page
   return `<!DOCTYPE html>
@@ -178,6 +206,7 @@ function indexPage(sitename: string | undefined, dir: string, isRoot: boolean, i
 <title>${encodeHtml(title)}</title>
 <meta name="color-scheme" content="light dark">
 <meta name="google" value="notranslate">
+<link rel="icon" href="/favicon.png" />
 
 <script>
 function addRow(name, url, isdir,
@@ -372,7 +401,7 @@ window.addEventListener('DOMContentLoaded', onLoad);
 <body>
 
 <h1 id="header">Index of LOCATION</h1>
-
+${desc ? `<p>${desc}</p>` : ""}
 <div id="parentDirLinkBox" style="display:none">
   <a id="parentDirLink" class="icon up">
     <span id="parentDirText">[parent directory]</span>

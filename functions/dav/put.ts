@@ -1,4 +1,4 @@
-import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE } from "../../lib/commons";
+import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, extname } from "../../lib/commons";
 import {
   responseBadRequest,
   responseConflict,
@@ -48,6 +48,10 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
   const customMetadata = thumbnail ? { thumbnail } : undefined;
 
+  const oldObject = await bucket.head(path);
+  if (oldObject?.customMetadata?.thumbnail) {
+    await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${oldObject.customMetadata.thumbnail}`);
+  }
   const result = await bucket.put(path, request.body, {
     onlyIf: request.headers,
     httpMetadata: request.headers,

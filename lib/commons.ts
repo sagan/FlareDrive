@@ -49,7 +49,7 @@ export enum ShareRefererMode {
 
 export interface ShareObject {
   /**
-   * file key.
+   * file key. If it ends with "/", treat it as a dir share.
    */
   key: string;
   /**
@@ -69,9 +69,20 @@ export interface ShareObject {
    * Referer restriction mode. By default is no limit.
    */
   refererMode?: ShareRefererMode;
+
+  /**
+   * "username:password" format auth credentials.
+   */
+  auth?: string;
+
+  /**
+   * Optional share description
+   */
+  desc?: string;
 }
 
 export function dirname(path: string): string {
+  path = trimPrefixSuffix(path, "/");
   return path.split(/[\\/]/).slice(0, -1).join("/");
 }
 
@@ -105,6 +116,20 @@ export function trimPrefix(str: string, prefix: string): string {
     str = str.slice(prefix.length);
   }
   return str;
+}
+
+/**
+ * Simliar to Go strings.Cut function. cut("user:pass", ":") => ["user", "pass", true]
+ * @param str
+ * @param deli
+ * @returns [before, after, found]
+ */
+export function cut(str: string, deli: string): [string, string, boolean] {
+  const i = str.indexOf(deli);
+  if (i === -1) {
+    return [str, "", false];
+  }
+  return [str.slice(0, i), str.slice(i + 1), true];
 }
 
 export function trimPrefixSuffix(str: string, prefixSuffix: string): string {

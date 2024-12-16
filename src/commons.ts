@@ -1,3 +1,4 @@
+import { trimPrefixSuffix } from "../lib/commons";
 import { SyntheticEvent } from "react";
 
 export const PreventDefaultEventCb: React.EventHandler<SyntheticEvent> = function (e) {
@@ -33,4 +34,15 @@ export function generatePassword(length: number) {
     }
   }
   return password;
+}
+
+/**
+ * Get url path of a dir file key. "foo/demo bar" => "foo/demo%20bar/"
+ * @param dirkey
+ * @returns
+ */
+export function dirUrlPath(dirkey: string): string {
+  dirkey = (!dirkey.startsWith("/") ? "/" : "") + encodeURI(dirkey);
+  dirkey += !dirkey.endsWith("/") ? "/" : "";
+  return dirkey;
 }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, } from "@mui/material";
-import { Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
+import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
 import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
@@ -145,7 +145,10 @@ function Main({
           }
           return link
         }}
-        onShare={(filekey: string) => setSharing(filekey)}
+        onShare={(filekey: string) => {
+          const file = files.find(f => f.key === filekey)
+          setSharing(filekey + (file?.httpMetadata.contentType === MIME_DIR ? "/" : ""))
+        }}
         onClose={() => setMultiSelected([])}
         onRename={async () => {
           const oldName = basename(multiSelected[0]);

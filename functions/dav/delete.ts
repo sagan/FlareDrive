@@ -14,7 +14,7 @@ export async function deleteFile(bucket: R2Bucket, key: string, keepThumbnail = 
     return null;
   }
   if (!keepThumbnail && !key.startsWith(KEY_PREFIX_PRIVATE) && file.customMetadata?.thumbnail) {
-    const thumbnailKey = `${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}${extname(key)}`;
+    const thumbnailKey = `${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}`;
     const thumbnail = await bucket.get(thumbnailKey);
     if (thumbnail) {
       await bucket.delete(thumbnailKey);

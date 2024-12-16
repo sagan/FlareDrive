@@ -92,8 +92,9 @@ function FileGrid({
             <ListItemIcon>
               {(authed && file.customMetadata?.thumbnail ? (
                 <img
-                  src={`${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}${extname(file.key)}`
-                    + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`}
+                  src={`${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}`
+                    + `?ext=${encodeURIComponent(extname(file.key))}`
+                    + `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`}
                   alt={file.key}
                   style={{ width: 36, height: 36, objectFit: "cover" }}
                 />

@@ -277,7 +277,7 @@ export async function processTransferTask({
       const thumbnailBlob = await generateThumbnail(file);
       const digestHex = await blobDigest(thumbnailBlob);
 
-      const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}${extname(file.name)}`;
+      const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}`;
       try {
         await fetch(thumbnailUploadUrl, {
           method: "PUT",
