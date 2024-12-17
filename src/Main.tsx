@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, } from "@mui/material";
-import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, key2Path, trimPrefixSuffix } from "../lib/commons";
-import FileGrid, { encodeKey, FileItem, isDirectory } from "./FileGrid";
+import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, compareBoolean, compareString, key2Path, trimPrefixSuffix } from "../lib/commons";
+import FileGrid, { FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
@@ -75,10 +75,6 @@ function Main({
   const uploadEnqueue = useUploadEnqueue();
 
   useEffect(() => {
-    document.title = cwd ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
-  }, [cwd]);
-
-  useEffect(() => {
     if (!transferQueue.length) {
       return;
     }
@@ -94,7 +90,8 @@ function Main({
   const filteredFiles = useMemo(
     () =>
       (search ? files.filter((file) => (file.name || file.key).toLowerCase().includes(search.toLowerCase())) : files)
-        .sort((a, b) => isDirectory(a) ? -1 : isDirectory(b) ? 1 : 0),
+        .sort((a, b) => compareBoolean(!a.system, !b.system) ||
+          compareBoolean(!isDirectory(a), !isDirectory(b)) || compareString(a.key, b.key)),
     [files, search]
   );
 
@@ -191,7 +188,7 @@ function Main({
             return;
           }
           for (const key of multiSelected) {
-            await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}`, {
+            await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
               method: "DELETE",
               headers: {
                 ...(auth ? { Authorization: auth } : {}),

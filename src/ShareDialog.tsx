@@ -3,16 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Modal from '@mui/material/Modal';
-import { Button, FormControl, IconButton, InputLabel, NativeSelect, TextField } from '@mui/material';
+import { Button, Checkbox, FormControl, FormControlLabel, FormGroup, IconButton, InputLabel, NativeSelect, TextField } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
+import FolderIcon from '@mui/icons-material/Folder';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import CasinoIcon from '@mui/icons-material/Casino';
 import PasswordIcon from '@mui/icons-material/Password';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { SHARE_ENDPOINT, ShareObject, ShareRefererMode, WEBDAV_ENDPOINT, basename, dirname, key2Path, path2Key, trimPrefixSuffix } from '../lib/commons';
-import { generatePassword } from './commons';
+import ShareIcon from '@mui/icons-material/Share';
+import { SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode, WEBDAV_ENDPOINT, basename, cut, dirname, key2Path, path2Key, trimPrefixSuffix } from '../lib/commons';
+import { dirUrlPath, generatePassword } from './commons';
 import { createShare, deleteShare } from './app/share';
-import { CopyButton } from './components';
+import { CopyButton, TooltipIconButton } from './components';
 
 enum Status {
   Creating,
@@ -26,6 +29,9 @@ const style = {
   left: '50%',
   transform: 'translate(-50%, -50%)',
   width: 400,
+  maxWidth: "80vw",
+  maxHeight: "80vh",
+  overflow: "auto",
   bgcolor: 'background.paper',
   border: '2px solid #000',
   boxShadow: 24,
@@ -53,14 +59,13 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   const [shareObject, setShareObject] = useState<ShareObject>(
     otherProps.shareKey ? otherProps.shareObject! : { key: filekey })
   const [referer, setReferer] = useState(otherProps.shareKey ? list2Referer(otherProps.shareObject!.refererList) : "")
-  const [refererMode, setRefererMode] = useState(ShareRefererMode.NoLimit)
   const [status, setStatus] = useState(otherProps.shareKey ? Status.Editing : Status.Creating)
   const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
 
   const targetIsDir = shareObject.key.endsWith("/")
   const targetLink = (targetIsDir ? "/" : WEBDAV_ENDPOINT) + key2Path(shareObject.key)
-  const targetParentLink = "/" + path2Key(dirname(shareObject.key))
+  const targetParentLink = dirUrlPath(dirname(shareObject.key))
   const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "")
   const shareKeyError = !shareKey ? "Share name can not be empty" :
     (shareKey !== shareKey.trim() ? "Share name can not start or end with spaces" :
@@ -92,8 +97,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
     const newShareObject: ShareObject = {
       ...shareObject,
       ...(ttl >= 0 ? { expiration: ttl ? Math.round(+new Date / 1000) + ttl : 0 } : {}),
-      ...(refererMode ? {
-        refererMode,
+      ...(shareObject.refererMode ? {
         refererList: refer2list(referer),
       } : {})
     }
@@ -106,13 +110,15 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
       setError(`${e}`)
       setStatus(previousStatus)
     }
-  }, [shareKey, refererMode, referer, shareObject, ttl]);
-
+  }, [shareKey, referer, shareObject, ttl]);
 
   return <Modal open={open} onClose={onClose}>
     <Box sx={style}>
       <Typography sx={{ mb: 2 }} variant="h6" component="h6">
-        Share
+        <TooltipIconButton title={status === Status.Creating ? "Create share" : "View / Update share"}
+          color={status === Status.Creating ? "disabled" : "primary"}>
+          <ShareIcon />
+        </TooltipIconButton>
         <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
           if (!targetIsDir) {
             return
@@ -131,6 +137,9 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth
           helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
           placeholder='Share name' InputProps={{
+            startAdornment: <IconButton edge="start">
+              {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+            </IconButton>,
             endAdornment:
               <>
                 <IconButton
@@ -143,7 +152,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
                 </IconButton>
                 <IconButton
                   disabled={status !== Status.Creating}
-                  onClick={() => setSharekey(generatePassword(32))}
+                  onClick={() => setSharekey(generatePassword(STRONG_PASSWORD_LENGTH))}
                   title="Random secure (long) link"
                   edge="end"
                 >
@@ -169,8 +178,14 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
               <>
                 <IconButton
                   disabled={status === Status.Sharing}
-                  onClick={() => setShareObject({ ...shareObject, auth: "user:" + generatePassword(32) })}
-                  title={`Set to "user:<random_password>"`}
+                  onClick={() => {
+                    let [user] = cut(shareObject.auth || "", ":")
+                    if (!user) {
+                      user = "user"
+                    }
+                    setShareObject({ ...shareObject, auth: `${user}:${generatePassword(STRONG_PASSWORD_LENGTH)}` })
+                  }}
+                  title={`Set to random password"`}
                   edge="end"
                 >
                   <PasswordIcon />
@@ -222,9 +237,9 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         <FormControl sx={{ m: 1, minWidth: 120 }}>
           <InputLabel variant="standard" htmlFor="referer-mode">Referer limit</InputLabel>
           <NativeSelect
-            value={refererMode}
+            value={shareObject.refererMode || ShareRefererMode.NoLimit}
             disabled={status === Status.Sharing}
-            onChange={e => setRefererMode(parseInt(e.target.value))}
+            onChange={e => setShareObject({ ...shareObject, refererMode: parseInt(e.target.value) })}
             inputProps={{ id: 'referer-mode' }}
           >
             <option value={ShareRefererMode.NoLimit}>No limit</option>
@@ -233,13 +248,21 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
           </NativeSelect>
         </FormControl>
       </div>
-      {refererMode !== ShareRefererMode.NoLimit && <div>
+      {!!shareObject.refererMode && <div>
         <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
           helperText={<>
             One <a href="https://github.com/clearlylocal/browser-extension-url-match">url pattern</a> per line.
-            Enter a empty line with a trailing "\n" to include "no referer".
+            Enter a empty line with a trailing "\n" to include "no referer" or direct access.
           </>} value={referer} onChange={e => setReferer(e.target.value)}
         />
+      </div>}
+      {targetIsDir && <div>
+        <FormGroup>
+          <FormControlLabel label="Disable dir index" control={
+            <Checkbox checked={shareObject.noindex || false} onChange={e => {
+              setShareObject({ ...shareObject, noindex: e.target.checked })
+            }} />} />
+        </FormGroup>
       </div>}
       {!!error && <Typography sx={{ mt: 2 }}>{error}</Typography>}
       {status === Status.Editing && <Typography sx={{ mt: 2 }}>
@@ -278,6 +301,10 @@ function refer2list(referer?: string): string[] {
 function list2Referer(list?: string[]): string {
   if (!list) {
     return ""
+  }
+  // special case
+  if (list.length === 1 && list[0] === "") {
+    return "\n"
   }
   return list.join("\n")
 }

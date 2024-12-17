@@ -23,6 +23,7 @@ yarn-error.log*
 /.vscode
 /.local
 /wrangler.toml
+/.dev.vars
 
 # theses assets are dynamically created during build
 /public/manifest.json

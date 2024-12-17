@@ -1,10 +1,10 @@
 import pLimit from "p-limit";
 
 import {
+  key2Path,
   escapeRegExp,
   str2int,
   Permission,
-  extname,
   WEBDAV_ENDPOINT,
   HEADER_PERMISSION,
   HEADER_AUTHED,
@@ -14,11 +14,11 @@ import {
   KEY_PREFIX_THUMBNAIL,
   MIME_XML,
 } from "../../lib/commons";
-import { encodeKey, FileItem } from "../FileGrid";
+import { FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
 
 export async function fetchPath(path: string, auth?: string | null) {
-  const res = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(path)}`, {
+  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
     method: "PROPFIND",
     headers: {
       Depth: "1",
@@ -165,7 +165,7 @@ export async function multipartUpload(
   const headers = options?.headers || {};
   headers["content-type"] = file.type;
 
-  const uploadResponse = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}?uploads`, {
+  const uploadResponse = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
     headers,
     method: "POST",
   });
@@ -182,7 +182,7 @@ export async function multipartUpload(
         partNumber: i.toString(),
         uploadId,
       });
-      const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(key)}?${searchParams}`;
+      const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}?${searchParams}`;
       if (i === limit.concurrency) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
@@ -215,7 +215,7 @@ export async function multipartUpload(
   );
   const uploadedParts = await Promise.all(promises);
   const completeParams = new URLSearchParams({ uploadId });
-  const response = await fetch(`${WEBDAV_ENDPOINT}${encodeKey(key)}?${completeParams}`, {
+  const response = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
     method: "POST",
     headers: {
       ...(headers.Authorization ? { Authorization: headers.Authorization } : {}),
@@ -227,8 +227,8 @@ export async function multipartUpload(
 }
 
 export async function copyPaste(source: string, target: string, auth: string | null, move = false) {
-  const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(source)}`;
-  const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${encodeKey(target)}`, window.location.href);
+  const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(source)}`;
+  const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${key2Path(target)}`, window.location.href);
   await fetch(uploadUrl, {
     method: move ? "MOVE" : "COPY",
     headers: {
@@ -247,7 +247,7 @@ export async function createFolder(cwd: string, auth: string | null) {
       return;
     }
     const folderKey = `${cwd}${folderName}`;
-    const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(folderKey)}`;
+    const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
     await fetch(uploadUrl, {
       method: "MKCOL",
       headers: {
@@ -305,7 +305,7 @@ export async function processTransferTask({
       onUploadProgress: onTaskProgress,
     });
   } else {
-    const uploadUrl = `${WEBDAV_ENDPOINT}${encodeKey(remoteKey)}`;
+    const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(remoteKey)}`;
     return await xhrFetch(uploadUrl, {
       method: "PUT",
       headers,

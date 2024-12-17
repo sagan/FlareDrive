@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Permission } from "../lib/commons";
 import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
 
@@ -42,7 +43,15 @@ function Header({
         }}
       />
       <IconButton
-        aria-label="More"
+        color="inherit"
+        title="Refresh"
+        sx={{ marginLeft: 0.5 }}
+        onClick={fetchFiles}
+      >
+        <RefreshIcon />
+      </IconButton>
+      <IconButton
+        title="More"
         color="inherit"
         sx={{ marginLeft: 0.5 }}
         onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -54,10 +63,6 @@ function Header({
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
-        <MenuItem onClick={() => {
-          setAnchorEl(null);
-          fetchFiles();
-        }}>Refresh</MenuItem>
         <MenuItem>View as</MenuItem>
         <MenuItem>Sort by</MenuItem>
         <MenuItem

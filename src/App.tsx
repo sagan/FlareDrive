@@ -62,6 +62,10 @@ function App() {
     navigate(dirUrlPath(cwd));
   }, [navigate])
 
+  useEffect(() => {
+    document.title = cwd ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
+  }, [cwd]);
+
   const fetchFiles = useCallback(() => {
     setLoading(true);
     setMultiSelected([]);

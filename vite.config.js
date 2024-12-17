@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "url";
 import fs from "fs/promises";
@@ -7,10 +7,10 @@ import { favicons } from "favicons";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// override these with env.
-const DefaultVariables = {
+// override these with ".env" / ".env.local" dotenv file or environment variables.
+const DefaultPublicVariables = {
   SITENAME: "FlareDrive",
-  SHORT_SITENAME: "", // default to SITENAME
+  SHORT_SITENAME: "", // Optional, if not present, app will use SITENAME instead.
 };
 
 // `npm run cfdev`
@@ -56,10 +56,23 @@ async function generateAssets(variables) {
 }
 
 export default defineConfig(async ({ command, mode }) => {
-  const variables = Object.keys(DefaultVariables).reduce((v, key) => {
-    v[key] = process.env[key] || DefaultVariables[key];
+  const env = loadEnv(mode, __dirname, "");
+  const publicVariables = Object.keys(DefaultPublicVariables).reduce((v, key) => {
+    if (env[key] !== undefined) {
+      v[key] = env[key];
+    } else {
+      v[key] = DefaultPublicVariables[key];
+    }
     return v;
   }, {});
+
+  if (command === "serve") {
+    try {
+      // CF wrangler backend use .dev.vars in dev mode.
+      // https://developers.cloudflare.com/workers/configuration/environment-variables/
+      fs.copyFile(path.join(__dirname, ".env.local"), path.join(__dirname, ".dev.vars"));
+    } catch (e) {}
+  }
 
   let assetExists = false;
   try {
@@ -67,7 +80,7 @@ export default defineConfig(async ({ command, mode }) => {
     assetExists = true;
   } catch (e) {}
   if (!assetExists || command === "build") {
-    await generateAssets(variables);
+    await generateAssets(publicVariables);
   }
 
   return {
@@ -87,8 +100,8 @@ export default defineConfig(async ({ command, mode }) => {
     // Note the vite projet is for CloudFlare pages project (JavaScript SPA),
     // which is fullly static and runned in build time so any changes in env must be re-build to take effect.
     // For functions (functions/), env is dynamic and can be changed at any time.
-    define: Object.keys(variables).reduce((dv, key) => {
-      dv[`import.meta.env.${key}`] = variables[key];
+    define: Object.keys(publicVariables).reduce((dv, key) => {
+      dv[`import.meta.env.${key}`] = JSON.stringify(publicVariables[key]);
       return dv;
     }, {}),
   };

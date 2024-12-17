@@ -94,7 +94,8 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
 
   const url = new URL(request.url);
-  const requestMeta = new URLSearchParams(url.search).get("meta");
+  const searchParams = new URLSearchParams(url.search);
+  const requestMeta = searchParams.get("meta");
 
   if (requestMeta) {
     const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
@@ -123,7 +124,14 @@ export const onRequestGet: FdCfFunc = async function (context) {
     }
   }
   if (data.refererMode) {
-    const referMatch = matchPatternsWithUrl(data.refererList || [], request.headers.get("Referer") || "");
+    let referList = data.refererList || [];
+    const referer = request.headers.get("Referer") || "";
+    const i = referList.indexOf("");
+    if (i != -1) {
+      referList = referList.splice(i, 1);
+    }
+    const referMatch =
+      (i != -1 && (!referer || referer.startsWith(url.origin + "/"))) || matchPatternsWithUrl(referList, referer);
     let block = false;
     switch (data.refererMode) {
       case ShareRefererMode.WhitelistMode:
@@ -156,9 +164,15 @@ export const onRequestGet: FdCfFunc = async function (context) {
     return responseNotFound();
   }
   if (obj.httpMetadata?.contentType === MIME_DIR) {
+    if (data.noindex && relpath) {
+      return responseNotFound();
+    }
     if (!url.pathname.endsWith("/")) {
       url.pathname += "/";
       return responseRedirect(url.href);
+    }
+    if (data.noindex) {
+      return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
     }
     const files = await findChildren({
       bucket: context.env.BUCKET,
@@ -187,6 +201,26 @@ export const onRequestHead: FdCfFunc = async function (context) {
     headers: res.headers,
   });
 };
+
+function noindexPage(sitename: string | undefined, desc: string, dir: string): string {
+  const title = sitename ? `${dir} - ${sitename}` : `${dir}`;
+  // from Chrome file:// url dir index page
+  return `<!DOCTYPE html>
+<html dir="ltr" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>${encodeHtml(title)}</title>
+    <meta name="google" value="notranslate">
+    <link rel="icon" href="/favicon.png" />
+  </head>
+  <body>
+    <h1>Index of ${encodeHtml(dir)}</h1>
+    ${desc ? `<p>${desc}</p>` : ""}
+    <p>Dir index is disabled for this folder. Append the file relative path to url directly to access it.</p>
+  </body>
+</html>
+`;
+}
 
 function indexPage(
   sitename: string | undefined,
@@ -484,13 +518,6 @@ function encodeHtml(str: string): string {
 }
 
 function matchPatternsWithUrl(patterns: string[], url: string): boolean {
-  let i = patterns.indexOf("");
-  if (i != -1) {
-    if (!url) {
-      return true;
-    }
-    patterns = patterns.splice(i, 1);
-  }
   const matcher = matchPattern(patterns);
   if (!matcher.valid) {
     return false;

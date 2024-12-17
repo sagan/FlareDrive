@@ -4,6 +4,13 @@ export const SHARE_ENDPOINT = "/s/";
 export const KEY_PREFIX_PRIVATE = ".flaredrive/";
 
 /**
+ * A password of [a-zA-Z0-9]{length} is considered strong enough.
+ * Each char is Math.log2(62) = 5.95 bit.
+ * Password of 22 chars is 130 bit security.
+ */
+export const STRONG_PASSWORD_LENGTH = 22;
+
+/**
  * ".flaredrive/thumbnails/"
  */
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
@@ -66,7 +73,7 @@ export interface ShareObject {
   refererList?: string[];
 
   /**
-   * Referer restriction mode. By default is no limit.
+   * Referer restriction mode. By default is no limit (0).
    */
   refererMode?: ShareRefererMode;
 
@@ -79,6 +86,11 @@ export interface ShareObject {
    * Optional share description
    */
   desc?: string;
+
+  /**
+   * optional, disable directory index page.
+   */
+  noindex?: boolean;
 }
 
 export function dirname(path: string): string {
@@ -187,4 +199,42 @@ export function extname(path: string): string {
     return "";
   }
   return "." + path.split(".").pop();
+}
+
+/**
+ * Compare a and b, return -1, 0 or 1. undefined or null is treated as empty string.
+ * @param a
+ * @param b
+ * @returns
+ */
+export function compareString(a: string | undefined | null, b: string | undefined | null): number {
+  a = a || "";
+  b = b || "";
+  if (a < b) {
+    return -1;
+  } else if (a > b) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * Compare boolean a and b, return -1, 0 or 1. false < true. Treat undefined as false.
+ * @param a
+ * @param b
+ * @returns
+ */
+export function compareBoolean(a: boolean | undefined, b: boolean | undefined): number {
+  if (!a && b) {
+    return -1;
+  } else if (a && !b) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+export function fileurl(key: string, auth: string | null): string {
+  return `${WEBDAV_ENDPOINT}${key2Path(key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`;
 }

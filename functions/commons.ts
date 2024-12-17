@@ -112,7 +112,7 @@ export function htmlResponse(html: string) {
  * @returns
  */
 export function checkAuthFailure(request: Request, user: string, pass: string, realm = "WebDAV"): Response | null {
-  if (!user || !pass) {
+  if (!user && !pass) {
     return responseForbidden();
   }
 

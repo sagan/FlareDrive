@@ -1,4 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
+import Lightbox, { SlideImage } from "yet-another-react-lightbox";
+import Counter from "yet-another-react-lightbox/plugins/counter";
+import Captions from "yet-another-react-lightbox/plugins/captions";
+import Download from "yet-another-react-lightbox/plugins/download";
+import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
+import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
+import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
+import Video from "yet-another-react-lightbox/plugins/video";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   Box,
   Grid,
@@ -7,7 +16,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, MIME_DIR, WEBDAV_ENDPOINT } from "../lib/commons";
+import { fileurl, extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, MIME_DIR, WEBDAV_ENDPOINT, basename } from "../lib/commons";
 
 export interface FileItem {
   /**
@@ -18,7 +27,11 @@ export interface FileItem {
    * Alternative display name for system folder
    */
   name?: string;
+  /**
+   * Icon for system folder
+   */
   icon?: React.FunctionComponent;
+
   key: string;
   size: number;
   uploaded: string;
@@ -26,16 +39,40 @@ export interface FileItem {
   customMetadata?: { thumbnail?: string };
 }
 
-function extractFilename(key: string) {
-  return key.split("/").pop();
-}
-
-export function encodeKey(key: string) {
-  return key.split("/").map(encodeURIComponent).join("/");
-}
-
 export function isDirectory(file: FileItem) {
   return file.httpMetadata?.contentType === MIME_DIR;
+}
+
+function isImage(file: FileItem): boolean {
+  return file.httpMetadata.contentType?.startsWith("image/")
+}
+
+function thumburl(file: FileItem, auth: string | null): string {
+  return `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata?.thumbnail || ""}`
+    + `?ext=${encodeURIComponent(extname(file.key))}`
+    + `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`
+}
+
+
+function getSlides(files: FileItem[], auth: string | null, startkey: string): SlideImage[] {
+  let index = files.findIndex(f => f.key === startkey);
+  const slides: SlideImage[] = []
+  for (let i = index; i < files.length; i++) {
+    handle(files[i]);
+  }
+  for (let i = 0; i < index; i++) {
+    handle(files[i]);
+  }
+  return slides;
+
+  function handle(file: FileItem) {
+    if (isImage(file)) {
+      slides.push({
+        src: fileurl(file.key, auth),
+        thumbnail: thumburl(file, auth),
+      })
+    }
+  }
 }
 
 function FileGrid({
@@ -55,9 +92,13 @@ function FileGrid({
   onMultiSelect: (key: string) => void;
   emptyMessage?: React.ReactNode;
 }) {
-  return files.length === 0 ? (
-    emptyMessage
-  ) : (
+  const [slides, setSlides] = useState<SlideImage[]>([]);
+
+  if (files.length === 0) {
+    return emptyMessage
+  }
+
+  return <>
     <Grid container sx={{ paddingBottom: "48px" }}>
       {files.map((file) => {
         const IconComponent = file.icon
@@ -72,12 +113,10 @@ function FileGrid({
                 onMultiSelect(file.key);
               } else if (isDirectory(file)) {
                 onCwdChange(file.key + "/");
+              } else if (isImage(file)) {
+                setSlides(getSlides(files, auth, file.key));
               } else {
-                window.open(
-                  `${WEBDAV_ENDPOINT}${encodeKey(file.key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`,
-                  "_blank",
-                  "noopener,noreferrer"
-                );
+                window.open(fileurl(file.key, auth), "_blank", "noopener,noreferrer");
               }
             }}
             onContextMenu={(e) => {
@@ -91,18 +130,12 @@ function FileGrid({
           >
             <ListItemIcon>
               {(authed && file.customMetadata?.thumbnail ? (
-                <img
-                  src={`${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata.thumbnail}`
-                    + `?ext=${encodeURIComponent(extname(file.key))}`
-                    + `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`}
-                  alt={file.key}
-                  style={{ width: 36, height: 36, objectFit: "cover" }}
-                />
+                <img src={thumburl(file, auth)} alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
                 IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}
             </ListItemIcon>
             <ListItemText
-              primary={file.name || extractFilename(file.key)}
+              primary={file.name || basename(file.key)}
               primaryTypographyProps={{
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -127,7 +160,13 @@ function FileGrid({
         </Grid>
       })}
     </Grid>
-  );
+    <Lightbox
+      open={!!slides.length}
+      close={() => setSlides([])}
+      slides={slides}
+      plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download]}
+    />
+  </>
 }
 
 export default FileGrid;

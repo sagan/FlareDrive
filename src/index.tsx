@@ -3,6 +3,9 @@ import { redirect } from "react-router";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import App from "./App";
+import "yet-another-react-lightbox/styles.css";
+import "yet-another-react-lightbox/plugins/thumbnails.css";
+import "yet-another-react-lightbox/plugins/counter.css";
 import "./index.css"
 
 const router = createBrowserRouter([

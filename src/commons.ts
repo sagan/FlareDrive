@@ -37,7 +37,7 @@ export function generatePassword(length: number) {
 }
 
 /**
- * Get url path of a dir file key. "foo/demo bar" => "foo/demo%20bar/"
+ * Get url path of a dir file key. "foo/demo bar" => "/foo/demo%20bar/"
  * @param dirkey
  * @returns
  */

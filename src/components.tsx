@@ -79,6 +79,17 @@ export function PathBreadcrumb({ permission, path, onCwdChange }: {
   );
 }
 
+export function TooltipIconButton({ children, ...others }: { title: string, color?: string, children: any }) {
+  return <Tooltip
+    PopperProps={{
+      disablePortal: true,
+    }}
+    {...others}
+  >
+    <IconButton>{children}</IconButton>
+  </Tooltip>
+}
+
 export function CopyButton({ disabled, isIcon, isLink, get, text, children, ...others }: {
   disabled?: boolean;
   isIcon?: boolean;
