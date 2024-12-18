@@ -215,7 +215,7 @@ function noindexPage(sitename: string | undefined, desc: string, dir: string): s
   </head>
   <body>
     <h1>Index of ${encodeHtml(dir)}</h1>
-    ${desc ? `<p>${desc}</p>` : ""}
+    ${desc ? `<div>${desc}</div>` : ""}
     <p>Dir index is disabled for this folder. Append the file relative path to url directly to access it.</p>
   </body>
 </html>
@@ -435,7 +435,7 @@ window.addEventListener('DOMContentLoaded', onLoad);
 <body>
 
 <h1 id="header">Index of LOCATION</h1>
-${desc ? `<p>${desc}</p>` : ""}
+${desc ? `<div>${desc}</div>` : ""}
 <div id="parentDirLinkBox" style="display:none">
   <a id="parentDirLink" class="icon up">
     <span id="parentDirText">[parent directory]</span>

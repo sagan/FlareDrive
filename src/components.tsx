@@ -1,9 +1,26 @@
-import React, { SyntheticEvent, useState } from "react";
-import { Box, Breadcrumbs, Button, Link, Typography, ClickAwayListener, IconButton, Tooltip } from "@mui/material";
+import React, { FC, SyntheticEvent, useState } from "react";
+import { Link as ReactRouterLink } from "react-router-dom";
+import {
+  Box, Breadcrumbs, Button, LinkProps,
+  Link as MuiLink, Typography, ClickAwayListener, IconButton, Tooltip
+} from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
-import { Permission, key2Path } from "../lib/commons";
-import { PreventDefaultEventCb } from "./commons";
+import { Permission } from "../lib/commons";
+import { PreventDefaultEventCb, dirUrlPath } from "./commons";
+
+const permissionDescriptions: Record<Permission, string> = {
+  [Permission.Unknown]: "Dir permission unknown",
+  [Permission.RequireAuth]: "Private dir: this dir can only be accessed by authorized user",
+  [Permission.OpenDir]: "Public Dir Permalink: this dir can be publicly accessed (read)",
+  [Permission.OpenFile]: "Files inside this dir can be publicly accessed (read), but dir browsing is not available",
+}
+
+export const Link: FC<LinkProps> = props => {
+  return (
+    <MuiLink {...props} component={ReactRouterLink} to={props.href ?? "#"} />
+  );
+};
 
 export function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -27,66 +44,50 @@ export function PathBreadcrumb({ permission, path, onCwdChange }: {
 }) {
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
-  let cwdHref = "/" + key2Path(path)
-  if (!cwdHref.endsWith("/")) {
-    cwdHref += "/"
-  }
+  const cwdHref = dirUrlPath(path);
 
   return (
     <Breadcrumbs separator="›" sx={{ padding: 1 }}>
-      <Button
-        onClick={() => onCwdChange("")}
-        sx={{
-          minWidth: 0,
-          padding: 0,
-        }}
-      >
+      <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
+        e.preventDefault();
+        onCwdChange("");
+      }}>
         <HomeIcon />
       </Button>
-      {parts.map((part, index) =>
-        index === parts.length - 1 ? (
-          <Typography key={index} color="text.primary">
-            {part}
-          </Typography>
+      {parts.map((part, index) => {
+        const url = dirUrlPath(parts.slice(0, index + 1).join("/"));
+        return index === parts.length - 1 ? (
+          <Typography key={index} color="text.primary">{part}</Typography>
         ) : (
-          <Link
-            key={index}
-            component="button"
-            onClick={() => {
-              onCwdChange(parts.slice(0, index + 1).join("/") + "/");
-            }}
-          >
-            {part}
-          </Link>
+          <Link key={index} href={url}>{part}</Link>
         )
-      )}
-      {permission !== Permission.RequireAuth && <Button sx={{
-        minWidth: 0,
-        padding: 0,
-      }}
-        title={
-          permission === Permission.OpenDir
-            ? "Public Dir Permalink: this dir can be publicly accessed (read)"
-            : "Files inside this dir can be publicly accessed (read), but dir browsing is not available"
-        }
-        {...(permission === Permission.OpenDir ? {
-          href: cwdHref,
-          onClick: PreventDefaultEventCb,
-        } : {})}>
-        <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
-      </Button>}
-    </Breadcrumbs>
+      })
+      }
+      {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile) &&
+        <Button sx={{ minWidth: 0, padding: 0 }}
+          title={permissionDescriptions[permission]}
+          {...(permission === Permission.OpenDir ? {
+            href: cwdHref,
+            onClick: PreventDefaultEventCb,
+          } : {})}>
+          <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
+        </Button>
+      }
+    </Breadcrumbs >
   );
 }
 
-export function TooltipIconButton({ children, ...others }: { title: string, color?: string, children: any }) {
+export function TooltipIconButton({ href, children, ...others }: {
+  title: string,
+  href?: string, color?: string, children: any
+}) {
   return <Tooltip
     PopperProps={{
       disablePortal: true,
     }}
     {...others}
   >
-    <IconButton>{children}</IconButton>
+    <IconButton {...(href ? { href } : {})} >{children}</IconButton>
   </Tooltip>
 }
 

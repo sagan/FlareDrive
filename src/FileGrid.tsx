@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import Lightbox, { SlideImage } from "yet-another-react-lightbox";
+import React, { useMemo, useState } from "react";
+import DownloadIcon from '@mui/icons-material/Download';
+import Lightbox, { ContainerRect, Slide, SlideImage } from "yet-another-react-lightbox";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
@@ -10,13 +11,15 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   Box,
+  Button,
   Grid,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Typography,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { fileurl, extname, humanReadableSize, KEY_PREFIX_THUMBNAIL, MIME_DIR, WEBDAV_ENDPOINT, basename } from "../lib/commons";
+import { fileurl, extname, humanReadableSize, MIME_DIR, basename, THUMBNAIL_API } from "../lib/commons";
 
 export interface FileItem {
   /**
@@ -47,32 +50,42 @@ function isImage(file: FileItem): boolean {
   return file.httpMetadata.contentType?.startsWith("image/")
 }
 
-function thumburl(file: FileItem, auth: string | null): string {
-  return `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${file.customMetadata?.thumbnail || ""}`
-    + `?ext=${encodeURIComponent(extname(file.key))}`
+function thumbnailUrl(file: FileItem, color: string, auth: string | null): string {
+  return `${THUMBNAIL_API}?digest=${file.customMetadata?.thumbnail || ""}`
+    + `&ext=${encodeURIComponent(extname(file.key))}&no404=1&color=${color}`
     + `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`
 }
 
+function downloadFile(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer")
+}
 
-function getSlides(files: FileItem[], auth: string | null, startkey: string): SlideImage[] {
-  let index = files.findIndex(f => f.key === startkey);
-  const slides: SlideImage[] = []
-  for (let i = index; i < files.length; i++) {
-    handle(files[i]);
+function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: ContainerRect }) {
+  if (slide.type == "image") {
+    return undefined
   }
-  for (let i = 0; i < index; i++) {
-    handle(files[i]);
-  }
-  return slides;
 
-  function handle(file: FileItem) {
-    if (isImage(file)) {
-      slides.push({
-        src: fileurl(file.key, auth),
-        thumbnail: thumburl(file, auth),
-      })
-    }
-  }
+  const src = (slide as { src: string }).src || ""
+
+  return <Box sx={{
+    width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
+    color: "white", overflow: "auto",
+  }}>
+    <Box sx={{ mb: 1 }}>
+      <Button variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+        e.preventDefault()
+        downloadFile(src)
+      }}>
+        Download
+      </Button>
+    </Box>
+    <Typography sx={{ mb: 1 }} variant="h5" component="h5">
+      {slide.description}
+    </Typography>
+    <Box>
+      <img src={slide.thumbnail} width={128} height={128} />
+    </Box>
+  </Box >
 }
 
 function FileGrid({
@@ -92,7 +105,28 @@ function FileGrid({
   onMultiSelect: (key: string) => void;
   emptyMessage?: React.ReactNode;
 }) {
-  const [slides, setSlides] = useState<SlideImage[]>([]);
+  const [slideIndex, setSlideIndex] = useState(-1);
+
+  const { slides, slideIndexes } = useMemo(() => {
+    const slides: SlideImage[] = []
+    const slideIndexes: Record<string, number> = {}
+    for (const file of files) {
+      if (isDirectory(file)) {
+        continue
+      }
+      const name = basename(file.key)
+      const size = humanReadableSize(file.size)
+      slideIndexes[file.key] = slides.length
+      slides.push({
+        src: fileurl(file.key, auth),
+        type: isImage(file) ? "image" : undefined,
+        thumbnail: thumbnailUrl(file, "white", auth),
+        title: name,
+        description: `${name} (${size})`,
+      })
+    }
+    return { slides, slideIndexes };
+  }, [files])
 
   if (files.length === 0) {
     return emptyMessage
@@ -108,15 +142,15 @@ function FileGrid({
             onClick={() => {
               if (multiSelected.length > 0) {
                 if (file.system) {
-                  return
+                  return;
                 }
                 onMultiSelect(file.key);
               } else if (isDirectory(file)) {
                 onCwdChange(file.key + "/");
-              } else if (isImage(file)) {
-                setSlides(getSlides(files, auth, file.key));
+              } else if (slideIndexes[file.key] !== undefined) {
+                setSlideIndex(slideIndexes[file.key]);
               } else {
-                window.open(fileurl(file.key, auth), "_blank", "noopener,noreferrer");
+                downloadFile(fileurl(file.key, auth));
               }
             }}
             onContextMenu={(e) => {
@@ -130,7 +164,7 @@ function FileGrid({
           >
             <ListItemIcon>
               {(authed && file.customMetadata?.thumbnail ? (
-                <img src={thumburl(file, auth)} alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
+                <img src={thumbnailUrl(file, "", auth)} alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
                 IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}
             </ListItemIcon>
@@ -161,9 +195,12 @@ function FileGrid({
       })}
     </Grid>
     <Lightbox
-      open={!!slides.length}
-      close={() => setSlides([])}
+      index={slideIndex}
+      carousel={{ finite: true }}
+      open={slideIndex >= 0}
+      close={() => setSlideIndex(-1)}
       slides={slides}
+      render={{ slide: SlideRender }}
       plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download]}
     />
   </>

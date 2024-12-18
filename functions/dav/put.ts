@@ -1,4 +1,4 @@
-import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, extname } from "../../lib/commons";
+import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL } from "../../lib/commons";
 import {
   responseBadRequest,
   responseConflict,

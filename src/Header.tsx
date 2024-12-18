@@ -1,11 +1,11 @@
 import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { Permission } from "../lib/commons";
+import { Permission, SIGNOUT_API } from "../lib/commons";
 import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
 
 function Header({
@@ -29,6 +29,11 @@ function Header({
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>
+      <Link to="/">
+        <IconButton title={window.__SITENAME__} sx={{ width: 24, height: 24 }}>
+          <img src="/favicon.png" style={{ objectFit: "contain" }} />
+        </IconButton>
+      </Link>
       <InputBase
         size="small"
         fullWidth
@@ -95,7 +100,7 @@ function Header({
         <MenuItem onClick={async () => {
           setAnchorEl2(null);
           localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
-          location.href = "/api/signout"
+          location.href = SIGNOUT_API
         }}>Sign out</MenuItem>
       </Menu>
     </Toolbar>

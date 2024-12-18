@@ -3,7 +3,7 @@ import {
   HEADER_AUTHED,
   HEADER_INAPP,
   HEADER_PERMISSION,
-  isHttpsOrLocalOrigin,
+  isHttpsOrLocalUrl,
   MIME_DIR,
   MIME_XML,
   str2int,
@@ -77,11 +77,7 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
   });
 
   let sentBackAuthHeader: string | null = null;
-  if (
-    authed &&
-    str2int(request.headers.get(HEADER_INAPP)) &&
-    isHttpsOrLocalOrigin(request.headers.get("Origin") || "")
-  ) {
+  if (authed && str2int(request.headers.get(HEADER_INAPP)) && isHttpsOrLocalUrl(request.url)) {
     sentBackAuthHeader = request.headers.get("Authorization");
   }
 

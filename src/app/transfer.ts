@@ -269,9 +269,11 @@ export async function processTransferTask({
   onTaskProgress?: (event: { loaded: number; total: number }) => void;
 }) {
   const { remoteKey, file } = task;
-  if (task.type !== "upload" || !file) throw new Error("Invalid task");
+  if (task.type !== "upload" || !file) {
+    throw new Error("Invalid task");
+  }
   let thumbnailDigest = null;
-
+  console.log("upload", task);
   if (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf") {
     try {
       const thumbnailBlob = await generateThumbnail(file);

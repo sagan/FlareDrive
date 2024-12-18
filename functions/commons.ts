@@ -116,17 +116,17 @@ export function checkAuthFailure(request: Request, user: string, pass: string, r
     return responseForbidden();
   }
 
+  const res = new Response("Unauthorized", {
+    status: 401,
+    headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
+  });
   const auth = new URL(request.url).searchParams.get("auth") || request.headers.get("Authorization");
   if (!auth) {
-    return new Response("Unauthorized", {
-      status: 401,
-      headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
-    });
+    return res;
   }
-
   const expectedAuth = `Basic ${btoa(`${user}:${pass}`)}`;
   if (auth !== expectedAuth) {
-    return new Response("Unauthorized", { status: 401 });
+    return res;
   }
   return null;
 }

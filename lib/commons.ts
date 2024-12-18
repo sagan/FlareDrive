@@ -1,7 +1,7 @@
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
-
-export const KEY_PREFIX_PRIVATE = ".flaredrive/";
+export const THUMBNAIL_API = "/api/thumbnail";
+export const SIGNOUT_API = "/api/signout";
 
 /**
  * A password of [a-zA-Z0-9]{length} is considered strong enough.
@@ -9,6 +9,8 @@ export const KEY_PREFIX_PRIVATE = ".flaredrive/";
  * Password of 22 chars is 130 bit security.
  */
 export const STRONG_PASSWORD_LENGTH = 22;
+
+export const KEY_PREFIX_PRIVATE = ".flaredrive/";
 
 /**
  * ".flaredrive/thumbnails/"
@@ -32,7 +34,14 @@ export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
  */
 export const HEADER_AUTH = "X-Auth";
 
+/**
+ * Dir access permission. All values (except Unknown) > 0; Unknown is 0.
+ */
 export enum Permission {
+  /**
+   * Unknown permission
+   */
+  Unknown = 0,
   /**
    * Request target file is open (can be anonymously read)
    */
@@ -184,13 +193,13 @@ export function str2int(str?: string | undefined | null, defaultValue = 0): numb
   return value;
 }
 
-export function isHttpsOrLocalOrigin(origin: string): boolean {
+export function isHttpsOrLocalUrl(url: string): boolean {
   return (
-    origin.startsWith("https://") ||
-    origin.startsWith("http://localhost:") ||
-    origin.startsWith("http://127.0.0.1:") ||
-    origin === "http://localhost" ||
-    origin === "http://127.0.0.1"
+    url.startsWith("https://") ||
+    url.startsWith("http://localhost:") ||
+    url.startsWith("http://localhost/") ||
+    url.startsWith("http://127.0.0.1:") ||
+    url.startsWith("http://127.0.0.1/")
   );
 }
 

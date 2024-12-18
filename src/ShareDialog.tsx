@@ -1,11 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle
+} from "@mui/material";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Modal from '@mui/material/Modal';
 import { Button, Checkbox, FormControl, FormControlLabel, FormGroup, IconButton, InputLabel, NativeSelect, TextField } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 import FolderIcon from '@mui/icons-material/Folder';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import CasinoIcon from '@mui/icons-material/Casino';
 import PasswordIcon from '@mui/icons-material/Password';
@@ -22,21 +27,6 @@ enum Status {
   Sharing,
   Editing,
 }
-
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  maxWidth: "80vw",
-  maxHeight: "80vh",
-  overflow: "auto",
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-};
 
 /**
  * Either filekey, or shareKey & shareObject must be provided.
@@ -112,28 +102,30 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
     }
   }, [shareKey, referer, shareObject, ttl]);
 
-  return <Modal open={open} onClose={onClose}>
-    <Box sx={style}>
-      <Typography sx={{ mb: 2 }} variant="h6" component="h6">
-        <TooltipIconButton title={status === Status.Creating ? "Create share" : "View / Update share"}
-          color={status === Status.Creating ? "disabled" : "primary"}>
-          <ShareIcon />
-        </TooltipIconButton>
-        <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
-          if (!targetIsDir) {
-            return
-          }
-          e.preventDefault();
-          onClose();
-          navigate(targetLink);
-        }}>{shareObject.key}</Button>
-        <Button title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
-          e.preventDefault();
-          onClose();
-          navigate(targetParentLink);
-        }}>Open parent</Button>
-      </Typography>
-      <div>
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+    <DialogTitle>
+      <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
+        color={status !== Status.Creating ? "primary" : "disabled"}
+        href={status !== Status.Creating ? link : ""}
+      >
+        <ShareIcon />
+      </TooltipIconButton>
+      <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
+        if (!targetIsDir) {
+          return
+        }
+        e.preventDefault();
+        onClose();
+        navigate(targetLink);
+      }}>{shareObject.key}</Button>
+      <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
+        e.preventDefault();
+        onClose();
+        navigate(targetParentLink);
+      }}><FolderOpenIcon /></IconButton>
+    </DialogTitle>
+    <DialogContent>
+      <Box sx={{ mt: 1 }}>
         <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth
           helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
           placeholder='Share name' InputProps={{
@@ -168,7 +160,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
                 </IconButton>
               </>
           }} />
-      </div>
+      </Box>
       <div>
         <TextField disabled={status === Status.Sharing} fullWidth
           helperText={`share password of username:password format`} value={shareObject.auth || ""}
@@ -287,8 +279,8 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         }
         <Button onClick={onClose} color='secondary'>Close</Button>
       </Typography>
-    </Box>
-  </Modal >;
+    </DialogContent>
+  </Dialog>;
 }
 
 function refer2list(referer?: string): string[] {

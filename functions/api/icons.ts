@@ -1,5 +1,5 @@
 import mime from "mime";
-import { extname } from "../../lib/commons";
+import { HEADER_AUTHED, extname } from "../../lib/commons";
 
 const SVG_HEADER = `<?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">`;
 
@@ -15,7 +15,7 @@ const icons: Record<string, string> = {
   ".pdf": ICON_PDF,
 };
 
-export function fallbackIconResponse(path: string): Response {
+export function fallbackIconResponse(path: string, color = "", sendHttp200 = false, authed = false): Response {
   const fileExt = extname(path).toLowerCase();
   const contentType = mime.getType(fileExt) || "";
   let icon = "";
@@ -26,10 +26,14 @@ export function fallbackIconResponse(path: string): Response {
   } else {
     icon = icons[fileExt] || DEFAULT_ICON;
   }
+  if (color) {
+    icon = `<svg fill="${color}"` + icon.slice(4);
+  }
   return new Response(SVG_HEADER + icon, {
-    status: 404,
+    status: sendHttp200 ? 200 : 404,
     headers: {
       "Content-Type": "image/svg+xml",
+      [HEADER_AUTHED]: authed ? "1" : "0",
     },
   });
 }

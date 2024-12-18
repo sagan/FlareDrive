@@ -1,6 +1,4 @@
-import { KEY_PREFIX_THUMBNAIL } from "../../lib/commons";
 import { responseNotFound, responsePreconditionsFailed } from "../commons";
-import { fallbackIconResponse } from "./icons";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestGet({ bucket, path, request }: RequestHandlerParams) {
@@ -9,9 +7,6 @@ export async function handleRequestGet({ bucket, path, request }: RequestHandler
     range: request.headers,
   });
   if (obj === null) {
-    if (path.startsWith(KEY_PREFIX_THUMBNAIL)) {
-      return fallbackIconResponse(new URL(request.url).searchParams.get("ext") || "");
-    }
     return responseNotFound();
   }
   if (!("body" in obj)) {
@@ -20,8 +15,5 @@ export async function handleRequestGet({ bucket, path, request }: RequestHandler
 
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
-  if (path.startsWith(KEY_PREFIX_THUMBNAIL)) {
-    headers.set("Cache-Control", "max-age=31536000");
-  }
   return new Response(obj.body, { headers });
 }

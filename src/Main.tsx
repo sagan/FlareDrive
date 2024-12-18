@@ -116,7 +116,7 @@ function Main({
       ) : (
         <DropZone
           onDrop={async (files) => {
-            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
+            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd != "/" ? cwd : "" })));
           }}
         >
           <FileGrid

@@ -1,3 +1,11 @@
 * {
   word-wrap: break-word;
 }
+
+/*
+ * https://github.com/igordanchenko/yet-another-react-lightbox style bug:
+ * when both captions and counter plugins are used, captions overlay with counters
+ */
+.yarl__slide_title {
+  padding-left: 40px;
+}

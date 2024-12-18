@@ -53,7 +53,6 @@ function App() {
   const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
   const [permission, setPermission] = useState<Permission>(Permission.RequireAuth);
 
-
   const location = useLocation();
   const navigate = useNavigate();
   const dirkey = path2Key(location.pathname)
@@ -63,12 +62,14 @@ function App() {
   }, [navigate])
 
   useEffect(() => {
-    document.title = cwd ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
+    document.title = cwd != "/" ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
   }, [cwd]);
 
   const fetchFiles = useCallback(() => {
     setLoading(true);
     setMultiSelected([]);
+    setFiles([]);
+    setPermission(Permission.Unknown);
     console.log("fetch", cwd)
     const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
     if (dirkey == SHARES_FOLDER_KEY) {
@@ -118,7 +119,7 @@ function App() {
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
             setShowProgressDialog={setShowProgressDialog}
           />
-          <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
+          <PathBreadcrumb permission={permission} path={dirkey} onCwdChange={setCwd} />
           {
             dirkey === SHARES_FOLDER_KEY
               ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
