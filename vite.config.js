@@ -83,6 +83,17 @@ export default defineConfig(async ({ command, mode }) => {
     await generateAssets(publicVariables);
   }
 
+  if (command == "build") {
+    console.log("generate wrangler.toml");
+    fs.writeFile(
+      path.join(__dirname, "wrangler.toml"),
+      `# wrangler.toml
+  compatibility_date = "2024-11-06"
+  compatibility_flags = [ "nodejs_compat" ]
+  `
+    );
+  }
+
   return {
     server: {
       proxy: {
