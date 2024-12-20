@@ -87,11 +87,12 @@ function UploadDrawer({
       }
       input.multiple = true;
       input.onchange = async () => {
-        if (!input.files) return;
+        if (!input.files) {
+          return;
+        }
         const files = Array.from(input.files);
-        uploadEnqueue(...files.map((file) => ({ file, basedir: cwd != "/" ? cwd : "" })));
+        uploadEnqueue(...files.map((file) => ({ file, basedir: cwd })));
         setOpen(false);
-        onUpload();
       };
       input.click();
     },

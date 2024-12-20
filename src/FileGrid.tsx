@@ -19,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { fileurl, extname, humanReadableSize, MIME_DIR, basename, THUMBNAIL_API } from "../lib/commons";
+import { fileUrl, humanReadableSize, MIME_DIR, basename, thumbnailUrl } from "../lib/commons";
 
 export interface FileItem {
   /**
@@ -48,12 +48,6 @@ export function isDirectory(file: FileItem) {
 
 function isImage(file: FileItem): boolean {
   return file.httpMetadata.contentType?.startsWith("image/")
-}
-
-function thumbnailUrl(file: FileItem, color: string, auth: string | null): string {
-  return `${THUMBNAIL_API}?digest=${file.customMetadata?.thumbnail || ""}`
-    + `&ext=${encodeURIComponent(extname(file.key))}&no404=1&color=${color}`
-    + `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`
 }
 
 function downloadFile(url: string) {
@@ -118,9 +112,9 @@ function FileGrid({
       const size = humanReadableSize(file.size)
       slideIndexes[file.key] = slides.length
       slides.push({
-        src: fileurl(file.key, auth),
+        src: fileUrl(file.key, auth),
         type: isImage(file) ? "image" : undefined,
-        thumbnail: thumbnailUrl(file, "white", auth),
+        thumbnail: thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "white", auth),
         title: name,
         description: `${name} (${size})`,
       })
@@ -150,7 +144,7 @@ function FileGrid({
               } else if (slideIndexes[file.key] !== undefined) {
                 setSlideIndex(slideIndexes[file.key]);
               } else {
-                downloadFile(fileurl(file.key, auth));
+                downloadFile(fileUrl(file.key, auth));
               }
             }}
             onContextMenu={(e) => {
@@ -164,7 +158,8 @@ function FileGrid({
           >
             <ListItemIcon>
               {(authed && file.customMetadata?.thumbnail ? (
-                <img src={thumbnailUrl(file, "", auth)} alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
+                <img src={thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "", auth)}
+                  alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
                 IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}
             </ListItemIcon>

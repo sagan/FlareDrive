@@ -100,7 +100,19 @@ export interface ShareObject {
    * optional, disable directory index page.
    */
   noindex?: boolean;
+
+  /**
+   * CORS policy. 0 or undefined - disable. 1 - enable.
+   */
+  cors?: number;
 }
+
+/**
+ * "Access-Control-Allow-Origin": "*"
+ */
+export const corsHeaders = new Headers({
+  "Access-Control-Allow-Origin": "*",
+});
 
 export function dirname(path: string): string {
   path = trimPrefixSuffix(path, "/");
@@ -244,6 +256,14 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
   }
 }
 
-export function fileurl(key: string, auth: string | null): string {
-  return `${WEBDAV_ENDPOINT}${key2Path(key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`;
+export function fileUrl(key: string, auth: string | null, origin = ""): string {
+  return `${origin}${WEBDAV_ENDPOINT}${key2Path(key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`;
+}
+
+export function thumbnailUrl(key: string, digest: string, color: string, auth: string | null): string {
+  return (
+    `${THUMBNAIL_API}?digest=${digest}` +
+    `&ext=${encodeURIComponent(extname(key))}&no404=1&color=${color}` +
+    `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`
+  );
 }

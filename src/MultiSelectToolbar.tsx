@@ -22,11 +22,11 @@ function MultiSelectToolbar({
   readonly: boolean
   multiSelected: string[];
   onClose: () => void;
-  getLink: (file: string) => string;
+  getLink: (key: string) => string;
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
-  onShare: (filekey: string) => void;
+  onShare: (key: string) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 

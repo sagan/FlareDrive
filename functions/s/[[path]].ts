@@ -13,7 +13,16 @@ import {
   responseForbidden,
   responseRedirect,
 } from "../commons";
-import { type ShareObject, path2Key, trimPrefix, MIME_DIR, ShareRefererMode, trimSuffix, cut } from "../../lib/commons";
+import {
+  type ShareObject,
+  path2Key,
+  trimPrefix,
+  MIME_DIR,
+  ShareRefererMode,
+  trimSuffix,
+  cut,
+  corsHeaders,
+} from "../../lib/commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -191,6 +200,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
+  if (data.cors) {
+    obj.writeHttpMetadata(corsHeaders);
+  }
   return new Response(obj.body, { headers });
 };
 

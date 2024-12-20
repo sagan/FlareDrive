@@ -55,14 +55,13 @@ function App() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const dirkey = path2Key(location.pathname)
-  const cwd = dirkey + "/"
+  const cwd = path2Key(location.pathname)
   const setCwd = useCallback((cwd: string) => {
     navigate(dirUrlPath(cwd));
   }, [navigate])
 
   useEffect(() => {
-    document.title = cwd != "/" ? `${cwd} - ${window.__SITENAME__}` : window.__SITENAME__
+    document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
   }, [cwd]);
 
   const fetchFiles = useCallback(() => {
@@ -72,16 +71,16 @@ function App() {
     setPermission(Permission.Unknown);
     console.log("fetch", cwd)
     const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
-    if (dirkey == SHARES_FOLDER_KEY) {
+    if (cwd == SHARES_FOLDER_KEY) {
       listShares(savedAuth).then(setShares).catch(e => {
         setShares([])
         setError(e)
       }).finally(() => setLoading(false))
       return
     }
-    fetchPath(dirkey, savedAuth).then(({ permission, auth, items }) => {
+    fetchPath(cwd, savedAuth).then(({ permission, auth, items }) => {
       setPermission(permission)
-      if (!dirkey) {
+      if (!cwd) {
         items = [...systemFolders, ...items]
       }
       setFiles(items);
@@ -119,9 +118,9 @@ function App() {
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
             setShowProgressDialog={setShowProgressDialog}
           />
-          <PathBreadcrumb permission={permission} path={dirkey} onCwdChange={setCwd} />
+          <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
           {
-            dirkey === SHARES_FOLDER_KEY
+            cwd === SHARES_FOLDER_KEY
               ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
               : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
                 permission={permission} authed={!!auth} auth={auth} files={files}

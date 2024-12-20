@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
+  DialogActions,
   DialogTitle
 } from "@mui/material";
 import Box from '@mui/material/Box';
@@ -103,7 +104,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   }, [shareKey, referer, shareObject, ttl]);
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-    <DialogTitle>
+    <DialogTitle sx={{ display: "flex" }}>
       <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
         color={status !== Status.Creating ? "primary" : "disabled"}
         href={status !== Status.Creating ? link : ""}
@@ -248,39 +249,43 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
           </>} value={referer} onChange={e => setReferer(e.target.value)}
         />
       </div>}
-      {targetIsDir && <div>
-        <FormGroup>
+      <Box sx={{ display: 'flex' }} >
+        <FormControlLabel label="Enable CORS" control={
+          <Checkbox checked={!!shareObject.cors} onChange={e => {
+            setShareObject({ ...shareObject, cors: +e.target.checked })
+          }} />} />
+        {targetIsDir &&
           <FormControlLabel label="Disable dir index" control={
             <Checkbox checked={shareObject.noindex || false} onChange={e => {
               setShareObject({ ...shareObject, noindex: e.target.checked })
             }} />} />
-        </FormGroup>
-      </div>}
-      {!!error && <Typography sx={{ mt: 2 }}>{error}</Typography>}
-      {status === Status.Editing && <Typography sx={{ mt: 2 }}>
+        }
+      </Box>
+      {!!error && <Typography>{error}</Typography>}
+      {status === Status.Editing && <Typography>
         Shared link: <a href={link}>{new URL(link).pathname}</a>
         {!!shareObject.expiration &&
           <span>&nbsp;(Link expires on {new Date(shareObject.expiration * 1000).toISOString()})</span>}
       </Typography>}
-      <Typography sx={{ mt: 2 }}>
-        <Button disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'>{
-          {
-            [Status.Creating]: "Create",
-            [Status.Sharing]: "Updating...",
-            [Status.Editing]: "Update",
-          }[status]
-        }</Button>
-        {
-          status != Status.Creating && <>
-            <CopyButton isLink text={link} disabled={status !== Status.Editing} color='primary'>Copy link</CopyButton>
-            <Button disabled={status !== Status.Editing} color='warning'
-              onClick={doDeleteShare} title="Delete share">Delete</Button>
-          </>
-        }
-        <Button onClick={onClose} color='secondary'>Close</Button>
-      </Typography>
     </DialogContent>
-  </Dialog>;
+    <DialogActions>
+      <Button disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'>{
+        {
+          [Status.Creating]: "Create",
+          [Status.Sharing]: "Updating...",
+          [Status.Editing]: "Update",
+        }[status]
+      }</Button>
+      {
+        status != Status.Creating && <>
+          <CopyButton isLink text={link} disabled={status !== Status.Editing} color='primary'>Copy link</CopyButton>
+          <Button disabled={status !== Status.Editing} color='warning'
+            onClick={doDeleteShare} title="Delete share">Delete</Button>
+        </>
+      }
+      <Button onClick={onClose} color='secondary'>Close</Button>
+    </DialogActions>
+  </Dialog >;
 }
 
 function refer2list(referer?: string): string[] {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, } from "@mui/material";
-import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, compareBoolean, compareString, key2Path, trimPrefixSuffix } from "../lib/commons";
+import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, compareBoolean, compareString, fileUrl, key2Path, trimPrefixSuffix } from "../lib/commons";
 import FileGrid, { FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
@@ -116,7 +116,7 @@ function Main({
       ) : (
         <DropZone
           onDrop={async (files) => {
-            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd != "/" ? cwd : "" })));
+            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
           }}
         >
           <FileGrid
@@ -135,16 +135,12 @@ function Main({
       <MultiSelectToolbar
         readonly={!authed}
         multiSelected={multiSelected}
-        getLink={(file: string) => {
-          let link = location.origin + WEBDAV_ENDPOINT + key2Path(file);
-          if (auth && permission == Permission.RequireAuth) {
-            link += "?auth=" + encodeURIComponent(auth)
-          }
-          return link
-        }}
-        onShare={(filekey: string) => {
-          const file = files.find(f => f.key === filekey)
-          setSharing(filekey + (file?.httpMetadata.contentType === MIME_DIR ? "/" : ""))
+        getLink={
+          (key: string) => fileUrl(key, auth && permission == Permission.RequireAuth ? auth : "", location.origin)
+        }
+        onShare={(key: string) => {
+          const file = files.find(f => f.key === key)
+          setSharing(key + (file?.httpMetadata.contentType === MIME_DIR ? "/" : ""))
         }}
         onClose={() => setMultiSelected([])}
         onRename={async () => {
@@ -153,11 +149,11 @@ function Main({
           if (!newName || oldName === newName) {
             return;
           }
-          await copyPaste(cwd + oldName, cwd + newName, auth, true);
+          await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, auth, true);
           fetchFiles();
         }}
         onMove={async () => {
-          let dir = cwd ? cleanPath(cwd) : "/";
+          let dir = cwd || "/";
           let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
           if (!newdir) {
             return;
@@ -171,7 +167,7 @@ function Main({
           }
           for (const file of multiSelected) {
             const name = basename(file);
-            const src = cwd + name;
+            const src = (cwd ? cwd + "/" : "") + name;
             const dst = trimPrefixSuffix(newdir + name, "/");
             await copyPaste(src, dst, auth, true);
           }
