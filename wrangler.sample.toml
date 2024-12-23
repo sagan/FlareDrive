@@ -11,7 +11,7 @@
 #   npm run cfdev
 # It's using Wrangler: https://developers.cloudflare.com/workers/wrangler/
 # wrangler.toml: https://developers.cloudflare.com/workers/wrangler/configuration/
-compatibility_date = "2024-11-06"
+compatibility_date = "2024-12-03"
 name = "flaredrive"
 pages_build_output_dir = "dist"
 

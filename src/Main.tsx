@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, } from "@mui/material";
-import { MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath, compareBoolean, compareString, fileUrl, key2Path, trimPrefixSuffix } from "../lib/commons";
+import { MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath, compareBoolean, compareString, fileUrl, key2Path, trimPrefixSuffix } from "../lib/commons";
 import FileGrid, { FileItem, isDirectory } from "./FileGrid";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
@@ -74,6 +74,8 @@ function Main({
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
 
+  const now = +new Date;
+
   useEffect(() => {
     if (!transferQueue.length) {
       return;
@@ -121,6 +123,7 @@ function Main({
         >
           <FileGrid
             authed={authed}
+            permission={permission}
             auth={auth}
             files={filteredFiles}
             onCwdChange={(newCwd: string) => setCwd(newCwd)}
@@ -136,7 +139,8 @@ function Main({
         readonly={!authed}
         multiSelected={multiSelected}
         getLink={
-          (key: string) => fileUrl(key, auth && permission == Permission.RequireAuth ? auth : "", location.origin)
+          (key: string) => fileUrl(key, auth && permission == Permission.RequireAuth ? auth : "",
+            now + PRIVATE_URL_TTL, location.origin)
         }
         onShare={(key: string) => {
           const file = files.find(f => f.key === key)

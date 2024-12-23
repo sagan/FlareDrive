@@ -19,7 +19,10 @@ import {
   Typography,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { fileUrl, humanReadableSize, MIME_DIR, basename, thumbnailUrl } from "../lib/commons";
+import {
+  fileUrl, humanReadableSize, MIME_DIR,
+  basename, thumbnailUrl, PRIVATE_URL_TTL, Permission
+} from "../lib/commons";
 
 export interface FileItem {
   /**
@@ -46,7 +49,7 @@ export function isDirectory(file: FileItem) {
   return file.httpMetadata?.contentType === MIME_DIR;
 }
 
-function isImage(file: FileItem): boolean {
+export function isImage(file: FileItem): boolean {
   return file.httpMetadata.contentType?.startsWith("image/")
 }
 
@@ -84,6 +87,7 @@ function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: Cont
 
 function FileGrid({
   authed,
+  permission,
   auth,
   files,
   onCwdChange,
@@ -92,6 +96,7 @@ function FileGrid({
   emptyMessage,
 }: {
   authed: boolean;
+  permission: Permission;
   auth: string | null;
   files: FileItem[];
   onCwdChange: (newCwd: string) => void;
@@ -100,6 +105,8 @@ function FileGrid({
   emptyMessage?: React.ReactNode;
 }) {
   const [slideIndex, setSlideIndex] = useState(-1);
+
+  const now = +new Date
 
   const { slides, slideIndexes } = useMemo(() => {
     const slides: SlideImage[] = []
@@ -112,9 +119,9 @@ function FileGrid({
       const size = humanReadableSize(file.size)
       slideIndexes[file.key] = slides.length
       slides.push({
-        src: fileUrl(file.key, auth),
+        src: fileUrl(file.key, auth && permission == Permission.RequireAuth ? auth : "", now + PRIVATE_URL_TTL),
         type: isImage(file) ? "image" : undefined,
-        thumbnail: thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "white", auth),
+        thumbnail: thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "white", auth, now + PRIVATE_URL_TTL),
         title: name,
         description: `${name} (${size})`,
       })
@@ -144,7 +151,8 @@ function FileGrid({
               } else if (slideIndexes[file.key] !== undefined) {
                 setSlideIndex(slideIndexes[file.key]);
               } else {
-                downloadFile(fileUrl(file.key, auth));
+                downloadFile(fileUrl(file.key, auth && permission == Permission.RequireAuth ? auth : "",
+                  now + PRIVATE_URL_TTL));
               }
             }}
             onContextMenu={(e) => {
@@ -158,7 +166,7 @@ function FileGrid({
           >
             <ListItemIcon>
               {(authed && file.customMetadata?.thumbnail ? (
-                <img src={thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "", auth)}
+                <img src={thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "", auth, now + PRIVATE_URL_TTL)}
                   alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
                 IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}

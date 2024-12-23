@@ -32,7 +32,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -50,7 +50,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -82,7 +82,7 @@ export const onRequestDelete: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -107,7 +107,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const requestMeta = searchParams.get("meta");
 
   if (requestMeta) {
-    const failResponse = checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+    const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
     if (failResponse) {
       return failResponse;
     }
@@ -127,7 +127,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
   if (data.auth) {
     const [user, pass] = cut(data.auth, ":");
-    const failRespose = checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
+    const failRespose = await checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
     if (failRespose) {
       return failRespose;
     }
@@ -201,7 +201,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   if (data.cors) {
-    obj.writeHttpMetadata(corsHeaders);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      headers.set(key, value);
+    }
   }
   return new Response(obj.body, { headers });
 };

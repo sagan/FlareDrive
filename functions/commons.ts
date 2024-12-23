@@ -1,4 +1,15 @@
-import { KEY_PREFIX_PRIVATE } from "../lib/commons";
+<<<<<<< HEAD
+import {
+  KEY_PREFIX_PRIVATE,
+  KEY_PREFIX_THUMBNAIL,
+  sha256Blob,
+  hmacSha256Verify,
+  key2Path,
+  str2int,
+} from "../lib/commons";
+=======
+import { KEY_PREFIX_PRIVATE, hmacSha256Verify, str2int } from "../lib/commons";
+>>>>>>> 0bc506bbba11926acd1c7bcfad8f8556d465964c
 
 export type FdCfFuncContext = EventContext<
   {
@@ -6,6 +17,12 @@ export type FdCfFuncContext = EventContext<
     WEBDAV_PASSWORD: string;
     PUBLIC_PREFIX?: string;
     PUBLIC_DIR_PREFIX?: string;
+    /**
+     * optional bucket public access url with trailing /, e.g. "http://bucket-secret.example.com/".
+     * It is suggested to keep this url secret (choose a private & complex custom sub domain).
+     * It's only used by functions/* and will not be leaked to front end.
+     */
+    BUCKET_URL?: string;
     SITENAME?: string;
     BUCKET: R2Bucket;
     KV?: KVNamespace;
@@ -111,22 +128,40 @@ export function htmlResponse(html: string) {
  * @param pass
  * @returns
  */
-export function checkAuthFailure(request: Request, user: string, pass: string, realm = "WebDAV"): Response | null {
+export async function checkAuthFailure(
+  request: Request,
+  user: string,
+  pass: string,
+  realm = "WebDAV"
+): Promise<Response | null> {
   if (!user && !pass) {
     return responseForbidden();
   }
 
-  const res = new Response("Unauthorized", {
-    status: 401,
-    headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
-  });
-  const auth = new URL(request.url).searchParams.get("auth") || request.headers.get("Authorization");
-  if (!auth) {
-    return res;
-  }
+  const url = new URL(request.url);
+  const searchParams = url.searchParams;
+  const auth = searchParams.get("auth") || request.headers.get("Authorization");
+  const token = searchParams.get("token");
   const expectedAuth = `Basic ${btoa(`${user}:${pass}`)}`;
-  if (auth !== expectedAuth) {
-    return res;
+  let authed = false;
+
+  if (token) {
+    const expires = str2int(searchParams.get("expires"));
+    if (expires <= 0 || expires > +new Date()) {
+      searchParams.delete("token");
+      searchParams.sort();
+      const payload = url.pathname + (searchParams.size ? "?" : "") + searchParams.toString();
+      authed = await hmacSha256Verify(expectedAuth, token, payload);
+    }
+  } else {
+    authed = auth === expectedAuth;
+  }
+
+  if (!authed) {
+    return new Response("Unauthorized", {
+      status: 401,
+      headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
+    });
   }
   return null;
 }
@@ -165,4 +200,67 @@ export async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; 
   }
 
   return objects;
+}
+
+export async function generateFileThumbnail({
+  auth,
+  bucket,
+  key,
+  force,
+  urlPrefix,
+  thumbSize,
+}: {
+  auth?: string;
+  bucket: R2Bucket;
+  key: string;
+  force?: boolean;
+  urlPrefix: string;
+  thumbSize: number;
+}): Promise<number> {
+  if (!key) {
+    return 1;
+  }
+  const file = await bucket.get(key);
+  if (!file || !file.httpMetadata?.contentType?.startsWith("image/")) {
+    return 2;
+  }
+  let thumbFile: R2Object | null = null;
+  if (file.customMetadata?.thumbnail) {
+    const thumbKey = KEY_PREFIX_THUMBNAIL + file.customMetadata?.thumbnail;
+    thumbFile = await bucket.head(thumbKey);
+    if (thumbFile && !force) {
+      return 3;
+    }
+  }
+  const fileUrl = `${urlPrefix}${key2Path(key)}`;
+  const thumbResponse = await fetch(fileUrl, {
+    headers: {
+      ...(auth ? { Authorization: auth } : {}),
+    },
+    cf: { image: { width: thumbSize, height: thumbSize } },
+  });
+  if (!thumbResponse.ok) {
+    throw new Error(`status=${thumbResponse.status}`);
+  }
+  let thumbResponseSize = str2int(thumbResponse.headers.get("Content-Length"));
+  if (!thumbResponseSize || thumbResponseSize >= file.size) {
+    return 4;
+  }
+  const thumbContents = await thumbResponse.blob();
+  const thumbContentsDigest = await sha256Blob(thumbContents);
+  if (thumbFile && file.customMetadata?.thumbnail === thumbContentsDigest) {
+    // new thumbnail file is same as old
+    return 5;
+  }
+  // The only way to modify object metadata is to re-upload the object and set the metadata.
+  await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponse.headers });
+  await bucket.put(key, file.body, {
+    httpMetadata: file.httpMetadata,
+    customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),
+  });
+  if (thumbFile) {
+    // delete old thumbnail file
+    await bucket.delete(thumbFile.key);
+  }
+  return 0;
 }

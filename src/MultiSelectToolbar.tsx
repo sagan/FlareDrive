@@ -9,7 +9,7 @@ import {
 import LinkIcon from '@mui/icons-material/Link';
 import { CopyButton } from "./components";
 
-function MultiSelectToolbar({
+export default function MultiSelectToolbar({
   readonly,
   multiSelected,
   onClose,
@@ -96,5 +96,3 @@ function MultiSelectToolbar({
     </Slide >
   );
 }
-
-export default MultiSelectToolbar;

@@ -13,6 +13,9 @@ import {
   HEADER_FD_THUMBNAIL,
   KEY_PREFIX_THUMBNAIL,
   MIME_XML,
+  THUMBNAIL_SIZE,
+  sha256Blob,
+  THUMBNAIL_API,
 } from "../../lib/commons";
 import { FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
@@ -66,8 +69,6 @@ export async function fetchPath(path: string, auth?: string | null) {
   return { permission, authed, auth, items };
 }
 
-const THUMBNAIL_SIZE = 144;
-
 export async function generateThumbnail(file: File) {
   const canvas = document.createElement("canvas");
   canvas.width = THUMBNAIL_SIZE;
@@ -112,13 +113,6 @@ export async function generateThumbnail(file: File) {
   const thumbnailBlob = await new Promise<Blob>((resolve) => canvas.toBlob((blob) => resolve(blob!)));
 
   return thumbnailBlob;
-}
-
-export async function blobDigest(blob: Blob) {
-  const digest = await crypto.subtle.digest("SHA-1", await blob.arrayBuffer());
-  const digestArray = Array.from(new Uint8Array(digest));
-  const digestHex = digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return digestHex;
 }
 
 export const SIZE_LIMIT = 100 * 1000 * 1000; // 100MB
@@ -277,7 +271,7 @@ export async function processTransferTask({
   if (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf") {
     try {
       const thumbnailBlob = await generateThumbnail(file);
-      const digestHex = await blobDigest(thumbnailBlob);
+      const digestHex = await sha256Blob(thumbnailBlob);
 
       const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}`;
       try {
@@ -314,5 +308,19 @@ export async function processTransferTask({
       body: file,
       onUploadProgress: onTaskProgress,
     });
+  }
+}
+
+export async function generateThumbnails(keys: string[], auth: string | null, force: boolean) {
+  const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: auth } : {}),
+    },
+    body: JSON.stringify({ keys }),
+  });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
   }
 }

@@ -1,7 +1,23 @@
+import { hmac_sha256 } from "./sha256";
+
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
+
+export const THUMBNAIL_SIZE = 144;
+
+/**
+ * private file url default valid time in milliseconds.
+ * 86400 * 1000 = 1d.
+ */
+export const PRIVATE_URL_TTL = 86400 * 1000;
+
+/**
+ * private file url default valid time in milliseconds.
+ * 86400 * 1000 = 1d.
+ */
+export const PRIVATE_URL_TTL = 86400 * 1000;
 
 /**
  * A password of [a-zA-Z0-9]{length} is considered strong enough.
@@ -110,9 +126,9 @@ export interface ShareObject {
 /**
  * "Access-Control-Allow-Origin": "*"
  */
-export const corsHeaders = new Headers({
+export const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-});
+};
 
 export function dirname(path: string): string {
   path = trimPrefixSuffix(path, "/");
@@ -256,14 +272,90 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
   }
 }
 
-export function fileUrl(key: string, auth: string | null, origin = ""): string {
-  return `${origin}${WEBDAV_ENDPOINT}${key2Path(key)}` + `${auth ? "?auth=" + encodeURIComponent(auth) : ""}`;
+export function encodeHex(array: Uint8Array): string {
+  let result = "";
+  for (const value of array) {
+    result += value.toString(16).padStart(2, "0");
+  }
+  return result;
 }
 
-export function thumbnailUrl(key: string, digest: string, color: string, auth: string | null): string {
+export function decodeHex(str: string): Uint8Array {
+  const uint8array = new Uint8Array(Math.ceil(str.length / 2));
+  for (let i = 0; i < str.length; ) {
+    uint8array[i / 2] = Number.parseInt(str.slice(i, (i += 2)), 16);
+  }
+  return uint8array;
+}
+
+async function getHMACKey(key: string): Promise<CryptoKey> {
+  const cryptokey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(key),
+    {
+      name: "HMAC",
+      hash: { name: "SHA-256" },
+    },
+    false,
+    ["sign", "verify"]
+  );
+  return cryptokey;
+}
+
+export async function hmacSha256Sign(key: string, payload: string): Promise<string> {
+  const singkey = await getHMACKey(key);
+  const signature = await crypto.subtle.sign("HMAC", singkey, new TextEncoder().encode(payload));
+  return encodeHex(new Uint8Array(signature));
+}
+
+export function hmacSha256SignSync(key: string, payload: string): string {
+  const signature = hmac_sha256(key, payload);
+  return encodeHex(new Uint8Array(signature));
+}
+
+export async function hmacSha256Verify(key: string, signature: string, payload: string): Promise<boolean> {
+  const singkey = await getHMACKey(key);
+  const verified = await crypto.subtle.verify("HMAC", singkey, decodeHex(signature), new TextEncoder().encode(payload));
+  return verified;
+}
+
+export function fileUrl(key: string, auth: string | null, expires = 0, origin = ""): string {
+  const searchParams = new URLSearchParams();
+  if (auth && expires > 0) {
+    searchParams.set("expires", `${expires}`);
+  }
+  searchParams.sort();
+  const url = `${WEBDAV_ENDPOINT}${key2Path(key)}` + (searchParams.size ? "?" : "") + searchParams.toString();
+  const signature = auth ? hmacSha256SignSync(auth, url) : "";
   return (
-    `${THUMBNAIL_API}?digest=${digest}` +
-    `&ext=${encodeURIComponent(extname(key))}&no404=1&color=${color}` +
-    `${auth ? "&auth=" + encodeURIComponent(auth) : ""}`
+    origin + url + `${signature ? (searchParams.size ? "&" : "?") + "token=" + encodeURIComponent(signature) : ""}`
   );
 }
+
+export function thumbnailUrl(key: string, digest: string, color: string, auth: string | null, expires = 0): string {
+  const searchParams = new URLSearchParams(
+    `digest=${digest}&no404=1&color=${color}` + `&ext=${encodeURIComponent(extname(key))}`
+  );
+  if (auth && expires > 0) {
+    searchParams.set("expires", `${expires}`);
+  }
+  searchParams.sort();
+  const url = THUMBNAIL_API + (searchParams.size ? "?" : "") + searchParams.toString();
+  const signature = auth ? hmacSha256SignSync(auth, url) : "";
+  return url + `${signature ? (searchParams.size ? "&" : "?") + "token=" + encodeURIComponent(signature) : ""}`;
+}
+<<<<<<< HEAD
+
+/**
+ * Return sha-256 digest hex string of a blob
+ * @param blob
+ * @returns
+ */
+export async function sha256Blob(blob: Blob) {
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  const digestArray = Array.from(new Uint8Array(digest));
+  const digestHex = digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return digestHex;
+}
+=======
+>>>>>>> 0bc506bbba11926acd1c7bcfad8f8556d465964c

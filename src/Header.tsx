@@ -8,11 +8,12 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { Permission, SIGNOUT_API } from "../lib/commons";
 import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
 
-function Header({
+export default function Header({
   permission,
   authed,
   search,
   onSearchChange,
+  onGenerateThumbnails,
   setShowProgressDialog,
   fetchFiles,
 }: {
@@ -20,6 +21,7 @@ function Header({
   authed: boolean;
   search: string;
   onSearchChange: (newSearch: string) => void;
+  onGenerateThumbnails: (() => void) | null;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
 }) {
@@ -70,6 +72,10 @@ function Header({
       >
         <MenuItem>View as</MenuItem>
         <MenuItem>Sort by</MenuItem>
+        {authed && <MenuItem disabled={!onGenerateThumbnails} onClick={() => {
+          setAnchorEl(null);
+          onGenerateThumbnails!();
+        }}>Generate thumbnails</MenuItem>}
         <MenuItem
           onClick={() => {
             setAnchorEl(null);
@@ -107,4 +113,3 @@ function Header({
   );
 }
 
-export default Header;

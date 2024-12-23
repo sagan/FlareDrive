@@ -1,4 +1,3 @@
-import { trimPrefixSuffix } from "../lib/commons";
 import { SyntheticEvent } from "react";
 
 export const PreventDefaultEventCb: React.EventHandler<SyntheticEvent> = function (e) {
