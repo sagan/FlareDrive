@@ -1,4 +1,4 @@
-import { KEY_PREFIX_PRIVATE, MIME_DIR, Permission, trimPrefixSuffix } from "../../lib/commons";
+import { MIME_DIR, Permission, trimPrefixSuffix } from "../../lib/commons";
 import { type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {

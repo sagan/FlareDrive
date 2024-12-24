@@ -1,6 +1,8 @@
 import {
   HEADER_AUTH,
   HEADER_AUTHED,
+  HEADER_AUTHORIZATION,
+  HEADER_CONTENT_TYPE,
   HEADER_INAPP,
   HEADER_PERMISSION,
   isHttpsOrLocalUrl,
@@ -78,13 +80,13 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
 
   let sentBackAuthHeader: string | null = null;
   if (authed && str2int(request.headers.get(HEADER_INAPP)) && isHttpsOrLocalUrl(request.url)) {
-    sentBackAuthHeader = request.headers.get("Authorization");
+    sentBackAuthHeader = request.headers.get(HEADER_AUTHORIZATION);
   }
 
   return new Response(responseTemplate.replace("{{items}}", items.join("")), {
     status: 207,
     headers: {
-      "Content-Type": MIME_XML,
+      [HEADER_CONTENT_TYPE]: MIME_XML,
       [HEADER_PERMISSION]: `${permission}`,
       [HEADER_AUTHED]: `${authed ? 1 : 0}`,
       ...(sentBackAuthHeader

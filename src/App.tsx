@@ -16,7 +16,7 @@ import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
-import { isImage, type FileItem } from "./FileGrid";
+import { isImage, type FileItem, isDirectory } from "./FileGrid";
 import { fetchPath, generateThumbnails } from "./app/transfer";
 import ShareManager from "./ShareManager";
 import { listShares } from "./app/share";
@@ -47,7 +47,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
-  const [generateThumbnailsKeys, setGenerateThumbnailsKeys] = React.useState<string[]>([]);
+  const [generateThumbnailFiles, setGenerateThumbnailsFiles] = React.useState<FileItem[]>([])
   const [error, setError] = useState<Error | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
@@ -105,8 +105,6 @@ function App() {
     }).finally(() => setLoading(false));
   }, [cwd, setError]);
 
-  const imageKeys = files.filter(isImage).map(f => f.key);
-
   useEffect(() => {
     fetchFiles();
   }, [fetchFiles]);
@@ -120,7 +118,14 @@ function App() {
           <Header
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
-            onGenerateThumbnails={imageKeys.length ? () => setGenerateThumbnailsKeys(imageKeys) : null}
+            onGenerateThumbnails={() => {
+              let generateThumbnailFiles = files.filter(f => !isDirectory(f))
+              if (multiSelected.length > 0) {
+                generateThumbnailFiles = generateThumbnailFiles.filter(f => multiSelected.includes(f.key))
+              }
+              console.log("dd", multiSelected, generateThumbnailFiles)
+              setGenerateThumbnailsFiles(generateThumbnailFiles)
+            }}
             setShowProgressDialog={setShowProgressDialog}
           />
           <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
@@ -142,9 +147,9 @@ function App() {
           open={showProgressDialog}
           onClose={() => setShowProgressDialog(false)}
         />
-        <GenerateThumbnailsDialog open={generateThumbnailsKeys.length > 0} onError={e => alert(e)}
-          onClose={() => setGenerateThumbnailsKeys([])} auth={auth} onDone={fetchFiles} keys={generateThumbnailsKeys}>
-        </GenerateThumbnailsDialog>
+        {generateThumbnailFiles.length > 0 && <GenerateThumbnailsDialog open={true} onError={e => alert(e)} auth={auth}
+          onClose={() => setGenerateThumbnailsFiles([])} onDone={fetchFiles} files={generateThumbnailFiles}>
+        </GenerateThumbnailsDialog>}
       </TransferQueueProvider>
     </ThemeProvider>
   );

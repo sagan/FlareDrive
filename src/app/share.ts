@@ -1,4 +1,4 @@
-import { ShareObject, SHARE_ENDPOINT, key2Path } from "../../lib/commons";
+import { ShareObject, SHARE_ENDPOINT, key2Path, HEADER_AUTHORIZATION, HEADER_CONTENT_TYPE } from "../../lib/commons";
 
 /**
  * @returns share project keys
@@ -7,7 +7,7 @@ export async function listShares(auth: string | null): Promise<string[]> {
   const res = await fetch(`${SHARE_ENDPOINT}`, {
     method: "POST",
     headers: {
-      ...(auth ? { Authorization: auth } : {}),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
   if (!res.ok) {
@@ -21,8 +21,8 @@ export async function createShare(key: string, share: ShareObject, auth: string 
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
     method: "PUT",
     headers: {
-      "Content-Type": "application/json",
-      ...(auth ? { Authorization: auth } : {}),
+      [HEADER_CONTENT_TYPE]: "application/json",
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
     body: JSON.stringify(share),
   });
@@ -36,7 +36,7 @@ export async function deleteShare(key: string, auth: string | null): Promise<voi
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
     method: "DELETE",
     headers: {
-      ...(auth ? { Authorization: auth } : {}),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
   if (!res.ok) {
@@ -48,7 +48,7 @@ export async function deleteShare(key: string, auth: string | null): Promise<voi
 export async function getShare(key: string, auth: string | null): Promise<ShareObject> {
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?meta=1`, {
     headers: {
-      ...(auth ? { Authorization: auth } : {}),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
   if (!res.ok) {

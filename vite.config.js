@@ -70,7 +70,7 @@ export default defineConfig(async ({ command, mode }) => {
     try {
       // CF wrangler backend use .dev.vars in dev mode.
       // https://developers.cloudflare.com/workers/configuration/environment-variables/
-      fs.copyFile(path.join(__dirname, ".env.local"), path.join(__dirname, ".dev.vars"));
+      await fs.copyFile(path.join(__dirname, ".env.local"), path.join(__dirname, ".dev.vars"));
     } catch (e) {}
   }
 

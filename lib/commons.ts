@@ -8,10 +8,27 @@ export const SIGNOUT_API = "/api/signout";
 export const THUMBNAIL_SIZE = 144;
 
 /**
- * private file url default valid time in milliseconds.
- * 86400 * 1000 = 1d.
+ * thumbnail flag query variable. If is 1, current request is read / update the thumbnail of target object.
  */
-export const PRIVATE_URL_TTL = 86400 * 1000;
+export const THUMBNAIL_VARIABLE = "thumbnail";
+
+export const THUMBNAIL_NO404_VARIABLE = "thumbnailNo404";
+
+export const THUMBNAIL_COLOR_VARIABLE = "thumbnailColor";
+
+export const EXPIRES_VARIABLE = "expires";
+
+export const TOKEN_VARIABLE = "token";
+
+export const AUTH_VARIABLE = "auth";
+
+export const DOWNLOAD_VARIABLE = "download";
+
+/**
+ * These query string variables do not participate in signing:
+ * ["token"]
+ */
+export const NOSIGN_VARIABLES: string[] = [TOKEN_VARIABLE];
 
 /**
  * private file url default valid time in milliseconds.
@@ -44,6 +61,10 @@ export const HEADER_PERMISSION = "X-Permission";
 export const HEADER_INAPP = "X-In-App";
 
 export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
+
+export const HEADER_AUTHORIZATION = "Authorization";
+
+export const HEADER_CONTENT_TYPE = "Content-Type";
 
 /**
  * Sent back by server. The client sent "Authorization" header value.
@@ -319,32 +340,64 @@ export async function hmacSha256Verify(key: string, signature: string, payload: 
   return verified;
 }
 
-export function fileUrl(key: string, auth: string | null, expires = 0, origin = ""): string {
-  const searchParams = new URLSearchParams();
-  if (auth && expires > 0) {
-    searchParams.set("expires", `${expires}`);
+function signUrl({
+  key,
+  pathname,
+  searchParams,
+  origin = "",
+}: {
+  key: string;
+  pathname: string;
+  searchParams?: URLSearchParams;
+  origin?: string;
+}): string {
+  const signSearchParams = new URLSearchParams(searchParams);
+  for (const param of NOSIGN_VARIABLES) {
+    signSearchParams.delete(param);
   }
-  searchParams.sort();
-  const url = `${WEBDAV_ENDPOINT}${key2Path(key)}` + (searchParams.size ? "?" : "") + searchParams.toString();
-  const signature = auth ? hmacSha256SignSync(auth, url) : "";
-  return (
-    origin + url + `${signature ? (searchParams.size ? "&" : "?") + "token=" + encodeURIComponent(signature) : ""}`
-  );
+  signSearchParams.sort();
+  const payload = pathname + (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
+  const signature = hmacSha256SignSync(key, payload);
+  const qs = searchParams ? searchParams.toString() : "";
+  return `${origin}${pathname}?${qs}${qs ? "&" : ""}${TOKEN_VARIABLE}=${encodeURIComponent(signature)}`;
 }
 
-export function thumbnailUrl(key: string, digest: string, color: string, auth: string | null, expires = 0): string {
-  const searchParams = new URLSearchParams(
-    `digest=${digest}&no404=1&color=${color}` + `&ext=${encodeURIComponent(extname(key))}`
-  );
+export function fileUrl({
+  key,
+  auth,
+  expires = 0,
+  origin = "",
+  thumbnail = false,
+  thumbnailNo404 = false,
+  thumbnailColor = "",
+}: {
+  key: string;
+  auth: string | null;
+  expires?: number;
+  origin?: string;
+  thumbnail?: boolean;
+  thumbnailNo404?: boolean;
+  thumbnailColor?: string;
+}): string {
+  const searchParams = new URLSearchParams();
   if (auth && expires > 0) {
-    searchParams.set("expires", `${expires}`);
+    searchParams.set(EXPIRES_VARIABLE, `${expires}`);
   }
-  searchParams.sort();
-  const url = THUMBNAIL_API + (searchParams.size ? "?" : "") + searchParams.toString();
-  const signature = auth ? hmacSha256SignSync(auth, url) : "";
-  return url + `${signature ? (searchParams.size ? "&" : "?") + "token=" + encodeURIComponent(signature) : ""}`;
+  if (thumbnail) {
+    searchParams.set(THUMBNAIL_VARIABLE, "1");
+  }
+  if (thumbnailNo404) {
+    searchParams.set(THUMBNAIL_NO404_VARIABLE, "1");
+  }
+  if (thumbnailColor) {
+    searchParams.set(THUMBNAIL_COLOR_VARIABLE, thumbnailColor);
+  }
+  const pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
+  if (!auth) {
+    return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
+  }
+  return signUrl({ key: auth, pathname, searchParams, origin });
 }
-<<<<<<< HEAD
 
 /**
  * Return sha-256 digest hex string of a blob
@@ -357,5 +410,11 @@ export async function sha256Blob(blob: Blob) {
   const digestHex = digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   return digestHex;
 }
-=======
->>>>>>> 0bc506bbba11926acd1c7bcfad8f8556d465964c
+
+export function headers2Obj(headers: Headers): Record<string, string> {
+  let obj: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    obj[key] = value;
+  });
+  return obj;
+}

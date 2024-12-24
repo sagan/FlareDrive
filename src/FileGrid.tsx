@@ -13,16 +13,14 @@ import {
   Box,
   Button,
   Grid,
+  Link,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Typography,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import {
-  fileUrl, humanReadableSize, MIME_DIR,
-  basename, thumbnailUrl, PRIVATE_URL_TTL, Permission
-} from "../lib/commons";
+import { fileUrl, humanReadableSize, MIME_DIR, basename, PRIVATE_URL_TTL, Permission } from "../lib/commons";
 
 export interface FileItem {
   /**
@@ -54,7 +52,10 @@ export function isImage(file: FileItem): boolean {
 }
 
 function downloadFile(url: string) {
-  window.open(url, "_blank", "noopener,noreferrer")
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = ""
+  a.click();
 }
 
 function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: ContainerRect }) {
@@ -69,7 +70,7 @@ function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: Cont
     color: "white", overflow: "auto",
   }}>
     <Box sx={{ mb: 1 }}>
-      <Button variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+      <Button download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
         e.preventDefault()
         downloadFile(src)
       }}>
@@ -77,7 +78,7 @@ function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: Cont
       </Button>
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
-      {slide.description}
+      <Link href={src}>{slide.description}</Link>
     </Typography>
     <Box>
       <img src={slide.thumbnail} width={128} height={128} />
@@ -119,9 +120,19 @@ function FileGrid({
       const size = humanReadableSize(file.size)
       slideIndexes[file.key] = slides.length
       slides.push({
-        src: fileUrl(file.key, auth && permission == Permission.RequireAuth ? auth : "", now + PRIVATE_URL_TTL),
+        src: fileUrl({
+          key: file.key,
+          auth: auth && permission == Permission.RequireAuth ? auth : "",
+          expires: now + PRIVATE_URL_TTL
+        }),
         type: isImage(file) ? "image" : undefined,
-        thumbnail: thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "white", auth, now + PRIVATE_URL_TTL),
+        thumbnail: fileUrl({
+          key: file.key,
+          auth: auth && permission == Permission.RequireAuth ? auth : "",
+          expires: now + PRIVATE_URL_TTL,
+          thumbnailColor: "white",
+          thumbnail: true,
+        }),
         title: name,
         description: `${name} (${size})`,
       })
@@ -151,8 +162,11 @@ function FileGrid({
               } else if (slideIndexes[file.key] !== undefined) {
                 setSlideIndex(slideIndexes[file.key]);
               } else {
-                downloadFile(fileUrl(file.key, auth && permission == Permission.RequireAuth ? auth : "",
-                  now + PRIVATE_URL_TTL));
+                downloadFile(fileUrl({
+                  key: file.key,
+                  auth: auth && permission == Permission.RequireAuth ? auth : "",
+                  expires: now + PRIVATE_URL_TTL
+                }));
               }
             }}
             onContextMenu={(e) => {
@@ -165,8 +179,13 @@ function FileGrid({
             sx={{ userSelect: "none" }}
           >
             <ListItemIcon>
-              {(authed && file.customMetadata?.thumbnail ? (
-                <img src={thumbnailUrl(file.key, file.customMetadata?.thumbnail || "", "", auth, now + PRIVATE_URL_TTL)}
+              {(file.customMetadata?.thumbnail ? (
+                <img src={fileUrl({
+                  key: file.key,
+                  auth: auth && permission == Permission.RequireAuth ? auth : "",
+                  expires: now + PRIVATE_URL_TTL,
+                  thumbnail: true,
+                })}
                   alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
                 IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}

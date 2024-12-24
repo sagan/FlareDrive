@@ -1,3 +1,4 @@
+import { HEADER_CONTENT_TYPE } from "../../lib/commons";
 import { FdCfFunc } from "../commons";
 
 export const onRequestGet: FdCfFunc = async function (context) {
@@ -21,7 +22,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
     {
       status: 200,
       headers: {
-        "Content-Type": "text/html",
+        [HEADER_CONTENT_TYPE]: "text/html",
         "Clear-Site-Data": `"*"`,
       },
     }

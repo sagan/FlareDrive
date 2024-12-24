@@ -1,9 +1,18 @@
-import { HEADER_FD_THUMBNAIL, KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL } from "../../lib/commons";
+import {
+  HEADER_CONTENT_TYPE,
+  HEADER_FD_THUMBNAIL,
+  KEY_PREFIX_PRIVATE,
+  KEY_PREFIX_THUMBNAIL,
+  THUMBNAIL_VARIABLE,
+  sha256Blob,
+  str2int,
+} from "../../lib/commons";
 import {
   responseBadRequest,
   responseConflict,
   responseCreated,
   responseMethodNotAllowed,
+  responseNoContent,
   responsePreconditionsFailed,
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -22,12 +31,36 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   const uploadedPart = await multipartUpload.uploadPart(partNumber, request.body);
 
   return new Response(null, {
-    headers: { "Content-Type": "application/json", etag: uploadedPart.etag },
+    headers: { [HEADER_CONTENT_TYPE]: "application/json", etag: uploadedPart.etag },
   });
 }
 
 export async function handleRequestPut({ bucket, path, request }: RequestHandlerParams) {
   const searchParams = new URLSearchParams(new URL(request.url).search);
+
+  if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
+    // request is to update object's thumbnail
+    const object = await bucket.get(path);
+    if (!object) {
+      return responseConflict();
+    }
+    const blob = await request.blob();
+    const digest = await sha256Blob(blob);
+    if (digest === object.customMetadata?.thumbnail) {
+      return responseNoContent();
+    }
+    await bucket.put(KEY_PREFIX_THUMBNAIL + digest, blob, { httpMetadata: request.headers });
+    await bucket.put(path, object.body, {
+      httpMetadata: object.httpMetadata,
+      customMetadata: Object.assign({}, object.customMetadata, { thumbnail: digest }),
+    });
+    if (object.customMetadata?.thumbnail) {
+      // delete old thumbnail
+      await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${object.customMetadata.thumbnail}`);
+    }
+    return responseNoContent();
+  }
+
   if (searchParams.has("uploadId")) {
     return handleRequestPutMultipart({ bucket, path, request });
   }
@@ -49,9 +82,11 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   const customMetadata = thumbnail ? { thumbnail } : undefined;
 
   const oldObject = await bucket.head(path);
+
   if (oldObject?.customMetadata?.thumbnail) {
     await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${oldObject.customMetadata.thumbnail}`);
   }
+
   const result = await bucket.put(path, request.body, {
     onlyIf: request.headers,
     httpMetadata: request.headers,

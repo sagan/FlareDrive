@@ -21,7 +21,7 @@ export default function Header({
   authed: boolean;
   search: string;
   onSearchChange: (newSearch: string) => void;
-  onGenerateThumbnails: (() => void) | null;
+  onGenerateThumbnails: () => void;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
 }) {
@@ -72,9 +72,9 @@ export default function Header({
       >
         <MenuItem>View as</MenuItem>
         <MenuItem>Sort by</MenuItem>
-        {authed && <MenuItem disabled={!onGenerateThumbnails} onClick={() => {
+        {authed && <MenuItem onClick={() => {
           setAnchorEl(null);
-          onGenerateThumbnails!();
+          onGenerateThumbnails();
         }}>Generate thumbnails</MenuItem>}
         <MenuItem
           onClick={() => {

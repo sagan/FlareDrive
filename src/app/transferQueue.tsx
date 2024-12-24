@@ -37,7 +37,7 @@ export function useUploadEnqueue() {
         status: "pending",
         name: file.name,
         file,
-        remoteKey: basedir + file.name,
+        remoteKey: (basedir ? basedir + "/" : "") + file.name,
         loaded: 0,
         total: file.size,
       } as TransferTask)

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
@@ -6,10 +5,13 @@ import {
   hmacSha256Verify,
   key2Path,
   str2int,
+  THUMBNAIL_VARIABLE,
+  TOKEN_VARIABLE,
+  AUTH_VARIABLE,
+  HEADER_AUTHORIZATION,
+  NOSIGN_VARIABLES,
+  HEADER_CONTENT_TYPE,
 } from "../lib/commons";
-=======
-import { KEY_PREFIX_PRIVATE, hmacSha256Verify, str2int } from "../lib/commons";
->>>>>>> 0bc506bbba11926acd1c7bcfad8f8556d465964c
 
 export type FdCfFuncContext = EventContext<
   {
@@ -23,6 +25,14 @@ export type FdCfFuncContext = EventContext<
      * It's only used by functions/* and will not be leaked to front end.
      */
     BUCKET_URL?: string;
+    /**
+     * associated worker url. Must enable CloudFlare images transformation in worker domain zone.
+     */
+    WORKER_URL?: string;
+    /**
+     * associated worker token
+     */
+    WORKER_TOKEN?: string;
     SITENAME?: string;
     BUCKET: R2Bucket;
     KV?: KVNamespace;
@@ -84,6 +94,10 @@ export function responseForbidden(msg?: string): Response {
   return new Response(msg || "Forbidden", { status: 403 });
 }
 
+export function responseInternalServerError(msg?: string): Response {
+  return new Response(msg || "Internal Server Error", { status: 500 });
+}
+
 /**
  * Return 302 Found redirection response
  * @param url
@@ -107,7 +121,7 @@ export function responseMethodNotAllowed(): Response {
 export function jsonResponse(obj: any) {
   return new Response(JSON.stringify(obj), {
     headers: {
-      "Content-Type": "application/json",
+      [HEADER_CONTENT_TYPE]: "application/json",
     },
   });
 }
@@ -115,7 +129,7 @@ export function jsonResponse(obj: any) {
 export function htmlResponse(html: string) {
   return new Response(html, {
     headers: {
-      "Content-Type": "text/html",
+      [HEADER_CONTENT_TYPE]: "text/html",
     },
   });
 }
@@ -140,15 +154,17 @@ export async function checkAuthFailure(
 
   const url = new URL(request.url);
   const searchParams = url.searchParams;
-  const auth = searchParams.get("auth") || request.headers.get("Authorization");
-  const token = searchParams.get("token");
+  const auth = searchParams.get(AUTH_VARIABLE) || request.headers.get(HEADER_AUTHORIZATION);
+  const token = searchParams.get(TOKEN_VARIABLE);
   const expectedAuth = `Basic ${btoa(`${user}:${pass}`)}`;
   let authed = false;
 
   if (token) {
     const expires = str2int(searchParams.get("expires"));
     if (expires <= 0 || expires > +new Date()) {
-      searchParams.delete("token");
+      for (const param of NOSIGN_VARIABLES) {
+        searchParams.delete(param);
+      }
       searchParams.sort();
       const payload = url.pathname + (searchParams.size ? "?" : "") + searchParams.toString();
       authed = await hmacSha256Verify(expectedAuth, token, payload);
@@ -209,13 +225,17 @@ export async function generateFileThumbnail({
   force,
   urlPrefix,
   thumbSize,
+  workerUrl,
+  workerToken,
 }: {
-  auth?: string;
+  auth?: string | null;
   bucket: R2Bucket;
   key: string;
   force?: boolean;
   urlPrefix: string;
   thumbSize: number;
+  workerUrl: string;
+  workerToken: string;
 }): Promise<number> {
   if (!key) {
     return 1;
@@ -233,24 +253,37 @@ export async function generateFileThumbnail({
     }
   }
   const fileUrl = `${urlPrefix}${key2Path(key)}`;
-  const thumbResponse = await fetch(fileUrl, {
+  const thumbResponse = await fetch(workerUrl, {
+    method: "POST",
     headers: {
-      ...(auth ? { Authorization: auth } : {}),
+      [HEADER_CONTENT_TYPE]: "application/json",
     },
-    cf: { image: { width: thumbSize, height: thumbSize } },
+    body: JSON.stringify({
+      token: workerToken,
+      url: fileUrl,
+      options: {
+        headers: {
+          ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+        },
+        cf: { image: { width: thumbSize, height: thumbSize, fit: "scale-down" } },
+      },
+    }),
   });
   if (!thumbResponse.ok) {
     throw new Error(`status=${thumbResponse.status}`);
   }
+  if (!thumbResponse.headers.get("cf-resized")) {
+    return 4;
+  }
   let thumbResponseSize = str2int(thumbResponse.headers.get("Content-Length"));
   if (!thumbResponseSize || thumbResponseSize >= file.size) {
-    return 4;
+    return 5;
   }
   const thumbContents = await thumbResponse.blob();
   const thumbContentsDigest = await sha256Blob(thumbContents);
   if (thumbFile && file.customMetadata?.thumbnail === thumbContentsDigest) {
     // new thumbnail file is same as old
-    return 5;
+    return 6;
   }
   // The only way to modify object metadata is to re-upload the object and set the metadata.
   await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponse.headers });

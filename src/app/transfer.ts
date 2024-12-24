@@ -1,5 +1,5 @@
 import pLimit from "p-limit";
-
+import mime from "mime";
 import {
   key2Path,
   escapeRegExp,
@@ -16,9 +16,17 @@ import {
   THUMBNAIL_SIZE,
   sha256Blob,
   THUMBNAIL_API,
+  HEADER_AUTHORIZATION,
+  HEADER_CONTENT_TYPE,
+  THUMBNAIL_VARIABLE,
 } from "../../lib/commons";
 import { FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
+
+/**
+ * Client side canvas generated thumbnail blob content type.
+ */
+const CLIENT_THUMBNAIL_TYPE = "image/png";
 
 export async function fetchPath(path: string, auth?: string | null) {
   const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
@@ -26,14 +34,15 @@ export async function fetchPath(path: string, auth?: string | null) {
     headers: {
       Depth: "1",
       [HEADER_INAPP]: "1",
-      ...(auth ? { Authorization: auth } : {}),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
 
   if (!res.ok) {
     throw new Error(`Failed to fetch: status=${res.status}`);
   }
-  if (!res.headers.get("Content-Type")?.includes(MIME_XML)) {
+  const contentType = res.headers.get(HEADER_CONTENT_TYPE) || "";
+  if (contentType !== MIME_XML && !contentType.startsWith(MIME_XML + ";")) {
     throw new Error("Invalid response");
   }
 
@@ -69,25 +78,33 @@ export async function fetchPath(path: string, auth?: string | null) {
   return { permission, authed, auth, items };
 }
 
-export async function generateThumbnail(file: File) {
+export async function generateThumbnailFromFile(file: File): Promise<Blob> {
+  return generateThumbnailFromUrl(URL.createObjectURL(file), file.type);
+}
+
+export async function generateThumbnailFromUrl(url: string, contentType?: string): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = THUMBNAIL_SIZE;
   canvas.height = THUMBNAIL_SIZE;
   var ctx = canvas.getContext("2d")!;
 
-  if (file.type.startsWith("image/")) {
+  if (!contentType) {
+    contentType = mime.getType(url) || "";
+  }
+
+  if (contentType.startsWith("image/")) {
     const image = await new Promise<HTMLImageElement>((resolve) => {
       const image = new Image();
       image.onload = () => resolve(image);
-      image.src = URL.createObjectURL(file);
+      image.src = url;
     });
     ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
-  } else if (file.type === "video/mp4") {
+  } else if (contentType === "video/mp4") {
     // Generate thumbnail from video
     const video = await new Promise<HTMLVideoElement>(async (resolve, reject) => {
       const video = document.createElement("video");
       video.muted = true;
-      video.src = URL.createObjectURL(file);
+      video.src = url;
       setTimeout(() => reject(new Error("Video load timeout")), 2000);
       await video.play();
       video.pause();
@@ -95,22 +112,26 @@ export async function generateThumbnail(file: File) {
       resolve(video);
     });
     ctx.drawImage(video, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
-  } else if (file.type === "application/pdf") {
+  } else if (contentType === "application/pdf") {
     const pdfjsLib = await import(
       // @ts-ignore
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs"
     );
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
-    const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+    const pdf = await pdfjsLib.getDocument(url).promise;
     const page = await pdf.getPage(1);
     const { width, height } = page.getViewport({ scale: 1 });
     var scale = THUMBNAIL_SIZE / Math.max(width, height);
     const viewport = page.getViewport({ scale });
     const renderContext = { canvasContext: ctx, viewport };
     await page.render(renderContext).promise;
+  } else {
+    throw new Error(`invalid content type ${contentType}`);
   }
 
-  const thumbnailBlob = await new Promise<Blob>((resolve) => canvas.toBlob((blob) => resolve(blob!)));
+  const thumbnailBlob = await new Promise<Blob>((resolve) =>
+    canvas.toBlob((blob) => resolve(blob!), CLIENT_THUMBNAIL_TYPE)
+  );
 
   return thumbnailBlob;
 }
@@ -212,7 +233,7 @@ export async function multipartUpload(
   const response = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
     method: "POST",
     headers: {
-      ...(headers.Authorization ? { Authorization: headers.Authorization } : {}),
+      ...(headers[HEADER_AUTHORIZATION] ? { [HEADER_AUTHORIZATION]: headers[HEADER_AUTHORIZATION] } : {}),
     },
     body: JSON.stringify({ parts: uploadedParts }),
   });
@@ -227,7 +248,7 @@ export async function copyPaste(source: string, target: string, auth: string | n
     method: move ? "MOVE" : "COPY",
     headers: {
       Destination: destinationUrl.href,
-      ...(auth ? { Authorization: auth } : {}),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
 }
@@ -240,12 +261,12 @@ export async function createFolder(cwd: string, auth: string | null) {
       window.alert("Invalid folder name");
       return;
     }
-    const folderKey = `${cwd}${folderName}`;
+    const folderKey = (cwd ? cwd + "/" : "") + folderName;
     const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
     await fetch(uploadUrl, {
       method: "MKCOL",
       headers: {
-        ...(auth ? { Authorization: auth } : {}),
+        ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
       },
     });
   } catch (error) {
@@ -270,7 +291,7 @@ export async function processTransferTask({
   console.log("upload", task);
   if (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf") {
     try {
-      const thumbnailBlob = await generateThumbnail(file);
+      const thumbnailBlob = await generateThumbnailFromFile(file);
       const digestHex = await sha256Blob(thumbnailBlob);
 
       const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}`;
@@ -279,7 +300,8 @@ export async function processTransferTask({
           method: "PUT",
           body: thumbnailBlob,
           headers: {
-            ...(auth ? { Authorization: auth } : {}),
+            [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
+            ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
           },
         });
         thumbnailDigest = digestHex;
@@ -292,7 +314,7 @@ export async function processTransferTask({
   }
 
   const headers: Record<string, string> = {
-    ...(auth ? { Authorization: auth } : {}),
+    ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };
   if (file.size >= SIZE_LIMIT) {
@@ -311,16 +333,33 @@ export async function processTransferTask({
   }
 }
 
+/**
+ * Server Side thumbnail generation
+ * @param keys
+ * @param auth
+ * @param force
+ */
 export async function generateThumbnails(keys: string[], auth: string | null, force: boolean) {
   const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      ...(auth ? { Authorization: auth } : {}),
+      [HEADER_CONTENT_TYPE]: "application/json",
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
     body: JSON.stringify({ keys }),
   });
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
+}
+
+export async function putThumbnail(key: string, blob: Blob, auth: string | null) {
+  await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
+    method: "PUT",
+    body: blob,
+    headers: {
+      [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+    },
+  });
 }

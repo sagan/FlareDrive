@@ -1,5 +1,7 @@
 // obsolete, not used
 
+import { HEADER_AUTHORIZATION } from "./commons";
+
 function arrayBufferToHex(arrayBuffer: ArrayBuffer) {
   return [...new Uint8Array(arrayBuffer)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
@@ -70,7 +72,7 @@ export class S3Client {
     const credential = `${this.accessKeyId}/${scope}`;
     const authorizationString = `AWS4-HMAC-SHA256 Credential=${credential},SignedHeaders=${signedHeaders},Signature=${signature}`;
 
-    headers.set("Authorization", authorizationString);
+    headers.set(HEADER_AUTHORIZATION, authorizationString);
     init.headers = headers;
     return fetch(input, init);
   }
