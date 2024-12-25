@@ -42,12 +42,13 @@ export const onRequestPost: FdCfFunc = async function (context) {
   const results: Record<string, number> = {};
   for (const key of keys) {
     const result = await generateFileThumbnail({
-      auth: request.headers.get(HEADER_AUTHORIZATION),
+      auth: env.BUCKET_URL ? "" : request.headers.get(HEADER_AUTHORIZATION),
       bucket,
       key,
       force,
       thumbSize: THUMBNAIL_SIZE,
-      urlPrefix: env.BUCKET_URL || url.origin + WEBDAV_ENDPOINT,
+      origin: env.BUCKET_URL || url.origin,
+      originIsBucket: !!env.BUCKET_URL,
       workerUrl: env.WORKER_URL,
       workerToken: env.WORKER_TOKEN,
     });

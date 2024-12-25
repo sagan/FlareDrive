@@ -92,7 +92,8 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
       <List sx={{ pt: 0 }}>
         {files.map(file => {
           const thumbnailUrl = fileUrl({
-            key: file.key, auth,
+            key: file.key,
+            auth,
             thumbnail: file.customMetadata?.thumbnail || true,
             // an "image" (Content-Type: "image/*") response won't trigger onerror event of img,
             // even if it's status is 404 or some like.

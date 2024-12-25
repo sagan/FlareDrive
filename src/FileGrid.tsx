@@ -132,9 +132,8 @@ function FileGrid({
         thumbnail: fileUrl({
           key: file.key,
           auth,
-          expires: now + PRIVATE_URL_TTL,
-          thumbnailColor: "white",
           thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
+          thumbnailColor: "white",
         }),
         title: name,
         description: `${name} (${size})`,
@@ -186,7 +185,6 @@ function FileGrid({
                 <img src={fileUrl({
                   key: file.key,
                   auth: auth,
-                  expires: now + PRIVATE_URL_TTL,
                   thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
                 })}
                   alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />

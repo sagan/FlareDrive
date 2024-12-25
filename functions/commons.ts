@@ -12,6 +12,7 @@ import {
   HEADER_CONTENT_TYPE,
   HEADER_LAST_MODIFIED,
   HEADER_ETAG,
+  fileUrl,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -21,7 +22,7 @@ export type FdCfFuncContext = EventContext<
     PUBLIC_PREFIX?: string;
     PUBLIC_DIR_PREFIX?: string;
     /**
-     * optional bucket public access url with trailing /, e.g. "http://bucket-secret.example.com/".
+     * optional bucket public access url (without trailing "/"), e.g. "http://bucket-secret.example.com".
      * It is suggested to keep this url secret (choose a private & complex custom sub domain).
      * It's only used by functions/* and will not be leaked to front end.
      */
@@ -231,16 +232,18 @@ export async function generateFileThumbnail({
   bucket,
   key,
   force,
-  urlPrefix,
+  origin,
+  originIsBucket,
   thumbSize,
   workerUrl,
   workerToken,
 }: {
-  auth?: string | null;
+  auth: string | null;
   bucket: R2Bucket;
   key: string;
-  force?: boolean;
-  urlPrefix: string;
+  force: boolean;
+  origin: string;
+  originIsBucket: boolean;
   thumbSize: number;
   workerUrl: string;
   workerToken: string;
@@ -260,7 +263,10 @@ export async function generateFileThumbnail({
       return 3;
     }
   }
-  const fileUrl = `${urlPrefix}${key2Path(key)}`;
+
+  // Note: must put auth info in target url, cann't put it in options.headers,
+  // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
+  const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin });
   const thumbResponse = await fetch(workerUrl, {
     method: "POST",
     headers: {
@@ -268,17 +274,14 @@ export async function generateFileThumbnail({
     },
     body: JSON.stringify({
       token: workerToken,
-      url: fileUrl,
+      url: targetFileUrl,
       options: {
-        headers: {
-          ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-        },
         cf: { image: { width: thumbSize, height: thumbSize, fit: "scale-down" } },
       },
     }),
   });
   if (!thumbResponse.ok) {
-    throw new Error(`status=${thumbResponse.status}`);
+    throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
   }
   if (!thumbResponse.headers.get("cf-resized")) {
     return 4;
