@@ -14,11 +14,12 @@ import {
   KEY_PREFIX_THUMBNAIL,
   MIME_XML,
   THUMBNAIL_SIZE,
-  sha256Blob,
+  sha256,
   THUMBNAIL_API,
   HEADER_AUTHORIZATION,
   HEADER_CONTENT_TYPE,
   THUMBNAIL_VARIABLE,
+  ThumbnailObject,
 } from "../../lib/commons";
 import { FileItem } from "../FileGrid";
 import { TransferTask } from "./transferQueue";
@@ -126,11 +127,11 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
     const renderContext = { canvasContext: ctx, viewport };
     await page.render(renderContext).promise;
   } else {
-    throw new Error(`invalid content type ${contentType}`);
+    throw new Error(`unsupported file type: ${contentType}`);
   }
 
-  const thumbnailBlob = await new Promise<Blob>((resolve) =>
-    canvas.toBlob((blob) => resolve(blob!), CLIENT_THUMBNAIL_TYPE)
+  const thumbnailBlob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject("canvas toBlob failed")), CLIENT_THUMBNAIL_TYPE)
   );
 
   return thumbnailBlob;
@@ -292,7 +293,7 @@ export async function processTransferTask({
   if (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf") {
     try {
       const thumbnailBlob = await generateThumbnailFromFile(file);
-      const digestHex = await sha256Blob(thumbnailBlob);
+      const digestHex = await sha256(thumbnailBlob);
 
       const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}`;
       try {
@@ -339,7 +340,7 @@ export async function processTransferTask({
  * @param auth
  * @param force
  */
-export async function generateThumbnails(keys: string[], auth: string | null, force: boolean) {
+export async function generateThumbnailsServerSide(keys: string[], auth: string | null, force: boolean) {
   const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
     method: "POST",
     headers: {
@@ -353,8 +354,15 @@ export async function generateThumbnails(keys: string[], auth: string | null, fo
   }
 }
 
-export async function putThumbnail(key: string, blob: Blob, auth: string | null) {
-  await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
+/**
+ * Update the thumbnail of a object.
+ * @param key
+ * @param blob
+ * @param auth
+ * @returns
+ */
+export async function putThumbnail(key: string, blob: Blob, auth: string | null): Promise<ThumbnailObject> {
+  let res = await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
     method: "PUT",
     body: blob,
     headers: {
@@ -362,4 +370,9 @@ export async function putThumbnail(key: string, blob: Blob, auth: string | null)
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
+  }
+  const thumbnailObj = await res.json<ThumbnailObject>();
+  return thumbnailObj;
 }

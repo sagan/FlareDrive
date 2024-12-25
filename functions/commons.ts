@@ -1,16 +1,17 @@
 import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
-  sha256Blob,
+  sha256,
   hmacSha256Verify,
   key2Path,
   str2int,
-  THUMBNAIL_VARIABLE,
   TOKEN_VARIABLE,
   AUTH_VARIABLE,
   HEADER_AUTHORIZATION,
   NOSIGN_VARIABLES,
   HEADER_CONTENT_TYPE,
+  HEADER_LAST_MODIFIED,
+  HEADER_ETAG,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -43,6 +44,13 @@ export type FdCfFuncContext = EventContext<
 >;
 
 export type FdCfFunc = (context: FdCfFuncContext) => Response | Promise<Response>;
+
+/**
+ * Return 304 Not Modified response
+ */
+export function responseNotModified(): Response {
+  return new Response(null, { status: 304 });
+}
 
 /**
  * Return 404 Not Found response
@@ -118,7 +126,7 @@ export function responseMethodNotAllowed(): Response {
   return new Response("Method not allowed", { status: 405 });
 }
 
-export function jsonResponse(obj: any) {
+export function jsonResponse<T = any>(obj: T) {
   return new Response(JSON.stringify(obj), {
     headers: {
       [HEADER_CONTENT_TYPE]: "application/json",
@@ -280,7 +288,7 @@ export async function generateFileThumbnail({
     return 5;
   }
   const thumbContents = await thumbResponse.blob();
-  const thumbContentsDigest = await sha256Blob(thumbContents);
+  const thumbContentsDigest = await sha256(thumbContents);
   if (thumbFile && file.customMetadata?.thumbnail === thumbContentsDigest) {
     // new thumbnail file is same as old
     return 6;
@@ -296,4 +304,12 @@ export async function generateFileThumbnail({
     await bucket.delete(thumbFile.key);
   }
   return 0;
+}
+
+export function writeR2ObjectHeaders(obj: R2Object, headers: Headers) {
+  obj.writeHttpMetadata(headers);
+  headers.set(HEADER_LAST_MODIFIED, obj.uploaded.toUTCString());
+  if (obj.httpEtag) {
+    headers.set(HEADER_ETAG, obj.httpEtag);
+  }
 }

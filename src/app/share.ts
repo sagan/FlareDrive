@@ -13,7 +13,7 @@ export async function listShares(auth: string | null): Promise<string[]> {
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
-  const data = (await res.json()) as string[];
+  const data = await res.json<string[]>();
   return data;
 }
 
@@ -54,5 +54,5 @@ export async function getShare(key: string, auth: string | null): Promise<ShareO
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
-  return res.json();
+  return res.json<ShareObject>();
 }

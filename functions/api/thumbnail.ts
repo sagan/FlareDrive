@@ -35,7 +35,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   const force = !!str2int(searchParams.get("force"));
   const keys = searchParams.getAll("key");
   if (request.body) {
-    const body: PostBody = await request.json();
+    const body = await request.json<PostBody>();
     keys.push(...body.keys);
   }
 

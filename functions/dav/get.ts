@@ -1,52 +1,99 @@
 import {
   DOWNLOAD_VARIABLE,
-  HEADER_AUTHED,
   KEY_PREFIX_THUMBNAIL,
+  META_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_NO404_VARIABLE,
+  THUMBNAIL_NOFALLBACK,
   THUMBNAIL_VARIABLE,
   str2int,
 } from "@/lib/commons";
-import { responseNotFound, responsePreconditionsFailed } from "../commons";
+import {
+  jsonResponse,
+  responseForbidden,
+  responseNotFound,
+  responseNotModified,
+  writeR2ObjectHeaders,
+} from "../commons";
 import { RequestHandlerParams } from "./utils";
 import { fallbackIconResponse } from "./icons";
 
-export async function handleRequestGet({ bucket, path, request }: RequestHandlerParams) {
-  const obj = await bucket.get(path, {
-    onlyIf: request.headers,
-    range: request.headers,
-  });
-  if (obj === null) {
-    return responseNotFound();
-  }
-  const searchParams = new URL(request.url).searchParams;
-  if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
-    const digest = obj.customMetadata?.[THUMBNAIL_VARIABLE];
+export async function handleRequestGet({ bucket, path, request, authed }: RequestHandlerParams) {
+  const url = new URL(request.url);
+  const searchParams = new URL(url).searchParams;
+  const requestMeta = authed && !!str2int(searchParams.get(META_VARIABLE));
+  const thumbnail = searchParams.get(THUMBNAIL_VARIABLE) || "";
+  const thumbnailIsDigest = thumbnail.length > 1;
+  const requestThumbnail = !!thumbnail && thumbnail !== "0";
+
+  if (requestThumbnail) {
+    let digest: string;
+    if (thumbnailIsDigest) {
+      if (!authed) {
+        // must be authorized to directly access thumbnail by digest
+        return responseForbidden();
+      }
+      digest = thumbnail;
+    } else {
+      const obj = await bucket.head(path);
+      digest = obj?.customMetadata?.[THUMBNAIL_VARIABLE] || "";
+    }
     let thumbObj: R2ObjectBody | R2Object | null = null;
     if (digest) {
-      thumbObj = await bucket.get(KEY_PREFIX_THUMBNAIL + digest, {
-        onlyIf: request.headers,
-        range: request.headers,
-      });
+      if (requestMeta) {
+        thumbObj = await bucket.head(KEY_PREFIX_THUMBNAIL + digest);
+      } else {
+        thumbObj = await bucket.get(KEY_PREFIX_THUMBNAIL + digest, {
+          onlyIf: request.headers,
+          range: request.headers,
+        });
+      }
+    }
+    if (requestMeta) {
+      if (!thumbObj) {
+        return responseNotFound();
+      }
+      return jsonResponse(thumbObj);
     }
     if (!thumbObj) {
+      const noFallback = !!str2int(searchParams.get(THUMBNAIL_NOFALLBACK));
+      if (noFallback) {
+        return responseNotFound();
+      }
       const color = searchParams.get(THUMBNAIL_COLOR_VARIABLE) || "";
       const no404 = !!str2int(searchParams.get(THUMBNAIL_NO404_VARIABLE));
       return fallbackIconResponse(path, color, no404);
     }
     if (!("body" in thumbObj)) {
-      return responsePreconditionsFailed();
+      return responseNotModified();
     }
     const headers = new Headers();
-    headers.set("Cache-Control", "max-age=31536000");
-    thumbObj.writeHttpMetadata(headers);
+    writeR2ObjectHeaders(thumbObj, headers);
+    // headers.set("Cache-Control", "max-age=31536000");
     return new Response(thumbObj.body, { headers });
   }
+
+  let obj: R2ObjectBody | R2Object | null;
+  if (requestMeta) {
+    obj = await bucket.head(path);
+  } else {
+    obj = await bucket.get(path, {
+      onlyIf: request.headers,
+      range: request.headers,
+    });
+  }
+  if (obj === null) {
+    return responseNotFound();
+  }
+
+  if (requestMeta) {
+    return jsonResponse(obj);
+  }
   if (!("body" in obj)) {
-    return responsePreconditionsFailed();
+    return responseNotModified();
   }
   const headers = new Headers();
-  obj.writeHttpMetadata(headers);
+  writeR2ObjectHeaders(obj, headers);
   if (str2int(searchParams.get(DOWNLOAD_VARIABLE))) {
     headers.set("Content-Disposition", "attachment");
   }

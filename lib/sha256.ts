@@ -22,11 +22,13 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-// sha256(data) returns the digest
-// sha256() returns an object you can call .add(data) zero or more time and .digest() at the end
-// digest is a 32-byte Uint8Array instance with an added .hex() function.
-// Input should be either a string (that will be encoded as UTF-8) or an array-like object with values 0..255.
-function sha256(data?: any) {
+/**
+ * sha256(data) returns the digest
+ * sha256() returns an object you can call .add(data) zero or more time and .digest() at the end
+ * digest is a 32-byte Uint8Array instance with an added .hex() function.
+ * Input should be either a string (that will be encoded as UTF-8) or an array-like object with values 0..255.
+ */
+export function sha256(data?: any) {
   let h0 = 0x6a09e667,
     h1 = 0xbb67ae85,
     h2 = 0x3c6ef372,

@@ -1,4 +1,4 @@
-import { responseNotFound } from "../commons";
+import { responseNotFound, writeR2ObjectHeaders } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestHead({ bucket, path }: RequestHandlerParams) {
@@ -8,6 +8,6 @@ export async function handleRequestHead({ bucket, path }: RequestHandlerParams) 
   }
 
   const headers = new Headers();
-  obj.writeHttpMetadata(headers);
+  writeR2ObjectHeaders(obj, headers);
   return new Response(null, { headers });
 }

@@ -1,19 +1,6 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
 import {
-  FdCfFunc,
-  checkAuthFailure,
-  jsonResponse,
-  responseNotFound,
-  responsePreconditionsFailed,
-  responseNoContent,
-  responseBadRequest,
-  findChildren,
-  htmlResponse,
-  responseForbidden,
-  responseRedirect,
-} from "../commons";
-import {
   type ShareObject,
   path2Key,
   trimPrefix,
@@ -22,7 +9,23 @@ import {
   trimSuffix,
   cut,
   corsHeaders,
+  META_VARIABLE,
+  str2int,
 } from "../../lib/commons";
+import {
+  FdCfFunc,
+  checkAuthFailure,
+  jsonResponse,
+  responseNotFound,
+  responseNoContent,
+  responseBadRequest,
+  findChildren,
+  htmlResponse,
+  responseForbidden,
+  responseRedirect,
+  responseNotModified,
+  writeR2ObjectHeaders,
+} from "../commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -54,7 +57,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   if (failResponse) {
     return failResponse;
   }
-  const shareObject: ShareObject = await request.json();
+  const shareObject = await request.json<ShareObject>();
   if (!shareObject.key) {
     return responseBadRequest();
   }
@@ -104,7 +107,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
 
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
-  const requestMeta = searchParams.get("meta");
+  const requestMeta = !!str2int(searchParams.get(META_VARIABLE));
 
   if (requestMeta) {
     const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
@@ -196,10 +199,10 @@ export const onRequestGet: FdCfFunc = async function (context) {
     return responseNotFound();
   }
   if (!("body" in obj)) {
-    return responsePreconditionsFailed();
+    return responseNotModified();
   }
   const headers = new Headers();
-  obj.writeHttpMetadata(headers);
+  writeR2ObjectHeaders(obj, headers);
   if (data.cors) {
     for (const [key, value] of Object.entries(corsHeaders)) {
       headers.set(key, value);

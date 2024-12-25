@@ -23,7 +23,7 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
   }
   const multipartUpload = bucket.resumeMultipartUpload(path, uploadId);
 
-  const completeBody: { parts: Array<any> } = await request.json();
+  const completeBody = await request.json<{ parts: Array<any> }>();
 
   try {
     const object = await multipartUpload.complete(completeBody.parts);

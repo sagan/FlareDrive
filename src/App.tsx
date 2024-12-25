@@ -16,8 +16,8 @@ import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
-import { isImage, type FileItem, isDirectory } from "./FileGrid";
-import { fetchPath, generateThumbnails } from "./app/transfer";
+import { isImage, type FileItem, isDirectory, isThumbnailPossible } from "./FileGrid";
+import { fetchPath, generateThumbnailsServerSide } from "./app/transfer";
 import ShareManager from "./ShareManager";
 import { listShares } from "./app/share";
 import { PathBreadcrumb } from "./components";
@@ -47,7 +47,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
-  const [generateThumbnailFiles, setGenerateThumbnailsFiles] = React.useState<FileItem[]>([])
+  const [generateThumbnailFiles, setGenerateThumbnailFiles] = React.useState<FileItem[] | null>(null)
   const [error, setError] = useState<Error | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
@@ -65,6 +65,19 @@ function App() {
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
   }, [cwd]);
+
+  const onGenerateThumbnails = useCallback((files: FileItem[]) => {
+    let items: FileItem[]
+    if (generateThumbnailFiles) {
+      items = files.filter(f => generateThumbnailFiles.find(_f => f.key === _f.key))
+    } else {
+      items = files.filter(isThumbnailPossible)
+      if (multiSelected.length > 0) {
+        items = items.filter(f => multiSelected.includes(f.key))
+      }
+    }
+    setGenerateThumbnailFiles(items)
+  }, [multiSelected]);
 
   const fetchFiles = useCallback(() => {
     setLoading(true);
@@ -86,6 +99,9 @@ function App() {
         items = [...systemFolders, ...items]
       }
       setFiles(items);
+      if (generateThumbnailFiles) {
+        onGenerateThumbnails(items)
+      }
       if (auth) {
         setAuth(auth)
         if (auth !== localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
@@ -105,6 +121,7 @@ function App() {
     }).finally(() => setLoading(false));
   }, [cwd, setError]);
 
+
   useEffect(() => {
     fetchFiles();
   }, [fetchFiles]);
@@ -118,14 +135,7 @@ function App() {
           <Header
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)}
-            onGenerateThumbnails={() => {
-              let generateThumbnailFiles = files.filter(f => !isDirectory(f))
-              if (multiSelected.length > 0) {
-                generateThumbnailFiles = generateThumbnailFiles.filter(f => multiSelected.includes(f.key))
-              }
-              console.log("dd", multiSelected, generateThumbnailFiles)
-              setGenerateThumbnailsFiles(generateThumbnailFiles)
-            }}
+            onGenerateThumbnails={() => onGenerateThumbnails(files)}
             setShowProgressDialog={setShowProgressDialog}
           />
           <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
@@ -147,8 +157,8 @@ function App() {
           open={showProgressDialog}
           onClose={() => setShowProgressDialog(false)}
         />
-        {generateThumbnailFiles.length > 0 && <GenerateThumbnailsDialog open={true} onError={e => alert(e)} auth={auth}
-          onClose={() => setGenerateThumbnailsFiles([])} onDone={fetchFiles} files={generateThumbnailFiles}>
+        {!!generateThumbnailFiles && <GenerateThumbnailsDialog open={true} auth={auth}
+          onClose={() => setGenerateThumbnailFiles(null)} onDone={fetchFiles} files={generateThumbnailFiles}>
         </GenerateThumbnailsDialog>}
       </TransferQueueProvider>
     </ThemeProvider>

@@ -47,6 +47,11 @@ export function isDirectory(file: FileItem) {
   return file.httpMetadata?.contentType === MIME_DIR;
 }
 
+export function isThumbnailPossible(file: FileItem) {
+  const ct = file.httpMetadata?.contentType;
+  return ct && (ct.startsWith("image/") || ct === "video/mp4" || ct === "application/pdf")
+}
+
 export function isImage(file: FileItem): boolean {
   return file.httpMetadata.contentType?.startsWith("image/")
 }
@@ -87,7 +92,6 @@ function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: Cont
 }
 
 function FileGrid({
-  authed,
   permission,
   auth,
   files,
@@ -96,7 +100,6 @@ function FileGrid({
   onMultiSelect,
   emptyMessage,
 }: {
-  authed: boolean;
   permission: Permission;
   auth: string | null;
   files: FileItem[];
@@ -128,10 +131,10 @@ function FileGrid({
         type: isImage(file) ? "image" : undefined,
         thumbnail: fileUrl({
           key: file.key,
-          auth: auth && permission == Permission.RequireAuth ? auth : "",
+          auth,
           expires: now + PRIVATE_URL_TTL,
           thumbnailColor: "white",
-          thumbnail: true,
+          thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
         }),
         title: name,
         description: `${name} (${size})`,
@@ -182,9 +185,9 @@ function FileGrid({
               {(file.customMetadata?.thumbnail ? (
                 <img src={fileUrl({
                   key: file.key,
-                  auth: auth && permission == Permission.RequireAuth ? auth : "",
+                  auth: auth,
                   expires: now + PRIVATE_URL_TTL,
-                  thumbnail: true,
+                  thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
                 })}
                   alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
               ) : (
@@ -199,15 +202,13 @@ function FileGrid({
               }}
               secondary={
                 <>
-                  <Box
-                    sx={{
-                      display: "inline-block",
-                      minWidth: "160px",
-                      marginRight: 1,
-                    }}
-                  >
+                  <span style={{
+                    display: "inline-block",
+                    minWidth: "160px",
+                    marginRight: 1,
+                  }}>
                     {file.system ? file.key : new Date(file.uploaded).toLocaleString()}
-                  </Box>
+                  </span>
                   {!isDirectory(file) && humanReadableSize(file.size)}
                 </>
               }
@@ -217,6 +218,7 @@ function FileGrid({
       })}
     </Grid>
     <Lightbox
+      animation={{ fade: 0, swipe: 0, navigation: 0 }}
       index={slideIndex}
       carousel={{ finite: true }}
       open={slideIndex >= 0}

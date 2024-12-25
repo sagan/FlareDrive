@@ -4,15 +4,18 @@ import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
   THUMBNAIL_VARIABLE,
-  sha256Blob,
+  ThumbnailObject,
+  sha256,
   str2int,
 } from "../../lib/commons";
 import {
+  jsonResponse,
   responseBadRequest,
   responseConflict,
   responseCreated,
   responseMethodNotAllowed,
   responseNoContent,
+  responseNotFound,
   responsePreconditionsFailed,
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -39,17 +42,23 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   const searchParams = new URLSearchParams(new URL(request.url).search);
 
   if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
-    // request is to update object's thumbnail
+    // request is to update object's thumbnail.
+    // return created thumbnail R2Object json when success.
     const object = await bucket.get(path);
     if (!object) {
-      return responseConflict();
+      return responseNotFound();
     }
     const blob = await request.blob();
-    const digest = await sha256Blob(blob);
+    const digest = await sha256(blob);
     if (digest === object.customMetadata?.thumbnail) {
-      return responseNoContent();
+      const currentThumbnailObj = await bucket.head(KEY_PREFIX_THUMBNAIL + digest);
+      if (currentThumbnailObj) {
+        return jsonResponse<ThumbnailObject>({ digest });
+      }
     }
-    await bucket.put(KEY_PREFIX_THUMBNAIL + digest, blob, { httpMetadata: request.headers });
+    await bucket.put(KEY_PREFIX_THUMBNAIL + digest, blob, {
+      httpMetadata: request.headers,
+    });
     await bucket.put(path, object.body, {
       httpMetadata: object.httpMetadata,
       customMetadata: Object.assign({}, object.customMetadata, { thumbnail: digest }),
@@ -58,7 +67,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
       // delete old thumbnail
       await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${object.customMetadata.thumbnail}`);
     }
-    return responseNoContent();
+    return jsonResponse<ThumbnailObject>({ digest });
   }
 
   if (searchParams.has("uploadId")) {

@@ -1,4 +1,4 @@
-import { hmac_sha256 } from "./sha256";
+import { sha256 as sha256Internal, hmac_sha256 } from "./sha256";
 
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
@@ -8,13 +8,17 @@ export const SIGNOUT_API = "/api/signout";
 export const THUMBNAIL_SIZE = 144;
 
 /**
- * thumbnail flag query variable. If is 1, current request is read / update the thumbnail of target object.
+ * thumbnail variable.
+ * When getting object thumbnail, set it to thumbnail's digest, or a simple "1".
+ * When setting (updating), set it to "1".
  */
 export const THUMBNAIL_VARIABLE = "thumbnail";
 
 export const THUMBNAIL_NO404_VARIABLE = "thumbnailNo404";
 
 export const THUMBNAIL_COLOR_VARIABLE = "thumbnailColor";
+
+export const THUMBNAIL_NOFALLBACK = "thumbnailNoFallback";
 
 export const EXPIRES_VARIABLE = "expires";
 
@@ -23,6 +27,8 @@ export const TOKEN_VARIABLE = "token";
 export const AUTH_VARIABLE = "auth";
 
 export const DOWNLOAD_VARIABLE = "download";
+
+export const META_VARIABLE = "meta";
 
 /**
  * These query string variables do not participate in signing:
@@ -65,6 +71,10 @@ export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
 export const HEADER_AUTHORIZATION = "Authorization";
 
 export const HEADER_CONTENT_TYPE = "Content-Type";
+
+export const HEADER_ETAG = "ETag";
+
+export const HEADER_LAST_MODIFIED = "Last-Modified";
 
 /**
  * Sent back by server. The client sent "Authorization" header value.
@@ -142,6 +152,10 @@ export interface ShareObject {
    * CORS policy. 0 or undefined - disable. 1 - enable.
    */
   cors?: number;
+}
+
+export interface ThumbnailObject {
+  digest: string;
 }
 
 /**
@@ -331,7 +345,7 @@ export async function hmacSha256Sign(key: string, payload: string): Promise<stri
 
 export function hmacSha256SignSync(key: string, payload: string): string {
   const signature = hmac_sha256(key, payload);
-  return encodeHex(new Uint8Array(signature));
+  return encodeHex(signature);
 }
 
 export async function hmacSha256Verify(key: string, signature: string, payload: string): Promise<boolean> {
@@ -369,14 +383,19 @@ export function fileUrl({
   origin = "",
   thumbnail = false,
   thumbnailNo404 = false,
+  thumbNoFallback = false,
   thumbnailColor = "",
 }: {
   key: string;
   auth: string | null;
   expires?: number;
   origin?: string;
-  thumbnail?: boolean;
+  /**
+   * true, or digest
+   */
+  thumbnail?: boolean | string;
   thumbnailNo404?: boolean;
+  thumbNoFallback?: boolean;
   thumbnailColor?: string;
 }): string {
   const searchParams = new URLSearchParams();
@@ -384,14 +403,22 @@ export function fileUrl({
     searchParams.set(EXPIRES_VARIABLE, `${expires}`);
   }
   if (thumbnail) {
-    searchParams.set(THUMBNAIL_VARIABLE, "1");
+    if (auth && typeof thumbnail == "string") {
+      searchParams.set(THUMBNAIL_VARIABLE, thumbnail);
+    } else {
+      searchParams.set(THUMBNAIL_VARIABLE, "1");
+    }
+    if (thumbnailNo404) {
+      searchParams.set(THUMBNAIL_NO404_VARIABLE, "1");
+    }
+    if (thumbNoFallback) {
+      searchParams.set(THUMBNAIL_NOFALLBACK, "1");
+    }
+    if (thumbnailColor) {
+      searchParams.set(THUMBNAIL_COLOR_VARIABLE, thumbnailColor);
+    }
   }
-  if (thumbnailNo404) {
-    searchParams.set(THUMBNAIL_NO404_VARIABLE, "1");
-  }
-  if (thumbnailColor) {
-    searchParams.set(THUMBNAIL_COLOR_VARIABLE, thumbnailColor);
-  }
+
   const pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   if (!auth) {
     return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
@@ -400,15 +427,40 @@ export function fileUrl({
 }
 
 /**
- * Return sha-256 digest hex string of a blob
+ * Return sha-256 digest hex string of a blob / string / ArrayBuffer / TypedArray
  * @param blob
  * @returns
  */
-export async function sha256Blob(blob: Blob) {
-  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+export async function sha256(content: Blob | string | ArrayBuffer | { buffer: ArrayBufferLike }) {
+  let input: ArrayBuffer;
+  if (typeof content == "string") {
+    input = new TextEncoder().encode(content);
+  } else if (content instanceof Blob) {
+    input = await content.arrayBuffer();
+  } else if ("buffer" in content) {
+    input = content.buffer;
+  } else {
+    input = content;
+  }
+  const digest = await crypto.subtle.digest("SHA-256", input);
   const digestArray = Array.from(new Uint8Array(digest));
   const digestHex = digestArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   return digestHex;
+}
+
+/**
+ * Synchronously return sha-256 digest hex string of a string / ArrayBuffer / TypedArray
+ * @param blob
+ * @returns
+ */
+export function sha256Sync(content: string | ArrayBuffer | { buffer: ArrayBufferLike }): string {
+  let input: any;
+  if (content instanceof ArrayBuffer) {
+    input = new Uint8Array(content);
+  } else {
+    input = content;
+  }
+  return encodeHex(sha256Internal(input) as Uint8Array);
 }
 
 export function headers2Obj(headers: Headers): Record<string, string> {

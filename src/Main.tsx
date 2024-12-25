@@ -125,7 +125,6 @@ function Main({
           }}
         >
           <FileGrid
-            authed={authed}
             permission={permission}
             auth={auth}
             files={filteredFiles}
