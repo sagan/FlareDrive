@@ -13,8 +13,9 @@ import {
   Checkbox
 } from "@mui/material";
 import { fileUrl } from '../lib/commons';
+import { FileItem, isImage } from './commons';
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
-import { FileItem, isImage } from './FileGrid';
+
 
 export default function GenerateThumbnailsDialog({ auth, files, open, onClose, onDone }: {
   auth: string | null;

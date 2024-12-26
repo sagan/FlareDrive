@@ -21,7 +21,7 @@ import {
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
 } from "../../lib/commons";
-import { FileItem } from "../FileGrid";
+import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
 
 /**

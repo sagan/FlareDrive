@@ -1,4 +1,62 @@
 import { SyntheticEvent } from "react";
+import { MIME_DIR } from "../lib/commons";
+
+export const VIEWMODE_VARIABLE = "viewMode";
+
+export enum ViewMode {
+  Default,
+  Album,
+}
+
+export interface FileItem {
+  /**
+   * system (special) folder
+   */
+  system?: boolean;
+  /**
+   * Alternative display name for system folder
+   */
+  name?: string;
+  /**
+   * Icon for system folder
+   */
+  icon?: React.FunctionComponent;
+
+  key: string;
+  size: number;
+  uploaded: string;
+  httpMetadata: { contentType: string };
+  customMetadata?: { thumbnail?: string };
+}
+
+export interface ViewProps {
+  auth: string | null;
+  files: FileItem[];
+  onClick: (file: FileItem) => void;
+  onContextMenu: (file: FileItem) => void;
+  multiSelected: string[];
+  emptyMessage?: React.ReactNode;
+}
+
+export function isDirectory(file: FileItem) {
+  return file.httpMetadata?.contentType === MIME_DIR;
+}
+
+export function isThumbnailPossible(file: FileItem) {
+  const ct = file.httpMetadata?.contentType;
+  return ct && (ct.startsWith("image/") || ct === "video/mp4" || ct === "application/pdf");
+}
+
+export function isImage(file: FileItem): boolean {
+  return file.httpMetadata.contentType?.startsWith("image/");
+}
+
+export function downloadFile(url: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "";
+  a.click();
+}
 
 export const PreventDefaultEventCb: React.EventHandler<SyntheticEvent> = function (e) {
   e.preventDefault();

@@ -54,7 +54,7 @@ export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
   }
 );
 
-function UploadDrawer({
+export default function UploadDrawer({
   auth,
   open,
   setOpen,
@@ -149,5 +149,3 @@ function UploadDrawer({
     </Drawer>
   );
 }
-
-export default UploadDrawer;

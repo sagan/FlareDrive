@@ -12,14 +12,14 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { TransferTask, useTransferQueue } from "./app/transferQueue";
-import { humanReadableSize } from "../lib/commons";
 import {
   CheckCircleOutline as CheckCircleOutlineIcon,
   ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
+import { humanReadableSize } from "../lib/commons";
+import { TransferTask, useTransferQueue } from "./app/transferQueue";
 
-function ProgressDialog({
+export default function ProgressDialog({
   open,
   onClose,
 }: {
@@ -85,5 +85,3 @@ function ProgressDialog({
     </Dialog>
   );
 }
-
-export default ProgressDialog;

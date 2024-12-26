@@ -1,22 +1,24 @@
 import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Permission, SIGNOUT_API } from "../lib/commons";
-import { LOCAL_STORAGE_KEY_AUTH } from "./commons";
+import { LOCAL_STORAGE_KEY_AUTH, ViewMode } from "./commons";
 
 export default function Header({
   permission,
   authed,
   search,
+  setViewMode,
   onSearchChange,
   onGenerateThumbnails,
   setShowProgressDialog,
   fetchFiles,
 }: {
+  setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>,
   permission: Permission;
   authed: boolean;
   search: string;
@@ -70,7 +72,10 @@ export default function Header({
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
       >
-        <MenuItem>View as</MenuItem>
+        <MenuItem onClick={() => {
+          setAnchorEl(null);
+          setViewMode(vm => vm ? ViewMode.Default : ViewMode.Album)
+        }}>Toggle view</MenuItem>
         <MenuItem>Sort by</MenuItem>
         {authed && <MenuItem onClick={() => {
           setAnchorEl(null);

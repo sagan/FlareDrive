@@ -1,10 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, CircularProgress, } from "@mui/material";
+import { Box, Button, CircularProgress, Link, Typography, } from "@mui/material";
+import DownloadIcon from '@mui/icons-material/Download';
+import Lightbox, { RenderSlideProps, SlideImage, useLightboxProps, useLightboxState } from "yet-another-react-lightbox";
+import Counter from "yet-another-react-lightbox/plugins/counter";
+import Captions from "yet-another-react-lightbox/plugins/captions";
+import Download from "yet-another-react-lightbox/plugins/download";
+import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
+import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
+import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
+import Share from "yet-another-react-lightbox/plugins/share";
+import Video from "yet-another-react-lightbox/plugins/video";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   HEADER_AUTHORIZATION, MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, key2Path, trimPrefixSuffix
+  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
 } from "../lib/commons";
-import FileGrid, { FileItem, isDirectory } from "./FileGrid";
+import { FileItem, ViewMode, ViewProps, downloadFile, isDirectory, isImage } from "./commons";
+import FileGrid from "./FileGrid";
+import FileAlbum from "./FileAlbum";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
@@ -45,7 +58,47 @@ function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (fi
   );
 }
 
-function Main({
+
+function SlideRender({ slide, rect }: RenderSlideProps) {
+  const lightbox = useLightboxProps();
+  const { currentIndex } = useLightboxState();
+  const src = (slide as { src: string }).src || ""
+
+  const click = lightbox.on.click
+
+  const onClick = useCallback(() => {
+    if (click) {
+      click({ index: currentIndex })
+    }
+  }, [click, currentIndex])
+
+  if (slide.type == "image") {
+    return undefined
+  }
+
+  return <Box onClick={onClick} sx={{
+    width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
+    color: "white", overflow: "auto",
+  }}>
+    <Box sx={{ mb: 1 }}>
+      <Button download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+        e.preventDefault()
+        downloadFile(src)
+      }}>
+        Download
+      </Button>
+    </Box>
+    <Typography sx={{ mb: 1 }} variant="h5" component="h5">
+      <Link href={src}>{slide.description}</Link>
+    </Typography>
+    <Box>
+      <img src={slide.thumbnail} width={128} height={128} />
+    </Box>
+  </Box >
+}
+
+export default function Main({
+  viewMode,
   cwd,
   setCwd,
   loading,
@@ -58,6 +111,7 @@ function Main({
   setMultiSelected,
   fetchFiles,
 }: {
+  viewMode: ViewMode,
   cwd: string;
   setCwd: (cwd: string) => void;
   loading: boolean;
@@ -76,8 +130,6 @@ function Main({
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
-
-  const now = +new Date;
 
   useEffect(() => {
     if (!transferQueue.length) {
@@ -112,6 +164,80 @@ function Main({
     });
   }, []);
 
+  const [slideIndex, setSlideIndex] = useState(-1);
+
+  // Hide lightbox controls on tap.
+  // https://github.com/igordanchenko/yet-another-react-lightbox/issues/78
+  const [hideLightboxControls, setHideLightboxControls] = React.useState(false);
+
+  const { slides, slideIndexes } = useMemo(() => {
+    const slides: SlideImage[] = []
+    const slideIndexes: Record<string, number> = {}
+    for (const file of files) {
+      if (isDirectory(file)) {
+        continue
+      }
+      const name = basename(file.key)
+      const size = humanReadableSize(file.size)
+      slideIndexes[file.key] = slides.length
+      slides.push({
+        src: fileUrl({
+          key: file.key,
+          auth: auth && permission == Permission.RequireAuth ? auth : "",
+        }),
+        type: isImage(file) ? "image" : undefined,
+        thumbnail: fileUrl({
+          key: file.key,
+          auth,
+          thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
+          thumbnailColor: "white",
+        }),
+        title: name,
+        description: `${name} (${size})`,
+      })
+    }
+    return { slides, slideIndexes };
+  }, [files])
+
+  const toggleLightboxControls = useCallback(() => setHideLightboxControls((state) => !state), [])
+
+  const onClick = useCallback((file: FileItem) => {
+    if (multiSelected.length > 0) {
+      if (file.system) {
+        return;
+      }
+      handleMultiSelect(file.key);
+    } else if (isDirectory(file)) {
+      setCwd(file.key + "/");
+    } else if (slideIndexes[file.key] !== undefined) {
+      setSlideIndex(slideIndexes[file.key]);
+    } else {
+      downloadFile(fileUrl({
+        key: file.key,
+        auth: auth && permission == Permission.RequireAuth ? auth : "",
+        expires: (+new Date) + PRIVATE_URL_TTL
+      }));
+    }
+  }, [multiSelected, slideIndexes, auth, permission]);
+
+  const onContextMenu = useCallback((file: FileItem) => {
+    if (file.system) {
+      return
+    }
+    handleMultiSelect(file.key);
+  }, [])
+
+  const viewProps: ViewProps = {
+    auth,
+    files: filteredFiles,
+    onClick,
+    onContextMenu,
+    multiSelected,
+    emptyMessage: <Centered>No files or folders</Centered>,
+  }
+  const viewElement = viewMode === ViewMode.Default ? <FileGrid {...viewProps} />
+    : <FileAlbum {...viewProps} />
+
   return (
     <>
       {loading ? (
@@ -124,15 +250,7 @@ function Main({
             uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
           }}
         >
-          <FileGrid
-            permission={permission}
-            auth={auth}
-            files={filteredFiles}
-            onCwdChange={(newCwd: string) => setCwd(newCwd)}
-            multiSelected={multiSelected}
-            onMultiSelect={handleMultiSelect}
-            emptyMessage={<Centered>No files or folders</Centered>}
-          />
+          {viewElement}
         </DropZone>
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
@@ -143,7 +261,7 @@ function Main({
         getLink={(key: string) => fileUrl({
           key,
           auth: auth && permission == Permission.RequireAuth ? auth : "",
-          expires: now + PRIVATE_URL_TTL,
+          expires: (+new Date) + PRIVATE_URL_TTL,
           origin: location.origin,
         })}
         onShare={(key: string) => {
@@ -203,8 +321,20 @@ function Main({
         }}
       />
       {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={!!sharing} onClose={() => setSharing("")} />}
+      <Lightbox
+        on={{ click: toggleLightboxControls }}
+        className={hideLightboxControls ? "yarl__hide-controls" : undefined}
+        animation={{ fade: 0, swipe: 0, navigation: 0 }}
+        index={slideIndex}
+        carousel={{ finite: true }}
+        open={slideIndex >= 0}
+        close={() => setSlideIndex(-1)}
+        slides={slides}
+        render={{ slide: SlideRender }}
+        plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download,
+          ...(permission === Permission.OpenDir || permission === Permission.OpenFile ? [Share] : []),
+        ]}
+      />
     </>
   );
 }
-
-export default Main;

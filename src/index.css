@@ -19,3 +19,26 @@
 .yarl__hide-controls .yarl__toolbar {
   visibility: hidden;
 }
+
+.file-album-item {
+  cursor: pointer;
+}
+
+.file-album-item img {
+  object-fit: cover;
+}
+
+.file-album-item.selected {
+  border: 2px dashed black;
+}
+
+.file-album-item:not(.selected) {
+  border: 2px dashed transparent;
+}
+
+.file-album-item-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}

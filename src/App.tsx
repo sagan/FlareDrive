@@ -9,15 +9,16 @@ import {
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
-
-import { MIME_DIR, path2Key, Permission } from "../lib/commons";
-import { dirUrlPath, LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY } from "./commons";
+import { MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
+import {
+  dirUrlPath, FileItem, isThumbnailPossible, ViewMode,
+  LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE,
+} from "./commons";
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
-import { isImage, type FileItem, isDirectory, isThumbnailPossible } from "./FileGrid";
-import { fetchPath, generateThumbnailsServerSide } from "./app/transfer";
+import { fetchPath } from "./app/transfer";
 import ShareManager from "./ShareManager";
 import { listShares } from "./app/share";
 import { PathBreadcrumb } from "./components";
@@ -43,7 +44,7 @@ const theme = createTheme({
   palette: { primary: { main: "#f38020" } },
 });
 
-function App() {
+export default function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
@@ -54,6 +55,23 @@ function App() {
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
   const [permission, setPermission] = useState<Permission>(Permission.RequireAuth);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return str2int(localStorage.getItem(VIEWMODE_VARIABLE))
+  })
+
+  useEffect(() => {
+    if (viewMode !== str2int(localStorage.getItem(VIEWMODE_VARIABLE))) {
+      localStorage.setItem(VIEWMODE_VARIABLE, `${viewMode}`)
+    }
+  }, [viewMode])
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode(value => {
+      const newValue = value === ViewMode.Default ? ViewMode.Album : ViewMode.Default
+      localStorage.setItem(VIEWMODE_VARIABLE, `${newValue}`)
+      return newValue
+    })
+  }, [])
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -138,7 +156,7 @@ function App() {
         <Stack sx={{ height: "100%" }}>
           <Header
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
-            onSearchChange={(newSearch: string) => setSearch(newSearch)}
+            onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
             onGenerateThumbnails={() => onGenerateThumbnails(files)}
             setShowProgressDialog={setShowProgressDialog}
           />
@@ -146,7 +164,7 @@ function App() {
           {
             cwd === SHARES_FOLDER_KEY
               ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
-              : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
+              : <Main viewMode={viewMode} cwd={cwd} setCwd={setCwd} loading={loading} search={search}
                 permission={permission} authed={!!auth} auth={auth} files={files}
                 multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
           }
@@ -168,5 +186,3 @@ function App() {
     </ThemeProvider>
   );
 }
-
-export default App;

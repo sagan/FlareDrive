@@ -1,4 +1,4 @@
-import { MIME_DIR } from "../lib/commons";
+import { MIME_DIR, cut } from "../lib/commons";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import CodeIcon from "@mui/icons-material/Code";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -7,28 +7,26 @@ import ImageIcon from "@mui/icons-material/Image";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import PdfIcon from "@mui/icons-material/PictureAsPdf";
 import VideoFileIcon from "@mui/icons-material/VideoFile";
+import { SvgIconProps } from "@mui/material";
 
-function MimeIcon({ contentType }: { contentType: string }) {
-  const fallbackIcon = <InsertDriveFileOutlinedIcon fontSize="large" />;
-  if (typeof contentType !== "string") return fallbackIcon;
-
-  return contentType.startsWith("image/") ? (
-    <ImageIcon fontSize="large" />
-  ) : contentType.startsWith("audio/") ? (
-    <AudioFileIcon fontSize="large" />
-  ) : contentType.startsWith("video/") ? (
-    <VideoFileIcon fontSize="large" />
-  ) : contentType === "application/pdf" ? (
-    <PdfIcon fontSize="large" />
-  ) : ["application/zip", "application/gzip"].includes(contentType) ? (
-    <FolderZipOutlinedIcon fontSize="large" />
-  ) : contentType.startsWith("text/") ? (
-    <CodeIcon fontSize="large" />
-  ) : contentType === MIME_DIR ? (
-    <FolderIcon fontSize="large" />
-  ) : (
-    fallbackIcon
-  );
+const icons: Record<string, React.FC<SvgIconProps>> = {
+  "image": ImageIcon,
+  "video": VideoFileIcon,
+  "audio": AudioFileIcon,
+  "text": CodeIcon,
+  "application/x-sh": CodeIcon,
+  "application/json": CodeIcon,
+  "application/xml": CodeIcon,
+  "application/pdf": PdfIcon,
+  "application/zip": FolderZipOutlinedIcon,
+  "application/gzip": FolderZipOutlinedIcon,
+  [MIME_DIR]: FolderIcon,
+  "": InsertDriveFileOutlinedIcon, // fallback
 }
 
-export default MimeIcon;
+export default function MimeIcon({ contentType, ...others }: SvgIconProps & { contentType?: string; }) {
+  contentType = contentType || ""
+  const [contentTypeCat] = cut(contentType, "/")
+  const Icon = icons[contentType] || icons[contentTypeCat] || icons[""]
+  return <Icon fontSize="large" {...others} />
+}
