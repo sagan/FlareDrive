@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import DownloadIcon from '@mui/icons-material/Download';
-import Lightbox, { ContainerRect, Slide, SlideImage } from "yet-another-react-lightbox";
+import Lightbox, { RenderSlideProps, ContainerRect, Slide, SlideImage } from "yet-another-react-lightbox";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
+import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
@@ -63,14 +64,14 @@ function downloadFile(url: string) {
   a.click();
 }
 
-function SlideRender({ slide, rect }: { slide: Slide; offset: number; rect: ContainerRect }) {
-  if (slide.type == "image") {
-    return undefined
-  }
+interface RenderSlidePropsWithCallbacks extends RenderSlideProps {
+  onClick?: () => void;
+}
 
+function SlideRender({ slide, rect, onClick }: RenderSlidePropsWithCallbacks) {
   const src = (slide as { src: string }).src || ""
 
-  return <Box sx={{
+  return <Box onClick={onClick} sx={{
     width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
     color: "white", overflow: "auto",
   }}>
@@ -110,6 +111,10 @@ function FileGrid({
 }) {
   const [slideIndex, setSlideIndex] = useState(-1);
 
+  // Hide lightbox controls on tap.
+  // https://github.com/igordanchenko/yet-another-react-lightbox/issues/78
+  const [hideLightboxControls, setHideLightboxControls] = React.useState(false);
+
   const now = +new Date
 
   const { slides, slideIndexes } = useMemo(() => {
@@ -126,7 +131,6 @@ function FileGrid({
         src: fileUrl({
           key: file.key,
           auth: auth && permission == Permission.RequireAuth ? auth : "",
-          expires: now + PRIVATE_URL_TTL
         }),
         type: isImage(file) ? "image" : undefined,
         thumbnail: fileUrl({
@@ -141,6 +145,19 @@ function FileGrid({
     }
     return { slides, slideIndexes };
   }, [files])
+
+  const toggleLightboxControls = useCallback(() => setHideLightboxControls((state) => !state), [])
+
+  // Currently, lightbox custom render does not support lifecycle hooks (e.g. on.click).
+  // Use closure as a workaround.
+  const SlideRenderWrap = useMemo<React.FC<RenderSlidePropsWithCallbacks>>(() => {
+    return function ({ slide, ...others }) {
+      if (slide.type == "image") {
+        return undefined
+      }
+      return <SlideRender onClick={toggleLightboxControls} slide={slide} {...others}></SlideRender>
+    }
+  }, [])
 
   if (files.length === 0) {
     return emptyMessage
@@ -216,14 +233,18 @@ function FileGrid({
       })}
     </Grid>
     <Lightbox
+      on={{ click: toggleLightboxControls }}
+      className={hideLightboxControls ? "yarl__hide-controls" : undefined}
       animation={{ fade: 0, swipe: 0, navigation: 0 }}
       index={slideIndex}
       carousel={{ finite: true }}
       open={slideIndex >= 0}
       close={() => setSlideIndex(-1)}
       slides={slides}
-      render={{ slide: SlideRender }}
-      plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download]}
+      render={{ slide: SlideRenderWrap }}
+      plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download,
+        ...(permission === Permission.OpenDir || permission === Permission.OpenFile ? [Share] : []),
+      ]}
     />
   </>
 }

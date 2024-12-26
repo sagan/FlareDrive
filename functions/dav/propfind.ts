@@ -46,20 +46,28 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
 {{items}}
 </multistatus>`;
 
+  let sentBackAuthHeader: string | null = null;
+  if (authed && str2int(request.headers.get(HEADER_INAPP)) && isHttpsOrLocalUrl(request.url)) {
+    sentBackAuthHeader = request.headers.get(HEADER_AUTHORIZATION);
+  }
+  const fixedHeaders = {
+    [HEADER_PERMISSION]: `${permission}`,
+    [HEADER_AUTHED]: `${authed ? 1 : 0}`,
+    ...(sentBackAuthHeader
+      ? {
+          [HEADER_AUTH]: sentBackAuthHeader,
+        }
+      : {}),
+  };
+
   const rootObject = path === "" ? ROOT_OBJECT : await bucket.head(path);
   if (!rootObject) {
-    return responseNotFound();
+    return responseNotFound(fixedHeaders);
   }
+
   const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === MIME_DIR;
   const depth = request.headers.get("Depth") ?? "infinity";
-
-  const children = !isDirectory
-    ? []
-    : await findChildren({
-        bucket,
-        path,
-        depth,
-      });
+  const children = !isDirectory ? [] : await findChildren({ bucket, path, depth });
 
   const items = [rootObject, ...children].map((child) => {
     const properties = fromR2Object(child);
@@ -78,22 +86,11 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
   </response>`;
   });
 
-  let sentBackAuthHeader: string | null = null;
-  if (authed && str2int(request.headers.get(HEADER_INAPP)) && isHttpsOrLocalUrl(request.url)) {
-    sentBackAuthHeader = request.headers.get(HEADER_AUTHORIZATION);
-  }
-
   return new Response(responseTemplate.replace("{{items}}", items.join("")), {
     status: 207,
     headers: {
       [HEADER_CONTENT_TYPE]: MIME_XML,
-      [HEADER_PERMISSION]: `${permission}`,
-      [HEADER_AUTHED]: `${authed ? 1 : 0}`,
-      ...(sentBackAuthHeader
-        ? {
-            [HEADER_AUTH]: sentBackAuthHeader,
-          }
-        : {}),
+      ...fixedHeaders,
     },
   });
 }

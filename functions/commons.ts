@@ -56,8 +56,8 @@ export function responseNotModified(): Response {
 /**
  * Return 404 Not Found response
  */
-export function responseNotFound(): Response {
-  return new Response("Not found", { status: 404 });
+export function responseNotFound(headers?: HeadersInit | undefined): Response {
+  return new Response("Not found", { status: 404, headers });
 }
 
 /**

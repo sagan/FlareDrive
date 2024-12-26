@@ -10,3 +10,12 @@
 .yarl__slide_title {
   padding-left: 40px;
 }
+
+.yarl__hide-controls .yarl__thumbnails_track,
+.yarl__hide-controls .yarl__counter,
+.yarl__hide-controls .yarl__slide_captions_container,
+.yarl__hide-controls .yarl__navigation_prev,
+.yarl__hide-controls .yarl__navigation_next,
+.yarl__hide-controls .yarl__toolbar {
+  visibility: hidden;
+}

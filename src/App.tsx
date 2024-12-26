@@ -95,18 +95,22 @@ function App() {
     }
     fetchPath(cwd, savedAuth).then(({ permission, auth, items }) => {
       setPermission(permission)
-      if (!cwd) {
-        items = [...systemFolders, ...items]
-      }
-      setFiles(items);
-      if (generateThumbnailFiles) {
-        onGenerateThumbnails(items)
-      }
       if (auth) {
         setAuth(auth)
         if (auth !== localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
           localStorage.setItem(LOCAL_STORAGE_KEY_AUTH, auth)
         }
+      }
+      if (items) {
+        if (!cwd) {
+          items = [...systemFolders, ...items]
+        }
+        setFiles(items);
+        if (generateThumbnailFiles) {
+          onGenerateThumbnails(items)
+        }
+      } else {
+        setError(new Error("dir not found"))
       }
     }).catch(e => {
       setFiles([]);

@@ -29,7 +29,15 @@ import { TransferTask } from "./transferQueue";
  */
 const CLIENT_THUMBNAIL_TYPE = "image/png";
 
-export async function fetchPath(path: string, auth?: string | null) {
+export async function fetchPath(
+  path: string,
+  auth?: string | null
+): Promise<{
+  permission: Permission;
+  authed: boolean;
+  auth: string | null;
+  items: FileItem[] | null;
+}> {
   const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
     method: "PROPFIND",
     headers: {
@@ -40,6 +48,14 @@ export async function fetchPath(path: string, auth?: string | null) {
   });
 
   if (!res.ok) {
+    if (res.status == 404) {
+      return {
+        authed: !!str2int(res.headers.get(HEADER_AUTHED)),
+        auth: res.headers.get(HEADER_AUTH),
+        items: null,
+        permission: Permission.RequireAuth,
+      };
+    }
     throw new Error(`Failed to fetch: status=${res.status}`);
   }
   const contentType = res.headers.get(HEADER_CONTENT_TYPE) || "";

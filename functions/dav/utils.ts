@@ -1,4 +1,4 @@
-import { MIME_DIR, Permission, trimPrefixSuffix } from "../../lib/commons";
+import { MIME_DIR, Permission, path2Key, trimPrefixSuffix } from "../../lib/commons";
 import { type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
@@ -28,9 +28,16 @@ export const ROOT_OBJECT = {
   etag: undefined,
 };
 
-function testPathHasPrefix(path: string, prefixesCsv: string): boolean {
+/**
+ * Test a R2 key has strict prefix.
+ * "foo/bar" and "foo" has "foo" prefix, but "foobar" doesn't.
+ * @param key
+ * @param prefixesCsv comma-separated prefixes. If key has any of these prefix, return true.
+ * @returns
+ */
+function testKeyHasPrefix(key: string, prefixesCsv: string): boolean {
   const prefixes = prefixesCsv.split(/\s*,\s*/).map((prefix) => trimPrefixSuffix(prefix, "/"));
-  if (prefixes.some((prefix) => path === prefix || path.startsWith(prefix + "/"))) {
+  if (prefixes.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
     return true;
   }
   return false;
@@ -38,13 +45,15 @@ function testPathHasPrefix(path: string, prefixesCsv: string): boolean {
 
 export function checkPermission(context: FdCfFuncContext): Permission {
   const { env, params } = context;
-  const pathSegments = (params.path || []) as String[];
-  const path = decodeURIComponent(pathSegments.join("/"));
-  if (env.PUBLIC_DIR_PREFIX && testPathHasPrefix(path, env.PUBLIC_DIR_PREFIX)) {
-    return Permission.OpenDir;
+  const key = path2Key(((params.path as string[]) || []).join("/"));
+  if (!key) {
+    return Permission.RequireAuth;
   }
-  if (env.PUBLIC_PREFIX && testPathHasPrefix(path, env.PUBLIC_PREFIX)) {
+  if (env.PUBLIC_PREFIX && testKeyHasPrefix(key, env.PUBLIC_PREFIX)) {
     return Permission.OpenFile;
+  }
+  if (env.PUBLIC_DIR_PREFIX && testKeyHasPrefix(key, env.PUBLIC_DIR_PREFIX)) {
+    return Permission.OpenDir;
   }
   return Permission.RequireAuth;
 }
