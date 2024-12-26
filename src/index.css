@@ -20,6 +20,10 @@
   visibility: hidden;
 }
 
+:root {
+  --yarl__color_button_active: #f38020;
+}
+
 .file-album-item {
   cursor: pointer;
 }

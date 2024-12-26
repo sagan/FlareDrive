@@ -65,14 +65,6 @@ export default function App() {
     }
   }, [viewMode])
 
-  const toggleViewMode = useCallback(() => {
-    setViewMode(value => {
-      const newValue = value === ViewMode.Default ? ViewMode.Album : ViewMode.Default
-      localStorage.setItem(VIEWMODE_VARIABLE, `${newValue}`)
-      return newValue
-    })
-  }, [])
-
   const location = useLocation();
   const navigate = useNavigate();
   const cwd = path2Key(location.pathname)

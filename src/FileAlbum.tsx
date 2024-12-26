@@ -26,6 +26,7 @@ export default function FileAlbum({
         auth,
         key: f.key,
         thumbnail: auth && f.customMetadata?.thumbnail ? f.customMetadata.thumbnail : true,
+        thumbnailContentType: f.httpMetadata.contentType,
       }) : "";
       const name = f.name || basename(f.key)
       const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded}`

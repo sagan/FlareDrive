@@ -16,6 +16,11 @@ export const THUMBNAIL_VARIABLE = "thumbnail";
 
 export const THUMBNAIL_NO404_VARIABLE = "thumbnailNo404";
 
+/**
+ * Display fallback thumbnail of that content type.
+ */
+export const THUMBNAIL_CONTENT_TYPE = "thumbnailContentType";
+
 export const THUMBNAIL_COLOR_VARIABLE = "thumbnailColor";
 
 export const THUMBNAIL_NOFALLBACK = "thumbnailNoFallback";
@@ -59,6 +64,16 @@ export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 export const MIME_DIR = "application/x-directory";
 
 export const MIME_XML = "application/xml";
+
+export const MIME_PDF = "application/pdf";
+
+export const MIME_SH = "application/x-sh";
+
+export const MIME_JSON = "application/json";
+
+export const MIME_ZIP = "application/zip";
+
+export const MIME_GZIP = "application/gzip";
 
 export const HEADER_AUTHED = "X-Authed";
 
@@ -385,6 +400,7 @@ export function fileUrl({
   thumbnailNo404 = false,
   thumbNoFallback = false,
   thumbnailColor = "",
+  thumbnailContentType = "",
 }: {
   key: string;
   auth: string | null;
@@ -397,6 +413,7 @@ export function fileUrl({
   thumbnailNo404?: boolean;
   thumbNoFallback?: boolean;
   thumbnailColor?: string;
+  thumbnailContentType?: string;
 }): string {
   const searchParams = new URLSearchParams();
   if (auth && expires > 0) {
@@ -416,6 +433,9 @@ export function fileUrl({
     }
     if (thumbnailColor) {
       searchParams.set(THUMBNAIL_COLOR_VARIABLE, thumbnailColor);
+    }
+    if (thumbnailContentType) {
+      searchParams.set(THUMBNAIL_CONTENT_TYPE, thumbnailContentType);
     }
   }
 

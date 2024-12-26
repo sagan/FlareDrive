@@ -22,7 +22,11 @@ export default function MultiSelectToolbar({
   readonly: boolean
   multiSelected: string[];
   onClose: () => void;
-  getLink: (key: string) => string;
+  /**
+   * @param key
+   * @returns [link, linkIsDir]
+   */
+  getLink: (key: string) => [string, boolean];
   onRename: () => void;
   onMove: () => void;
   onDelete: () => void;
@@ -30,7 +34,7 @@ export default function MultiSelectToolbar({
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const link = multiSelected.length === 1 ? getLink(multiSelected[0]) : ""
+  const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false]
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -52,7 +56,7 @@ export default function MultiSelectToolbar({
         <CopyButton color="primary" href={link} isIcon={true} text={link}><LinkIcon /></CopyButton>
         <IconButton
           color="primary"
-          disabled={!link || link.endsWith("/")}
+          disabled={!link || linkIsDir}
           onClick={() => {
             const a = document.createElement("a");
             a.href = link;

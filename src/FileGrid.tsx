@@ -44,6 +44,7 @@ export default function FileGrid({
                 key: file.key,
                 auth: auth,
                 thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
+                thumbnailContentType: file.httpMetadata.contentType,
               })}
                 alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
             ) : (

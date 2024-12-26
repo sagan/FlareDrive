@@ -15,7 +15,7 @@ import {
   HEADER_AUTHORIZATION, MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
   compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
 } from "../lib/commons";
-import { FileItem, ViewMode, ViewProps, downloadFile, isDirectory, isImage } from "./commons";
+import { FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
 import MultiSelectToolbar from "./MultiSelectToolbar";
@@ -24,6 +24,7 @@ import ShareDialog from "./ShareDialog";
 import { Centered } from "./components";
 import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
+import MimeIcon from "./MimeIcon";
 
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
@@ -75,6 +76,8 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   if (slide.type == "image") {
     return undefined
   }
+  const thumbSize = 128
+  const _type = (slide as any)._type
 
   return <Box onClick={onClick} sx={{
     width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
@@ -92,7 +95,9 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       <Link href={src}>{slide.description}</Link>
     </Typography>
     <Box>
-      <img src={slide.thumbnail} width={128} height={128} />
+      {_type
+        ? <MimeIcon contentType={_type} sx={{ width: thumbSize, height: thumbSize }} />
+        : <img src={slide.thumbnail} width={thumbSize} height={thumbSize} />}
     </Box>
   </Box >
 }
@@ -190,11 +195,18 @@ export default function Main({
           key: file.key,
           auth,
           thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
+          thumbnailContentType: file.httpMetadata.contentType,
           thumbnailColor: "white",
         }),
         title: name,
         description: `${name} (${size})`,
-      })
+      });
+      if (!file.customMetadata?.thumbnail) {
+        // workaround: set a private property to mark this slide do not have thumbnail.
+        // So slide render should display MIME icon instead.
+        // @todo: A better way is to directly set MIME icon image data: url as thumbnail source.
+        (slides[slides.length - 1] as any)._type = file.httpMetadata.contentType;
+      }
     }
     return { slides, slideIndexes };
   }, [files])
@@ -258,12 +270,18 @@ export default function Main({
       <MultiSelectToolbar
         readonly={!authed}
         multiSelected={multiSelected}
-        getLink={(key: string) => fileUrl({
-          key,
-          auth: auth && permission == Permission.RequireAuth ? auth : "",
-          expires: (+new Date) + PRIVATE_URL_TTL,
-          origin: location.origin,
-        })}
+        getLink={(key: string) => {
+          const file = files.find(f => f.key === key);
+          if (file && isDirectory(file)) {
+            return [`${location.origin}${dirUrlPath(key)}`, true];
+          }
+          return [fileUrl({
+            key,
+            auth: auth && permission == Permission.RequireAuth ? auth : "",
+            expires: (+new Date) + PRIVATE_URL_TTL,
+            origin: location.origin,
+          }), false];
+        }}
         onShare={(key: string) => {
           const file = files.find(f => f.key === key)
           setSharing(key + (file?.httpMetadata.contentType === MIME_DIR ? "/" : ""))

@@ -3,6 +3,7 @@ import {
   KEY_PREFIX_THUMBNAIL,
   META_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
+  THUMBNAIL_CONTENT_TYPE,
   THUMBNAIL_NO404_VARIABLE,
   THUMBNAIL_NOFALLBACK,
   THUMBNAIL_VARIABLE,
@@ -28,6 +29,7 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
 
   if (requestThumbnail) {
     let digest: string;
+    let obj: R2Object | null = null;
     if (thumbnailIsDigest) {
       if (!authed) {
         // must be authorized to directly access thumbnail by digest
@@ -35,7 +37,7 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
       }
       digest = thumbnail;
     } else {
-      const obj = await bucket.head(path);
+      obj = await bucket.head(path);
       digest = obj?.customMetadata?.[THUMBNAIL_VARIABLE] || "";
     }
     let thumbObj: R2ObjectBody | R2Object | null = null;
@@ -62,7 +64,8 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
       }
       const color = searchParams.get(THUMBNAIL_COLOR_VARIABLE) || "";
       const no404 = !!str2int(searchParams.get(THUMBNAIL_NO404_VARIABLE));
-      return fallbackIconResponse(path, color, no404);
+      const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
+      return fallbackIconResponse(path, contentType || obj?.httpMetadata?.contentType, color, no404);
     }
     if (!("body" in thumbObj)) {
       return responseNotModified();
