@@ -61,6 +61,11 @@ export const KEY_PREFIX_PRIVATE = ".flaredrive/";
  */
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 
+/**
+ * Fallback MIME for any type file
+ */
+export const MIME_DEFAULT = "application/octet-stream";
+
 export const MIME_DIR = "application/x-directory";
 
 export const MIME_XML = "application/xml";
@@ -80,6 +85,13 @@ export const HEADER_AUTHED = "X-Authed";
 export const HEADER_PERMISSION = "X-Permission";
 
 export const HEADER_INAPP = "X-In-App";
+
+/**
+ * Directly upload file from other url
+ */
+export const HEADER_SOURCE_URL = "X-Source-Url";
+
+export const HEADER_SOURCE_URL_OPTIONS = "X-Source-Url-Options";
 
 export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
 
@@ -489,4 +501,25 @@ export function headers2Obj(headers: Headers): Record<string, string> {
     obj[key] = value;
   });
   return obj;
+}
+
+export function basicAuthorizationHeader(user: string, pass: string): string {
+  return `Basic ${btoa(`${user}:${pass}`)}`;
+}
+
+/**
+ * Parse "Content-Type" header, return mime and it's category:
+ * E.g. `Text/HTML;Charset="utf-8"` => ["text/html", "text"].
+ * If input is null / undefined / empty, return ["", ""].
+ * @param contentType
+ * @returns
+ */
+export function mimeType(contentType?: string | null): [string, string] {
+  if (!contentType) {
+    return ["", ""];
+  }
+  let [mime] = cut(contentType, ";");
+  mime = mime.toLowerCase();
+  const [mimeCat] = cut(mime, "/");
+  return [mime, mimeCat];
 }

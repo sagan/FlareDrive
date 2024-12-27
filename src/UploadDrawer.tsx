@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useMemo } from "react";
+import React, { forwardRef, useCallback, useMemo, useState } from "react";
 
 import { Button, Card, Drawer, Fab, Grid, Typography } from "@mui/material";
 import {
@@ -7,8 +7,12 @@ import {
   Image as ImageIcon,
   Upload as UploadIcon,
 } from "@mui/icons-material";
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import { Permission } from "../lib/commons";
 import { createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
+import UploadFromUrlDialog from "./UploadFromUrlDialog";
+
 
 function IconCaptionButton({
   icon,
@@ -57,17 +61,21 @@ export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
 export default function UploadDrawer({
   auth,
   open,
+  permission,
   setOpen,
   cwd,
   onUpload,
 }: {
   auth: string | null;
+  permission: Permission;
   open: boolean;
   setOpen: (open: boolean) => void;
   cwd: string;
   onUpload: () => void;
 }) {
   const uploadEnqueue = useUploadEnqueue();
+
+  const [uploadFromUrlOpen, setUploadFromUrlOpen] = useState(false);
 
   const handleUpload = useCallback(
     (action: string) => () => {
@@ -103,49 +111,65 @@ export default function UploadDrawer({
   const uploadImage = useMemo(() => handleUpload("image"), [handleUpload]);
   const uploadFile = useMemo(() => handleUpload("file"), [handleUpload]);
 
+  const onUploadFromUrl = useCallback(() => {
+    setOpen(false);
+    setUploadFromUrlOpen(true);
+  }, [])
+
   return (
-    <Drawer
-      anchor="bottom"
-      open={open}
-      onClose={() => setOpen(false)}
-      PaperProps={{ sx: { borderRadius: "16px 16px 0 0" } }}
-    >
-      <Card sx={{ padding: 2 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={3}>
-            <IconCaptionButton
-              icon={<CameraIcon fontSize="large" />}
-              caption="Camera"
-              onClick={takePhoto}
-            />
+    <>
+      <Drawer
+        anchor="bottom"
+        open={open}
+        onClose={() => setOpen(false)}
+        PaperProps={{ sx: { borderRadius: "16px 16px 0 0" } }}
+      >
+        <Card sx={{ padding: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<CameraIcon fontSize="large" />}
+                caption="Camera"
+                onClick={takePhoto}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<ImageIcon fontSize="large" />}
+                caption="Image/Video"
+                onClick={uploadImage}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<UploadIcon fontSize="large" />}
+                caption="Upload"
+                onClick={uploadFile}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<CloudDownloadIcon fontSize="large" />}
+                caption="Upload from URL"
+                onClick={onUploadFromUrl}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<CreateNewFolderIcon fontSize="large" />}
+                caption="Create Folder"
+                onClick={async () => {
+                  setOpen(false);
+                  await createFolder(cwd, auth);
+                  onUpload();
+                }}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={3}>
-            <IconCaptionButton
-              icon={<ImageIcon fontSize="large" />}
-              caption="Image/Video"
-              onClick={uploadImage}
-            />
-          </Grid>
-          <Grid item xs={3}>
-            <IconCaptionButton
-              icon={<UploadIcon fontSize="large" />}
-              caption="Upload"
-              onClick={uploadFile}
-            />
-          </Grid>
-          <Grid item xs={3}>
-            <IconCaptionButton
-              icon={<CreateNewFolderIcon fontSize="large" />}
-              caption="Create Folder"
-              onClick={async () => {
-                setOpen(false);
-                await createFolder(cwd, auth);
-                onUpload();
-              }}
-            />
-          </Grid>
-        </Grid>
-      </Card>
-    </Drawer>
+        </Card>
+      </Drawer>
+      <UploadFromUrlDialog cwd={cwd} auth={auth} open={uploadFromUrlOpen} onUpload={onUpload}
+        permission={permission} close={() => setUploadFromUrlOpen(false)} />
+    </>
   );
 }

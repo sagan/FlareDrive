@@ -1,10 +1,15 @@
+import mime from "mime";
 import {
   HEADER_CONTENT_TYPE,
   HEADER_FD_THUMBNAIL,
+  HEADER_SOURCE_URL,
+  HEADER_SOURCE_URL_OPTIONS,
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
+  MIME_DEFAULT,
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
+  mimeType,
   sha256,
   str2int,
 } from "../../lib/commons";
@@ -13,9 +18,10 @@ import {
   responseBadRequest,
   responseConflict,
   responseCreated,
+  responseInternalServerError,
   responseMethodNotAllowed,
-  responseNoContent,
   responseNotFound,
+  responseNotModified,
   responsePreconditionsFailed,
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -94,6 +100,37 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
 
   if (oldObject?.customMetadata?.thumbnail) {
     await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${oldObject.customMetadata.thumbnail}`);
+  }
+
+  if (request.headers.has(HEADER_SOURCE_URL)) {
+    const sourceUrl = request.headers.get(HEADER_SOURCE_URL);
+    if (!sourceUrl) {
+      return responseBadRequest();
+    }
+    let [contentType] = mimeType(request.headers.get(HEADER_CONTENT_TYPE));
+    let sourceUrlOptions: any = {};
+    if (request.headers.has(HEADER_SOURCE_URL_OPTIONS)) {
+      sourceUrlOptions = JSON.parse(request.headers.get(HEADER_SOURCE_URL_OPTIONS)!);
+    }
+    const sourceReponse = await fetch(sourceUrl, sourceUrlOptions);
+    if (!sourceReponse.ok) {
+      if (sourceReponse.status === 304) {
+        return responseNotModified();
+      }
+      return responseInternalServerError(`source url return status=${sourceReponse.status}`);
+    }
+    const [sourceContentType] = mimeType(sourceReponse.headers.get(HEADER_CONTENT_TYPE));
+    if (contentType && sourceContentType && contentType !== sourceContentType) {
+      return responseInternalServerError(`source url return different content-type ${sourceContentType}`);
+    }
+    contentType = contentType || sourceContentType || mime.getType(path) || MIME_DEFAULT;
+    request.headers.set(HEADER_CONTENT_TYPE, contentType);
+
+    const r2obj = await bucket.put(path, sourceReponse.body, {
+      httpMetadata: sourceReponse.headers,
+      customMetadata,
+    });
+    return responseCreated(r2obj);
   }
 
   const result = await bucket.put(path, request.body, {

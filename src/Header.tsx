@@ -12,6 +12,7 @@ export default function Header({
   permission,
   authed,
   search,
+  onSignOut,
   setViewMode,
   onSearchChange,
   onGenerateThumbnails,
@@ -22,6 +23,7 @@ export default function Header({
   permission: Permission;
   authed: boolean;
   search: string;
+  onSignOut: () => void;
   onSearchChange: (newSearch: string) => void;
   onGenerateThumbnails: () => void;
   setShowProgressDialog: (show: boolean) => void;
@@ -97,7 +99,7 @@ export default function Header({
           } else if (permission === Permission.OpenDir) {
             navigate("/")
           } else {
-            location.reload()
+            fetchFiles()
           }
         }}
       >
@@ -108,10 +110,9 @@ export default function Header({
         open={Boolean(anchorEl2)}
         onClose={() => setAnchorEl2(null)}
       >
-        <MenuItem onClick={async () => {
+        <MenuItem onClick={() => {
           setAnchorEl2(null);
-          localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
-          location.href = SIGNOUT_API
+          onSignOut();
         }}>Sign out</MenuItem>
       </Menu>
     </Toolbar>

@@ -266,7 +266,8 @@ export default function Main({
         </DropZone>
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
-      <UploadDrawer auth={auth} open={showUploadDrawer} setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
+      <UploadDrawer auth={auth} open={showUploadDrawer} permission={permission}
+        setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
       <MultiSelectToolbar
         readonly={!authed}
         multiSelected={multiSelected}

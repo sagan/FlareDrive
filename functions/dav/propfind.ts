@@ -47,7 +47,7 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
 </multistatus>`;
 
   let sentBackAuthHeader: string | null = null;
-  if (authed && str2int(request.headers.get(HEADER_INAPP)) && isHttpsOrLocalUrl(request.url)) {
+  if (authed && request.headers.has(HEADER_INAPP) && isHttpsOrLocalUrl(request.url)) {
     sentBackAuthHeader = request.headers.get(HEADER_AUTHORIZATION);
   }
   const fixedHeaders = {

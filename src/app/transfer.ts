@@ -20,6 +20,7 @@ import {
   HEADER_CONTENT_TYPE,
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
+  HEADER_SOURCE_URL,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -391,4 +392,41 @@ export async function putThumbnail(key: string, blob: Blob, auth: string | null)
   }
   const thumbnailObj = await res.json<ThumbnailObject>();
   return thumbnailObj;
+}
+
+export async function uploadFromUrl({
+  key,
+  sourceUrl,
+  contentType,
+  auth,
+  signal,
+}: {
+  key: string;
+  sourceUrl: string;
+  auth: string | null;
+  contentType?: string;
+  signal?: AbortSignal;
+}): Promise<FileItem> {
+  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
+    method: "PUT",
+    headers: {
+      [HEADER_SOURCE_URL]: sourceUrl,
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+      ...(contentType ? { [HEADER_CONTENT_TYPE]: contentType } : {}),
+    },
+    signal,
+  });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
+  }
+  const obj = await res.json<R2Object>();
+  return {
+    key: obj.key,
+    size: obj.size,
+    uploaded: (obj as any).uploaded,
+    httpMetadata: {
+      contentType: obj.httpMetadata?.contentType || "",
+    },
+    customMetadata: obj.customMetadata,
+  };
 }

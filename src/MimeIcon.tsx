@@ -1,4 +1,4 @@
-import { MIME_DIR, MIME_GZIP, MIME_JSON, MIME_PDF, MIME_SH, MIME_XML, MIME_ZIP, cut } from "../lib/commons";
+import { MIME_DIR, MIME_GZIP, MIME_JSON, MIME_PDF, MIME_SH, MIME_XML, MIME_ZIP, mimeType } from "../lib/commons";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import CodeIcon from "@mui/icons-material/Code";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -25,8 +25,7 @@ const icons: Record<string, React.FC<SvgIconProps>> = {
 }
 
 export default function MimeIcon({ contentType, ...others }: SvgIconProps & { contentType?: string; }) {
-  contentType = contentType || ""
-  const [contentTypeCat] = cut(contentType, "/")
-  const Icon = icons[contentType] || icons[contentTypeCat] || icons[""]
+  let [mime, mimeCat] = mimeType(contentType)
+  const Icon = icons[mime] || icons[mimeCat] || icons[""]
   return <Icon fontSize="large" {...others} />
 }

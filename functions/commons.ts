@@ -13,6 +13,9 @@ import {
   HEADER_LAST_MODIFIED,
   HEADER_ETAG,
   fileUrl,
+  HEADER_INAPP,
+  basicAuthorizationHeader,
+  MIME_JSON,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -90,10 +93,14 @@ export function responseNoContent(): Response {
 }
 
 /**
- * Return 201 Created response
+ * Return 201 Created response.
+ * If body is a object, return a json response of it.
  */
-export function responseCreated(): Response {
-  return new Response("", { status: 201 });
+export function responseCreated(body?: object | string): Response {
+  if (typeof body === "object") {
+    return jsonResponse(body, 201);
+  }
+  return new Response(body || "", { status: 201 });
 }
 
 /**
@@ -103,6 +110,16 @@ export function responseForbidden(msg?: string): Response {
   return new Response(msg || "Forbidden", { status: 403 });
 }
 
+/**
+ * Return 401 Unauthorized response
+ */
+export function responseUnauthorized(headers?: HeadersInit): Response {
+  return new Response("Unauthorized", { status: 401, headers });
+}
+
+/**
+ * Return 500 Internal Server Error response
+ */
 export function responseInternalServerError(msg?: string): Response {
   return new Response(msg || "Internal Server Error", { status: 500 });
 }
@@ -127,8 +144,15 @@ export function responseMethodNotAllowed(): Response {
   return new Response("Method not allowed", { status: 405 });
 }
 
-export function jsonResponse<T = any>(obj: T) {
+/**
+ * Return a json response of obj, status is by default 200.
+ * @param obj
+ * @param status
+ * @returns
+ */
+export function jsonResponse<T = any>(obj: T, status = 200) {
   return new Response(JSON.stringify(obj), {
+    status,
     headers: {
       [HEADER_CONTENT_TYPE]: "application/json",
     },
@@ -165,7 +189,7 @@ export async function checkAuthFailure(
   const searchParams = url.searchParams;
   const auth = searchParams.get(AUTH_VARIABLE) || request.headers.get(HEADER_AUTHORIZATION);
   const token = searchParams.get(TOKEN_VARIABLE);
-  const expectedAuth = `Basic ${btoa(`${user}:${pass}`)}`;
+  const expectedAuth = basicAuthorizationHeader(user, pass);
   let authed = false;
 
   if (token) {
@@ -182,11 +206,13 @@ export async function checkAuthFailure(
     authed = auth === expectedAuth;
   }
 
+  const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
+
   if (!authed) {
-    return new Response("Unauthorized", {
-      status: 401,
-      headers: { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` },
-    });
+    if (request.headers.has(HEADER_INAPP)) {
+      return responseUnauthorized();
+    }
+    return responseUnauthorized(basicAuthHeader);
   }
   return null;
 }

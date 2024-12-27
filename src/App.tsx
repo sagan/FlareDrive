@@ -9,7 +9,7 @@ import {
 import React, { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
-import { MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
+import { basicAuthorizationHeader, MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
 import {
   dirUrlPath, FileItem, isThumbnailPossible, ViewMode,
   LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE,
@@ -23,6 +23,7 @@ import ShareManager from "./ShareManager";
 import { listShares } from "./app/share";
 import { PathBreadcrumb } from "./components";
 import GenerateThumbnailsDialog from "./GenerateThumbnailsDialog";
+import SignInDialog from "./SignInDialog";
 
 const systemFolders: FileItem[] = [
   {
@@ -54,7 +55,7 @@ export default function App() {
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
-  const [permission, setPermission] = useState<Permission>(Permission.RequireAuth);
+  const [permission, setPermission] = useState<Permission>(Permission.Unknown);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return str2int(localStorage.getItem(VIEWMODE_VARIABLE))
   })
@@ -126,7 +127,7 @@ export default function App() {
       setFiles([]);
       setError(e)
       setPermission(Permission.RequireAuth)
-      if (`${e}`.includes("satus=401")) {
+      if (`${e}`.includes("status=401")) {
         setAuth(null)
         if (savedAuth && savedAuth === localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
           localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
@@ -135,10 +136,20 @@ export default function App() {
     }).finally(() => setLoading(false));
   }, [cwd, setError]);
 
+  const onSignIn = useCallback((user: string, pass: string) => {
+    if (!user && !pass) {
+      setError(new Error("username & password can not be both empty"))
+      return
+    }
+    localStorage.setItem(LOCAL_STORAGE_KEY_AUTH, basicAuthorizationHeader(user, pass))
+    fetchFiles();
+  }, [fetchFiles])
 
   useEffect(() => {
     fetchFiles();
   }, [fetchFiles]);
+
+  const requireSignIn = !auth && (permission === Permission.OpenFile || permission === Permission.RequireAuth)
 
   return (
     <ThemeProvider theme={theme}>
@@ -147,6 +158,11 @@ export default function App() {
       <TransferQueueProvider auth={auth}>
         <Stack sx={{ height: "100%" }}>
           <Header
+            onSignOut={() => {
+              setAuth(null);
+              localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
+              fetchFiles();
+            }}
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
             onGenerateThumbnails={() => onGenerateThumbnails(files)}
@@ -174,6 +190,7 @@ export default function App() {
         {!!generateThumbnailFiles && <GenerateThumbnailsDialog open={true} auth={auth}
           onClose={() => setGenerateThumbnailFiles(null)} onDone={fetchFiles} files={generateThumbnailFiles}>
         </GenerateThumbnailsDialog>}
+        {requireSignIn && <SignInDialog open={true} onSignIn={onSignIn} />}
       </TransferQueueProvider>
     </ThemeProvider>
   );
