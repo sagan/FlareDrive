@@ -357,7 +357,11 @@ export async function processTransferTask({
  * @param auth
  * @param force
  */
-export async function generateThumbnailsServerSide(keys: string[], auth: string | null, force: boolean) {
+export async function generateThumbnailsServerSide(
+  keys: string[],
+  auth: string | null,
+  force: boolean
+): Promise<Record<string, number>> {
   const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
     method: "POST",
     headers: {
@@ -369,6 +373,8 @@ export async function generateThumbnailsServerSide(keys: string[], auth: string 
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
+  let result = await res.json<Record<string, number>>();
+  return result;
 }
 
 /**
@@ -417,7 +423,8 @@ export async function uploadFromUrl({
     signal,
   });
   if (!res.ok) {
-    throw new Error(`status=${res.status}`);
+    const msg = await res.text();
+    throw new Error(`${res.status}: ${msg}`);
   }
   const obj = await res.json<R2Object>();
   return {

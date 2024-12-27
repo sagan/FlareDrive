@@ -24,9 +24,9 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
   onDone: () => void;
   files: FileItem[];
 }) {
+  const [ts, setTs] = useState(0)
   const [force, setForce] = useState(false);
   const [working, setWorking] = useState(false)
-  const [msg, setMsg] = useState("")
   const [result, setResult] = useState<Record<string, string>>({})
   const mountedRef = useRef(true)
   /**
@@ -42,23 +42,44 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
     }
   }, [])
 
-  const imageKeys = files.filter(isImage).map(f => f.key);
-
-  const onGenerateThumbnailsServerSide = useCallback((force: boolean) => {
+  const onGenerateThumbnailsSS = useCallback((force: boolean) => {
     setWorking(true)
     setResult({});
-    setMsg("");
-    generateThumbnailsServerSide(imageKeys, auth, force)
-      .then(onDone)
-      .catch(e => setMsg(`${e}`))
-      .finally(() => setWorking(false))
-  }, [imageKeys, onDone])
+    (async () => {
+      let successCnt = 0
+      for (const file of files) {
+        if (!mountedRef.current) {
+          return
+        }
+        if (!isImage(file)) {
+          setResult(result => ({ ...result, [file.key]: `Unsupported type` }))
+          continue
+        }
+        try {
+          setResult(result => ({ ...result, [file.key]: `Generating...` }))
+          const result = await generateThumbnailsServerSide([file.key], auth, force)
+          if (result[file.key] === 0) {
+            successCnt++
+            setResult(result => ({ ...result, [file.key]: `Generated` }))
+          } else {
+            setResult(result => ({ ...result, [file.key]: `Result: ${result[file.key]}` }))
+          }
+        } catch (e) {
+          setResult(result => ({ ...result, [file.key]: `${e}` }))
+        }
+      }
+      setWorking(false);
+      if (successCnt > 0) {
+        setTs(+new Date)
+        onDone()
+      }
+    })();
+  }, [files, onDone])
 
   const onGenerateThumbnails = useCallback((force: boolean) => {
     const items = files
     setWorking(true);
     setResult({});
-    setMsg("");
     (async () => {
       let successCnt = 0
       for (const file of items) {
@@ -82,12 +103,13 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
       }
       setWorking(false);
       if (successCnt > 0) {
-        onDone();
+        setTs(+new Date)
+        onDone()
       }
     })();
   }, [files, onDone])
 
-  return <Dialog onClose={onClose} open={open}>
+  return <Dialog onClose={onClose} open={open} maxWidth="lg">
     <DialogTitle>(Re)Generate thumbnails of following files?</DialogTitle>
     <DialogContent>
       <List sx={{ pt: 0 }}>
@@ -99,6 +121,7 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
             // an "image" (Content-Type: "image/*") response won't trigger onerror event of img,
             // even if it's status is 404 or some like.
             thumbNoFallback: true,
+            ts,
           })
           return <ListItem disableGutters key={file.key}>
             <ListItemIcon>
@@ -122,15 +145,15 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
       </List>
     </DialogContent>
     <DialogActions>
-      <span>{msg}</span>
       {working && <span>...&nbsp;</span>}
       <FormControlLabel control={<Checkbox checked={force} onChange={e => setForce(e.target.checked)} />}
         label="Force" title='Re-generate existing thumbnails' />
-      <Button title="Generate thumbnails" disabled={working || !files.length} onClick={() => onGenerateThumbnails(force)}>
+      <Button title="Generate thumbnails"
+        disabled={working || !files.length} onClick={() => onGenerateThumbnails(force)}>
         Go
       </Button>
       <Button title="Generate thumbnails at the server side"
-        disabled={working || !imageKeys.length} onClick={() => onGenerateThumbnailsServerSide(force)}>
+        disabled={working || !files.length} onClick={() => onGenerateThumbnailsSS(force)}>
         Go (SS)
       </Button>
     </DialogActions>

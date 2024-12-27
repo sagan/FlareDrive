@@ -149,13 +149,6 @@ export default function UploadDrawer({
             </Grid>
             <Grid item xs={3}>
               <IconCaptionButton
-                icon={<CloudDownloadIcon fontSize="large" />}
-                caption="Upload from URL"
-                onClick={onUploadFromUrl}
-              />
-            </Grid>
-            <Grid item xs={3}>
-              <IconCaptionButton
                 icon={<CreateNewFolderIcon fontSize="large" />}
                 caption="Create Folder"
                 onClick={async () => {
@@ -163,6 +156,13 @@ export default function UploadDrawer({
                   await createFolder(cwd, auth);
                   onUpload();
                 }}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<CloudDownloadIcon fontSize="large" />}
+                caption="Cloud Download"
+                onClick={onUploadFromUrl}
               />
             </Grid>
           </Grid>

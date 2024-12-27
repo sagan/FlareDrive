@@ -8,7 +8,10 @@ import {
 } from "@mui/material";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { Button, Checkbox, FormControl, FormControlLabel, FormGroup, IconButton, InputLabel, NativeSelect, TextField } from '@mui/material';
+import {
+  Button, Checkbox, FormControl, FormControlLabel,
+  IconButton, InputLabel, NativeSelect, TextField
+} from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -18,7 +21,10 @@ import PasswordIcon from '@mui/icons-material/Password';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
-import { SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode, WEBDAV_ENDPOINT, basename, cut, dirname, key2Path, path2Key, trimPrefixSuffix } from '../lib/commons';
+import {
+  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
+  basename, cut, dirname, fileUrl, trimPrefixSuffix
+} from '../lib/commons';
 import { dirUrlPath, generatePassword } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton, TooltipIconButton } from './components';
@@ -55,7 +61,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
 
   const targetIsDir = shareObject.key.endsWith("/")
-  const targetLink = (targetIsDir ? "/" : WEBDAV_ENDPOINT) + key2Path(shareObject.key)
+  const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({ key: shareObject.key, auth })
   const targetParentLink = dirUrlPath(dirname(shareObject.key))
   const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "")
   const shareKeyError = !shareKey ? "Share name can not be empty" :
@@ -103,7 +109,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
     }
   }, [shareKey, referer, shareObject, ttl]);
 
-  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+  return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle sx={{ display: "flex" }}>
       <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
         color={status !== Status.Creating ? "primary" : "disabled"}

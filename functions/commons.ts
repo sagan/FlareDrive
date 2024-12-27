@@ -15,7 +15,7 @@ import {
   fileUrl,
   HEADER_INAPP,
   basicAuthorizationHeader,
-  MIME_JSON,
+  METHODS_DEFAULT,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -199,7 +199,11 @@ export async function checkAuthFailure(
         searchParams.delete(param);
       }
       searchParams.sort();
-      const payload = url.pathname + (searchParams.size ? "?" : "") + searchParams.toString();
+      const payload =
+        (!METHODS_DEFAULT.includes(request.method) ? request.method + " " : "") +
+        url.pathname +
+        (searchParams.size ? "?" : "") +
+        searchParams.toString();
       authed = await hmacSha256Verify(expectedAuth, token, payload);
     }
   } else {

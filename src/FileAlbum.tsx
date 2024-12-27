@@ -20,7 +20,7 @@ export default function FileAlbum({
     return emptyMessage
   }
 
-  return <Grid container spacing={3} sx={{ paddingBottom: "48px", ml: 1, mr: 1 }}>
+  return <Grid container spacing={1} sx={{ paddingBottom: "48px" }}>
     {files.map((f) => {
       const thumbnailUrl = f.customMetadata?.thumbnail ? fileUrl({
         auth,
@@ -30,7 +30,7 @@ export default function FileAlbum({
       }) : "";
       const name = f.name || basename(f.key)
       const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded}`
-      return <Grid item xs="auto"
+      return <Grid item xs="auto" key={f.key}
         onContextMenu={(e) => {
           e.preventDefault()
           onContextMenu(f);

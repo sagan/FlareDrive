@@ -36,10 +36,20 @@ export const DOWNLOAD_VARIABLE = "download";
 export const META_VARIABLE = "meta";
 
 /**
- * These query string variables do not participate in signing:
- * ["token"]
+ * request timestamp to make each url unique. Do not participate in url signinng
  */
-export const NOSIGN_VARIABLES: string[] = [TOKEN_VARIABLE];
+export const TS_VARIABLE = "_ts";
+
+/**
+ * simple "read" http methods: ["GET", "HEAD", "OPTIONS"]
+ */
+export const METHODS_DEFAULT = ["GET", "HEAD", "OPTIONS"];
+
+/**
+ * These query string variables do not participate in signing:
+ * ["token", "ts"]
+ */
+export const NOSIGN_VARIABLES: string[] = [TOKEN_VARIABLE, TS_VARIABLE];
 
 /**
  * private file url default valid time in milliseconds.
@@ -386,18 +396,23 @@ function signUrl({
   pathname,
   searchParams,
   origin = "",
+  method = "",
 }: {
   key: string;
   pathname: string;
   searchParams?: URLSearchParams;
   origin?: string;
+  method?: string;
 }): string {
   const signSearchParams = new URLSearchParams(searchParams);
   for (const param of NOSIGN_VARIABLES) {
     signSearchParams.delete(param);
   }
   signSearchParams.sort();
-  const payload = pathname + (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
+  const payload =
+    (method && !METHODS_DEFAULT.includes(method) ? method + " " : "") +
+    pathname +
+    (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
   const signature = hmacSha256SignSync(key, payload);
   const qs = searchParams ? searchParams.toString() : "";
   return `${origin}${pathname}?${qs}${qs ? "&" : ""}${TOKEN_VARIABLE}=${encodeURIComponent(signature)}`;
@@ -407,7 +422,9 @@ export function fileUrl({
   key,
   auth,
   expires = 0,
+  ts = 0,
   origin = "",
+  method = "",
   thumbnail = false,
   thumbnailNo404 = false,
   thumbNoFallback = false,
@@ -417,7 +434,9 @@ export function fileUrl({
   key: string;
   auth: string | null;
   expires?: number;
+  ts?: number;
   origin?: string;
+  method?: string;
   /**
    * true, or digest
    */
@@ -450,12 +469,15 @@ export function fileUrl({
       searchParams.set(THUMBNAIL_CONTENT_TYPE, thumbnailContentType);
     }
   }
+  if (ts) {
+    searchParams.set(TS_VARIABLE, `${ts}`);
+  }
 
   const pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   if (!auth) {
     return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
   }
-  return signUrl({ key: auth, pathname, searchParams, origin });
+  return signUrl({ key: auth, pathname, searchParams, origin, method });
 }
 
 /**

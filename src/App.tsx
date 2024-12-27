@@ -6,7 +6,7 @@ import {
   Snackbar,
   Stack,
 } from "@mui/material";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { basicAuthorizationHeader, MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
@@ -49,7 +49,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
-  const [generateThumbnailFiles, setGenerateThumbnailFiles] = React.useState<FileItem[] | null>(null)
+  const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
@@ -77,18 +77,13 @@ export default function App() {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
   }, [cwd]);
 
-  const onGenerateThumbnails = useCallback((files: FileItem[]) => {
-    let items: FileItem[]
-    if (generateThumbnailFiles) {
-      items = files.filter(f => generateThumbnailFiles.find(_f => f.key === _f.key))
-    } else {
-      items = files.filter(isThumbnailPossible)
-      if (multiSelected.length > 0) {
-        items = items.filter(f => multiSelected.includes(f.key))
-      }
+  const thumbnailableFiles = useMemo(() => {
+    let items = files.filter(isThumbnailPossible)
+    if (multiSelected.length > 0) {
+      items = items.filter(f => multiSelected.includes(f.key))
     }
-    setGenerateThumbnailFiles(items)
-  }, [multiSelected]);
+    return items
+  }, [files, multiSelected])
 
   const fetchFiles = useCallback(() => {
     setLoading(true);
@@ -117,9 +112,6 @@ export default function App() {
           items = [...systemFolders, ...items]
         }
         setFiles(items);
-        if (generateThumbnailFiles) {
-          onGenerateThumbnails(items)
-        }
       } else {
         setError(new Error("dir not found"))
       }
@@ -165,7 +157,7 @@ export default function App() {
             }}
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
             onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
-            onGenerateThumbnails={() => onGenerateThumbnails(files)}
+            onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
             setShowProgressDialog={setShowProgressDialog}
           />
           <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
@@ -187,8 +179,8 @@ export default function App() {
           open={showProgressDialog}
           onClose={() => setShowProgressDialog(false)}
         />
-        {!!generateThumbnailFiles && <GenerateThumbnailsDialog open={true} auth={auth}
-          onClose={() => setGenerateThumbnailFiles(null)} onDone={fetchFiles} files={generateThumbnailFiles}>
+        {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true} auth={auth}
+          onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
         </GenerateThumbnailsDialog>}
         {requireSignIn && <SignInDialog open={true} onSignIn={onSignIn} />}
       </TransferQueueProvider>
