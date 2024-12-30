@@ -1,5 +1,6 @@
 import mime from "mime";
 import {
+  ASYNC_VARIABLE,
   HEADER_CONTENT_TYPE,
   HEADER_FD_THUMBNAIL,
   HEADER_SOURCE_URL,
@@ -20,6 +21,7 @@ import {
   responseCreated,
   responseInternalServerError,
   responseMethodNotAllowed,
+  responseNoContent,
   responseNotFound,
   responseNotModified,
   responsePreconditionsFailed,
@@ -44,7 +46,7 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   });
 }
 
-export async function handleRequestPut({ bucket, path, request }: RequestHandlerParams) {
+export async function handleRequestPut({ context, bucket, path, request }: RequestHandlerParams) {
   const searchParams = new URLSearchParams(new URL(request.url).search);
 
   if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
@@ -77,7 +79,7 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
   }
 
   if (searchParams.has("uploadId")) {
-    return handleRequestPutMultipart({ bucket, path, request });
+    return handleRequestPutMultipart({ bucket, path, request, context });
   }
 
   if (request.url.endsWith("/")) {
@@ -126,10 +128,15 @@ export async function handleRequestPut({ bucket, path, request }: RequestHandler
     contentType = contentType || sourceContentType || mime.getType(path) || MIME_DEFAULT;
     request.headers.set(HEADER_CONTENT_TYPE, contentType);
 
-    const r2obj = await bucket.put(path, sourceReponse.body, {
+    const r2req = bucket.put(path, sourceReponse.body, {
       httpMetadata: sourceReponse.headers,
       customMetadata,
     });
+    if (str2int(searchParams.get(ASYNC_VARIABLE))) {
+      context.waitUntil(r2req);
+      return responseNoContent();
+    }
+    const r2obj = await r2req;
     return responseCreated(r2obj);
   }
 

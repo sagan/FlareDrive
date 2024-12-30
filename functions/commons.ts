@@ -16,6 +16,8 @@ import {
   HEADER_INAPP,
   basicAuthorizationHeader,
   METHODS_DEFAULT,
+  FULL_CONTROL_VARIABLE,
+  EXPIRES_VARIABLE,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -193,29 +195,25 @@ export async function checkAuthFailure(
   let authed = false;
 
   if (token) {
-    const expires = str2int(searchParams.get("expires"));
-    if (expires <= 0 || expires > +new Date()) {
+    const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
+    const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
+    if ((expires <= 0 || expires > +new Date()) && (fullControl || METHODS_DEFAULT.includes(request.method))) {
       for (const param of NOSIGN_VARIABLES) {
         searchParams.delete(param);
       }
       searchParams.sort();
-      const payload =
-        (!METHODS_DEFAULT.includes(request.method) ? request.method + " " : "") +
-        url.pathname +
-        (searchParams.size ? "?" : "") +
-        searchParams.toString();
+      const payload = url.pathname + (searchParams.size ? "?" : "") + searchParams.toString();
       authed = await hmacSha256Verify(expectedAuth, token, payload);
     }
   } else {
     authed = auth === expectedAuth;
   }
 
-  const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
-
   if (!authed) {
     if (request.headers.has(HEADER_INAPP)) {
       return responseUnauthorized();
     }
+    const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
     return responseUnauthorized(basicAuthHeader);
   }
   return null;

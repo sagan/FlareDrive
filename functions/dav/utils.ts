@@ -2,6 +2,7 @@ import { MIME_DIR, Permission, path2Key, trimPrefixSuffix } from "../../lib/comm
 import { type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
+  context: FdCfFuncContext;
   bucket: R2Bucket;
   path: string;
   request: Request;

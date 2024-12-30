@@ -11,7 +11,7 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { Permission } from "../lib/commons";
 import { createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
-import UploadFromUrlDialog from "./UploadFromUrlDialog";
+import CloudDownloadDialog from "./CloudDownloadDialog";
 
 
 function IconCaptionButton({
@@ -168,7 +168,7 @@ export default function UploadDrawer({
           </Grid>
         </Card>
       </Drawer>
-      <UploadFromUrlDialog cwd={cwd} auth={auth} open={uploadFromUrlOpen} onUpload={onUpload}
+      <CloudDownloadDialog cwd={cwd} auth={auth} open={uploadFromUrlOpen} onUpload={onUpload}
         permission={permission} close={() => setUploadFromUrlOpen(false)} />
     </>
   );

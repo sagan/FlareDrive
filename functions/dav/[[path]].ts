@@ -55,5 +55,5 @@ export const onRequest: FdCfFunc = async function (context) {
 
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
-  return handler({ bucket, path, request: context.request, permission, authed: !authFailResponse });
+  return handler({ context, bucket, path, request: context.request, permission, authed: !authFailResponse });
 };

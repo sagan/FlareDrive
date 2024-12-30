@@ -23,7 +23,7 @@ import { uploadFromUrl } from './app/transfer';
 import { useNavigate } from 'react-router-dom';
 
 
-export default function UploadFromUrlDialog({ cwd, auth, permission, open, close, onUpload }: {
+export default function CloudDownloadDialog({ cwd, auth, permission, open, close, onUpload }: {
   cwd: string;
   auth: string | null;
   permission: Permission;
@@ -128,7 +128,7 @@ export default function UploadFromUrlDialog({ cwd, auth, permission, open, close
         </Box>
         {!!error && <Typography>{error.toString()}</Typography>}
         <Box sx={{ mt: 1 }}>
-          <Button disabled={uploading} type="submit" onClick={onSubmit} color='primary'>
+          <Button disabled={uploading || !source} type="submit" onClick={onSubmit} color='primary'>
             {uploading ? "Uploading..." : "Upload"}
           </Button>
           <Button disabled={!uploading} color="secondary" onClick={() => {

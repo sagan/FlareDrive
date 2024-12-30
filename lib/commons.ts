@@ -35,6 +35,10 @@ export const DOWNLOAD_VARIABLE = "download";
 
 export const META_VARIABLE = "meta";
 
+export const ASYNC_VARIABLE = "async";
+
+export const FULL_CONTROL_VARIABLE = "fullControl";
+
 /**
  * request timestamp to make each url unique. Do not participate in url signinng
  */
@@ -396,23 +400,18 @@ function signUrl({
   pathname,
   searchParams,
   origin = "",
-  method = "",
 }: {
   key: string;
   pathname: string;
   searchParams?: URLSearchParams;
   origin?: string;
-  method?: string;
 }): string {
   const signSearchParams = new URLSearchParams(searchParams);
   for (const param of NOSIGN_VARIABLES) {
     signSearchParams.delete(param);
   }
   signSearchParams.sort();
-  const payload =
-    (method && !METHODS_DEFAULT.includes(method) ? method + " " : "") +
-    pathname +
-    (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
+  const payload = pathname + (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
   const signature = hmacSha256SignSync(key, payload);
   const qs = searchParams ? searchParams.toString() : "";
   return `${origin}${pathname}?${qs}${qs ? "&" : ""}${TOKEN_VARIABLE}=${encodeURIComponent(signature)}`;
@@ -424,19 +423,18 @@ export function fileUrl({
   expires = 0,
   ts = 0,
   origin = "",
-  method = "",
   thumbnail = false,
   thumbnailNo404 = false,
   thumbNoFallback = false,
   thumbnailColor = "",
   thumbnailContentType = "",
+  fullControl = false,
 }: {
   key: string;
   auth: string | null;
   expires?: number;
   ts?: number;
   origin?: string;
-  method?: string;
   /**
    * true, or digest
    */
@@ -445,6 +443,7 @@ export function fileUrl({
   thumbNoFallback?: boolean;
   thumbnailColor?: string;
   thumbnailContentType?: string;
+  fullControl?: boolean;
 }): string {
   const searchParams = new URLSearchParams();
   if (auth && expires > 0) {
@@ -472,12 +471,15 @@ export function fileUrl({
   if (ts) {
     searchParams.set(TS_VARIABLE, `${ts}`);
   }
+  if (fullControl) {
+    searchParams.set(FULL_CONTROL_VARIABLE, "1");
+  }
 
   const pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   if (!auth) {
     return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
   }
-  return signUrl({ key: auth, pathname, searchParams, origin, method });
+  return signUrl({ key: auth, pathname, searchParams, origin });
 }
 
 /**
