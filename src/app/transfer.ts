@@ -22,6 +22,8 @@ import {
   ThumbnailObject,
   HEADER_SOURCE_URL,
   HEADER_SOURCE_ASYNC,
+  MIME_DEFAULT,
+  HEADER_IF_UNMODIFIED_SINCE,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -197,7 +199,7 @@ export async function multipartUpload(
   }
 ) {
   const headers = options?.headers || {};
-  headers["content-type"] = file.type;
+  headers[HEADER_CONTENT_TYPE] = file.type;
 
   const uploadResponse = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
     headers,
@@ -272,13 +274,19 @@ export async function copyPaste(source: string, target: string, auth: string | n
   });
 }
 
-export async function createFolder(cwd: string, auth: string | null) {
+/**
+ *
+ * @param cwd
+ * @param auth
+ * @returns true if folder created
+ */
+export async function createFolder(cwd: string, auth: string | null): Promise<boolean> {
   try {
     const folderName = window.prompt("Folder name");
-    if (!folderName) return;
+    if (!folderName) return false;
     if (folderName.includes("/")) {
       window.alert("Invalid folder name");
-      return;
+      return false;
     }
     const folderKey = (cwd ? cwd + "/" : "") + folderName;
     const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
@@ -288,8 +296,32 @@ export async function createFolder(cwd: string, auth: string | null) {
         ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
       },
     });
-  } catch (error) {
-    console.log(`Create folder failed`);
+    return true;
+  } catch (err) {
+    alert(`Create folder failed: ${err}`);
+    return false;
+  }
+}
+
+/**
+ * Create empty new file
+ * @param key
+ * @param auth
+ * @returns
+ */
+export async function createFile(key: string, auth: string | null) {
+  const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      [HEADER_CONTENT_TYPE]: mime.getType(key) || MIME_DEFAULT,
+      [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString(),
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+    },
+    body: "",
+  });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
   }
 }
 
@@ -333,6 +365,7 @@ export async function processTransferTask({
   }
 
   const headers: Record<string, string> = {
+    [HEADER_CONTENT_TYPE]: file.type,
     ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };

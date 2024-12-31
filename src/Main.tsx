@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, CircularProgress, Link, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
+import EditIcon from '@mui/icons-material/Edit';
 import Lightbox, { RenderSlideProps, SlideImage, useLightboxProps, useLightboxState } from "yet-another-react-lightbox";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
@@ -15,7 +16,7 @@ import {
   HEADER_AUTHORIZATION, MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
   compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
 } from "../lib/commons";
-import { FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage } from "./commons";
+import { EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage, isTextFile } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
 import MultiSelectToolbar from "./MultiSelectToolbar";
@@ -25,6 +26,7 @@ import { Centered } from "./components";
 import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
 import MimeIcon from "./MimeIcon";
+import EditorDialog from "./EditorDialog";
 
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
@@ -59,6 +61,8 @@ function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (fi
   );
 }
 
+type SlideCallback = ({ index, key }: { index: number, key: string }) => void;
+
 
 function SlideRender({ slide, rect }: RenderSlideProps) {
   const lightbox = useLightboxProps();
@@ -66,6 +70,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   const src = (slide as { src: string }).src || ""
 
   const click = lightbox.on.click
+  const edit = (lightbox.on as Record<string, SlideCallback>).edit
 
   const onClick = useCallback(() => {
     if (click) {
@@ -77,26 +82,35 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
     return undefined
   }
   const thumbSize = 128
-  const _type = (slide as any)._type
+  const file: FileItem = (slide as any)._file
 
   return <Box onClick={onClick} sx={{
     width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
     color: "white", overflow: "auto",
   }}>
     <Box sx={{ mb: 1 }}>
-      <Button download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+      <Button sx={{ m: 1 }} download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
         e.preventDefault()
         downloadFile(src)
       }}>
         Download
       </Button>
+      {file.size <= EDIT_FILE_SIZE_LIMIT && isTextFile(file) && <Button
+        variant="contained" color="secondary" startIcon={<EditIcon />} onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault()
+          edit({ index: currentIndex, key: file.key })
+        }}>
+        Edit
+      </Button>
+      }
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
       <Link href={src}>{slide.description}</Link>
     </Typography>
     <Box>
-      {_type
-        ? <MimeIcon contentType={_type} sx={{ width: thumbSize, height: thumbSize }} />
+      {!file.customMetadata?.thumbnail
+        ? <MimeIcon contentType={file.httpMetadata.contentType} sx={{ width: thumbSize, height: thumbSize }} />
         : <img src={slide.thumbnail} width={thumbSize} height={thumbSize} />}
     </Box>
   </Box >
@@ -132,6 +146,7 @@ export default function Main({
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
   const [sharing, setSharing] = useState(""); // sharing file key
+  const [editing, setEditing] = useState<string | null>(null); // text editing file key
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
@@ -201,12 +216,7 @@ export default function Main({
         title: name,
         description: `${name} (${size})`,
       });
-      if (!file.customMetadata?.thumbnail) {
-        // workaround: set a private property to mark this slide do not have thumbnail.
-        // So slide render should display MIME icon instead.
-        // @todo: A better way is to directly set MIME icon image data: url as thumbnail source.
-        (slides[slides.length - 1] as any)._type = file.httpMetadata.contentType;
-      }
+      (slides[slides.length - 1] as any)._file = file
     }
     return { slides, slideIndexes };
   }, [files])
@@ -239,6 +249,14 @@ export default function Main({
     handleMultiSelect(file.key);
   }, [])
 
+  const lightboxCallbacks: Record<string, SlideCallback> = {
+    click: toggleLightboxControls,
+    edit: ({ key }) => {
+      setSlideIndex(-1)
+      setEditing(key)
+    }, // custom callback
+  }
+
   const viewProps: ViewProps = {
     auth,
     files: filteredFiles,
@@ -267,7 +285,12 @@ export default function Main({
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer auth={auth} open={showUploadDrawer} permission={permission}
-        setOpen={setShowUploadDrawer} cwd={cwd} onUpload={fetchFiles} />
+        setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
+          fetchFiles();
+          if (created) {
+            setEditing(created)
+          }
+        }} />
       <MultiSelectToolbar
         readonly={!authed}
         multiSelected={multiSelected}
@@ -339,14 +362,15 @@ export default function Main({
           fetchFiles();
         }}
       />
-      {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={!!sharing} onClose={() => setSharing("")} />}
+      {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={true} onClose={() => setSharing("")} />}
+      {editing !== null && <EditorDialog auth={auth} filekey={editing} open={true} close={() => setEditing(null)} />}
       <Lightbox
-        on={{ click: toggleLightboxControls }}
+        on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}
         animation={{ fade: 0, swipe: 0, navigation: 0 }}
         index={slideIndex}
         carousel={{ finite: true }}
-        open={slideIndex >= 0}
+        open={slideIndex >= 0 && editing === null}
         close={() => setSlideIndex(-1)}
         slides={slides}
         render={{ slide: SlideRender }}

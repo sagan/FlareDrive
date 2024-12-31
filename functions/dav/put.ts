@@ -4,6 +4,7 @@ import {
   HEADER_CONTENT_LENGTH,
   HEADER_CONTENT_TYPE,
   HEADER_FD_THUMBNAIL,
+  HEADER_IF_UNMODIFIED_SINCE,
   HEADER_SOURCE_ASYNC,
   HEADER_SOURCE_URL,
   HEADER_SOURCE_URL_OPTIONS,
@@ -18,6 +19,7 @@ import {
   str2int,
 } from "../../lib/commons";
 import {
+  checkConflict,
   jsonResponse,
   responseBadRequest,
   responseConflict,
@@ -59,6 +61,10 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
     if (!object) {
       return responseNotFound();
     }
+    if (checkConflict(request, object)) {
+      return responseConflict();
+    }
+
     const blob = await request.blob();
     const digest = await sha256(blob);
     if (digest === object.customMetadata?.thumbnail) {
@@ -102,6 +108,10 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
   const customMetadata = thumbnail ? { thumbnail } : undefined;
 
   const oldObject = await bucket.head(path);
+
+  if (checkConflict(request, oldObject)) {
+    return responseConflict();
+  }
 
   if (oldObject?.customMetadata?.thumbnail) {
     await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${oldObject.customMetadata.thumbnail}`);

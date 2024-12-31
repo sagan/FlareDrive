@@ -7,9 +7,10 @@ import {
   Image as ImageIcon,
   Upload as UploadIcon,
 } from "@mui/icons-material";
+import CreateIcon from '@mui/icons-material/Create';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { Permission } from "../lib/commons";
-import { createFolder } from "./app/transfer";
+import { createFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
 import CloudDownloadDialog from "./CloudDownloadDialog";
 
@@ -71,7 +72,7 @@ export default function UploadDrawer({
   open: boolean;
   setOpen: (open: boolean) => void;
   cwd: string;
-  onUpload: () => void;
+  onUpload: (created?: string) => void;
 }) {
   const uploadEnqueue = useUploadEnqueue();
 
@@ -116,6 +117,26 @@ export default function UploadDrawer({
     setUploadFromUrlOpen(true);
   }, [])
 
+  const onCreate = useCallback(async () => {
+    setOpen(false)
+    const filename = prompt("Enter new text file name: ")
+    if (!filename) {
+      return
+    }
+    if (filename !== filename.trim()) {
+      alert("filename cann't start of end with space")
+      return
+    }
+    const key = (cwd ? cwd + "/" : "") + filename
+    try {
+      await createFile(key, auth)
+    } catch (e) {
+      alert(e);
+      return
+    }
+    onUpload(key)
+  }, [auth])
+
   return (
     <>
       <Drawer
@@ -153,8 +174,8 @@ export default function UploadDrawer({
                 caption="Create Folder"
                 onClick={async () => {
                   setOpen(false);
-                  await createFolder(cwd, auth);
-                  onUpload();
+                  const created = await createFolder(cwd, auth);
+                  created && onUpload();
                 }}
               />
             </Grid>
@@ -163,6 +184,13 @@ export default function UploadDrawer({
                 icon={<CloudDownloadIcon fontSize="large" />}
                 caption="Cloud Download"
                 onClick={onUploadFromUrl}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<CreateIcon fontSize="large" />}
+                caption="Create text"
+                onClick={onCreate}
               />
             </Grid>
           </Grid>

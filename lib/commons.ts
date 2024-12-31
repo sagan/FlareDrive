@@ -97,6 +97,16 @@ export const MIME_ZIP = "application/zip";
 
 export const MIME_GZIP = "application/gzip";
 
+export const MIME_YAML = "application/yaml";
+
+export const MIME_TOML = "application/toml";
+
+/**
+ * Textual mimes besides "txt/*": ["application/xml", "application/json", "application/x-sh",
+ * "application/yaml", "application/toml"]
+ */
+export const TXT_MIMES = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
+
 export const HEADER_AUTHED = "X-Authed";
 
 export const HEADER_PERMISSION = "X-Permission";
@@ -121,6 +131,8 @@ export const HEADER_CONTENT_LENGTH = "Content-Length";
 export const HEADER_ETAG = "ETag";
 
 export const HEADER_LAST_MODIFIED = "Last-Modified";
+
+export const HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
 
 /**
  * Sent back by server. The client sent "Authorization" header value.

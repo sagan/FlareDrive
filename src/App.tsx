@@ -9,10 +9,9 @@ import {
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
-import { basicAuthorizationHeader, MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
+import { AUTH_VARIABLE, basicAuthorizationHeader, MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
 import {
-  dirUrlPath, FileItem, isThumbnailPossible, ViewMode,
-  LOCAL_STORAGE_KEY_AUTH, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE,
+  dirUrlPath, FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -54,7 +53,7 @@ export default function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(LOCAL_STORAGE_KEY_AUTH))
+  const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(AUTH_VARIABLE))
   const [permission, setPermission] = useState<Permission>(Permission.Unknown);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return str2int(localStorage.getItem(VIEWMODE_VARIABLE))
@@ -91,7 +90,7 @@ export default function App() {
     setFiles([]);
     setPermission(Permission.Unknown);
     console.log("fetch", cwd)
-    const savedAuth = localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)
+    const savedAuth = localStorage.getItem(AUTH_VARIABLE)
     if (cwd == SHARES_FOLDER_KEY) {
       listShares(savedAuth).then(setShares).catch(e => {
         setShares([])
@@ -103,8 +102,8 @@ export default function App() {
       setPermission(permission)
       if (auth) {
         setAuth(auth)
-        if (auth !== localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
-          localStorage.setItem(LOCAL_STORAGE_KEY_AUTH, auth)
+        if (auth !== localStorage.getItem(AUTH_VARIABLE)) {
+          localStorage.setItem(AUTH_VARIABLE, auth)
         }
       }
       if (items) {
@@ -121,8 +120,8 @@ export default function App() {
       setPermission(Permission.RequireAuth)
       if (`${e}`.includes("status=401")) {
         setAuth(null)
-        if (savedAuth && savedAuth === localStorage.getItem(LOCAL_STORAGE_KEY_AUTH)) {
-          localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
+        if (savedAuth && savedAuth === localStorage.getItem(AUTH_VARIABLE)) {
+          localStorage.removeItem(AUTH_VARIABLE)
         }
       }
     }).finally(() => setLoading(false));
@@ -133,7 +132,7 @@ export default function App() {
       setError(new Error("username & password can not be both empty"))
       return
     }
-    localStorage.setItem(LOCAL_STORAGE_KEY_AUTH, basicAuthorizationHeader(user, pass))
+    localStorage.setItem(AUTH_VARIABLE, basicAuthorizationHeader(user, pass))
     fetchFiles();
   }, [fetchFiles])
 
@@ -152,7 +151,7 @@ export default function App() {
           <Header
             onSignOut={() => {
               setAuth(null);
-              localStorage.removeItem(LOCAL_STORAGE_KEY_AUTH)
+              localStorage.removeItem(AUTH_VARIABLE)
               fetchFiles();
             }}
             permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}

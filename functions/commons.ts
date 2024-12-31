@@ -18,6 +18,8 @@ import {
   METHODS_DEFAULT,
   FULL_CONTROL_VARIABLE,
   EXPIRES_VARIABLE,
+  HEADER_CONTENT_LENGTH,
+  HEADER_IF_UNMODIFIED_SINCE,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -344,7 +346,26 @@ export async function generateFileThumbnail({
 export function writeR2ObjectHeaders(obj: R2Object, headers: Headers) {
   obj.writeHttpMetadata(headers);
   headers.set(HEADER_LAST_MODIFIED, obj.uploaded.toUTCString());
+  headers.set(HEADER_CONTENT_LENGTH, `${obj.size}`);
   if (obj.httpEtag) {
     headers.set(HEADER_ETAG, obj.httpEtag);
   }
+}
+
+/**
+ * Check if request's If-Unmodified-Since header conflicts with existing R2 file
+ * @param request
+ * @param object
+ * @returns
+ */
+export function checkConflict(request: Request, object?: R2Object | null | undefined): boolean {
+  const ifNotModifiedHeader = request.headers.get(HEADER_IF_UNMODIFIED_SINCE);
+  if (ifNotModifiedHeader) {
+    const ts = +new Date(ifNotModifiedHeader);
+    // treat epoch timestamp ('Thu, 01 Jan 1970 00:00:00 GMT') specially: always conflict is file exists.
+    if (ts === 0 ? object : object && +object.uploaded > ts) {
+      return true;
+    }
+  }
+  return false;
 }

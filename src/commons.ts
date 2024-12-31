@@ -1,7 +1,14 @@
 import { SyntheticEvent } from "react";
-import { MIME_DIR } from "../lib/commons";
+import { MIME_DIR, TXT_MIMES, mimeType } from "../lib/commons";
 
 export const VIEWMODE_VARIABLE = "viewMode";
+
+export const EDITOR_PROMPT_VARIABLE = "editorPrompt";
+
+/**
+ * Edit file size limiit , default is 10MiB
+ */
+export const EDIT_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 
 export enum ViewMode {
   Default,
@@ -48,7 +55,12 @@ export function isThumbnailPossible(file: FileItem) {
 }
 
 export function isImage(file: FileItem): boolean {
-  return file.httpMetadata.contentType?.startsWith("image/");
+  return file.httpMetadata.contentType.startsWith("image/");
+}
+
+export function isTextFile(file: FileItem): boolean {
+  const [mime] = mimeType(file.httpMetadata.contentType);
+  return mime.startsWith("text/") || TXT_MIMES.includes(mime);
 }
 
 export function downloadFile(url: string) {
@@ -61,8 +73,6 @@ export function downloadFile(url: string) {
 export const PreventDefaultEventCb: React.EventHandler<SyntheticEvent> = function (e) {
   e.preventDefault();
 };
-
-export const LOCAL_STORAGE_KEY_AUTH = "auth";
 
 export const SHARES_FOLDER_KEY = ".shares";
 

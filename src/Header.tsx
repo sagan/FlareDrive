@@ -5,8 +5,8 @@ import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { Permission, SIGNOUT_API } from "../lib/commons";
-import { LOCAL_STORAGE_KEY_AUTH, ViewMode } from "./commons";
+import { Permission } from "../lib/commons";
+import { ViewMode } from "./commons";
 
 export default function Header({
   permission,

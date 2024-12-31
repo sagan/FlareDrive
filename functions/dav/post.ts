@@ -35,16 +35,16 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
   }
 }
 
-export const handleRequestPost = async function ({ bucket, path, request }: RequestHandlerParams) {
+export const handleRequestPost = async function ({ bucket, path, request, context }: RequestHandlerParams) {
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
 
   if (searchParams.has("uploads")) {
-    return handleRequestPostCreateMultipart({ bucket, path, request });
+    return handleRequestPostCreateMultipart({ bucket, path, request, context });
   }
 
   if (searchParams.has("uploadId")) {
-    return handleRequestPostCompleteMultipart({ bucket, path, request });
+    return handleRequestPostCompleteMultipart({ bucket, path, request, context });
   }
 
   return responseMethodNotAllowed();
