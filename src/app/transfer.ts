@@ -21,6 +21,7 @@ import {
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
   HEADER_SOURCE_URL,
+  HEADER_SOURCE_ASYNC,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -406,13 +407,15 @@ export async function uploadFromUrl({
   contentType,
   auth,
   signal,
+  asyncMode,
 }: {
   key: string;
   sourceUrl: string;
   auth: string | null;
   contentType?: string;
   signal?: AbortSignal;
-}): Promise<FileItem> {
+  asyncMode?: boolean;
+}): Promise<FileItem | null> {
   const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
     method: "PUT",
     headers: {
@@ -426,6 +429,9 @@ export async function uploadFromUrl({
     const msg = await res.text();
     throw new Error(`${res.status}: ${msg}`);
   }
+  if (asyncMode) {
+    return null;
+  }
   const obj = await res.json<R2Object>();
   return {
     key: obj.key,
@@ -433,6 +439,7 @@ export async function uploadFromUrl({
     uploaded: (obj as any).uploaded,
     httpMetadata: {
       contentType: obj.httpMetadata?.contentType || "",
+      ...(asyncMode ? { [HEADER_SOURCE_ASYNC]: "1" } : {}),
     },
     customMetadata: obj.customMetadata,
   };

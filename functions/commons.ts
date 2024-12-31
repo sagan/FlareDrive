@@ -22,6 +22,10 @@ import {
 
 export type FdCfFuncContext = EventContext<
   {
+    /**
+     * Flag. set it to any value (e.g. "1") to lift cloud download size limitation.
+     */
+    CLOUD_DOWNLOAD_UNLIMITED?: string;
     WEBDAV_USERNAME: string;
     WEBDAV_PASSWORD: string;
     PUBLIC_PREFIX?: string;

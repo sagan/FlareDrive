@@ -1,8 +1,10 @@
 import React, { SyntheticEvent, useCallback, useMemo, useState } from 'react';
 import {
+  Checkbox,
   Dialog,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   Paper,
   Table,
@@ -34,7 +36,11 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
   const navigate = useNavigate()
   const [source, setSource] = useState("")
   const [name, setName] = useState("")
-  const [uploaded, setUploaded] = useState<{ file: FileItem, sourceUrl: string }[]>([])
+  const [uploaded, setUploaded] = useState<{
+    file: FileItem | null, sourceUrl: string,
+    dir: string, saveName: string
+  }[]>([])
+  const [asyncMode, setAsyncMode] = useState(false)
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<any>(null);
   const [ac, setAc] = useState<AbortController | null>(null)
@@ -59,33 +65,46 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
 
   const onSubmit = useCallback(async (e: SyntheticEvent) => {
     e.preventDefault();
-    let sourceUrl = source
+    let sourceUrl = ""
+    try {
+      sourceUrl = new URL(source.trim()).href
+    } catch (e) {
+      setError(e)
+      return
+    }
     let saveName = name || autoName
+    let _asyncMode = asyncMode
     if (!sourceUrl || !saveName) {
       setError(new Error(`invalid source url or save name`))
       return
     }
+    const dir = cwd
     const key = (cwd ? cwd + "/" : "") + saveName;
     const ac = new AbortController()
     setError(null);
     setUploading(true);
     setAc(ac);
     try {
-      let file = await uploadFromUrl({ key, auth, sourceUrl, signal: ac.signal })
-      setUploaded(uploaded => [...uploaded, { file, sourceUrl }])
+      let file = await uploadFromUrl({ key, auth, sourceUrl, asyncMode: _asyncMode, signal: ac.signal })
+      setUploaded(uploaded => [{ file, dir, sourceUrl, saveName }, ...uploaded])
       setSource("")
       setName("")
     } catch (e) {
       setError(e)
     }
     setUploading(false)
-    onUpload();
-  }, [source, name, autoName]);
+    if (!_asyncMode) {
+      onUpload();
+    }
+  }, [source, name, autoName, asyncMode]);
 
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-    <DialogTitle sx={{ display: "flex" }}>
-      Download file to "{cwd + "/"}"
+    <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
+      <span>Download file to "{cwd + "/"}</span>
+      <FormControlLabel disabled={uploading} label="Async" title="Async download mode" control={
+        <Checkbox checked={asyncMode} onChange={e => setAsyncMode(e.target.checked)} />
+      } />
     </DialogTitle>
     <DialogContent autoFocus>
       <form>
@@ -143,12 +162,11 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
         </Box>
       </form>
       {uploaded.length > 0 && <Box>
-        <Typography>Uploaded files:</Typography>
         <TableContainer component={Paper}>
           <Table aria-label="simple table">
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
+                <TableCell>Downloaded File</TableCell>
                 <TableCell align="right">Size</TableCell>
                 <TableCell align="left">Dir</TableCell>
                 <TableCell align="right">Source</TableCell>
@@ -156,17 +174,21 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
             </TableHead>
             <TableBody>
               {uploaded.map((item, i) => {
-                const dir = dirname(item.file.key)
                 return <TableRow key={i}>
                   <TableCell>
-                    <a href={fileUrl({ key: item.file.key, auth })}>{basename(item.file.key)}</a>
+                    {item.file
+                      ? <a href={fileUrl({ key: item.file.key, auth })}>{item.saveName}</a>
+                      : <span>{item.saveName}</span>
+                    }
                   </TableCell>
-                  <TableCell align="right">{humanReadableSize(item.file.size)}</TableCell>
-                  <TableCell align="left"><a href={dirUrlPath(dir)} onClick={e => {
+                  <TableCell align="right">
+                    {item.file ? humanReadableSize(item.file.size) : "Unknown (Async task)"}
+                  </TableCell>
+                  <TableCell align="left"><a href={item.dir} onClick={e => {
                     e.preventDefault();
                     navigate(e.currentTarget.getAttribute("href")!);
                     onClose();
-                  }}>{dir}/</a></TableCell>
+                  }}>{item.dir}/</a></TableCell>
                   <TableCell align="right"><a href={item.sourceUrl}>Source</a></TableCell>
                 </TableRow>
               })}

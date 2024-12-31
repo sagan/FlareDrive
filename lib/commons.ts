@@ -5,6 +5,11 @@ export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
 
+/**
+ * Cloud Download default file size limit (bytes): 10MiB.
+ */
+export const CLOUD_DOWNLOAD_SIZE_LIMIT = 50 * 1024 * 1024;
+
 export const THUMBNAIL_SIZE = 144;
 
 /**
@@ -34,8 +39,6 @@ export const AUTH_VARIABLE = "auth";
 export const DOWNLOAD_VARIABLE = "download";
 
 export const META_VARIABLE = "meta";
-
-export const ASYNC_VARIABLE = "async";
 
 export const FULL_CONTROL_VARIABLE = "fullControl";
 
@@ -113,6 +116,8 @@ export const HEADER_AUTHORIZATION = "Authorization";
 
 export const HEADER_CONTENT_TYPE = "Content-Type";
 
+export const HEADER_CONTENT_LENGTH = "Content-Length";
+
 export const HEADER_ETAG = "ETag";
 
 export const HEADER_LAST_MODIFIED = "Last-Modified";
@@ -121,6 +126,11 @@ export const HEADER_LAST_MODIFIED = "Last-Modified";
  * Sent back by server. The client sent "Authorization" header value.
  */
 export const HEADER_AUTH = "X-Auth";
+
+/**
+ * async upload mode
+ */
+export const HEADER_SOURCE_ASYNC = "X-Source-Async";
 
 /**
  * Dir access permission. All values (except Unknown) > 0; Unknown is 0.

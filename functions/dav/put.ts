@@ -1,8 +1,10 @@
 import mime from "mime";
 import {
-  ASYNC_VARIABLE,
+  CLOUD_DOWNLOAD_SIZE_LIMIT,
+  HEADER_CONTENT_LENGTH,
   HEADER_CONTENT_TYPE,
   HEADER_FD_THUMBNAIL,
+  HEADER_SOURCE_ASYNC,
   HEADER_SOURCE_URL,
   HEADER_SOURCE_URL_OPTIONS,
   KEY_PREFIX_PRIVATE,
@@ -10,6 +12,7 @@ import {
   MIME_DEFAULT,
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
+  humanReadableSize,
   mimeType,
   sha256,
   str2int,
@@ -121,6 +124,13 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
       }
       return responseInternalServerError(`source url return status=${sourceReponse.status}`);
     }
+    if (!context.env.CLOUD_DOWNLOAD_UNLIMITED) {
+      const size = str2int(sourceReponse.headers.get(HEADER_CONTENT_LENGTH));
+      if (size > CLOUD_DOWNLOAD_SIZE_LIMIT) {
+        return responseInternalServerError(`source url file is too large: ${humanReadableSize(size)}`);
+      }
+    }
+
     const [sourceContentType] = mimeType(sourceReponse.headers.get(HEADER_CONTENT_TYPE));
     if (contentType && sourceContentType && contentType !== sourceContentType) {
       return responseInternalServerError(`source url return different content-type ${sourceContentType}`);
@@ -132,7 +142,7 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
       httpMetadata: sourceReponse.headers,
       customMetadata,
     });
-    if (str2int(searchParams.get(ASYNC_VARIABLE))) {
+    if (str2int(request.headers.get(HEADER_SOURCE_ASYNC))) {
       context.waitUntil(r2req);
       return responseNoContent();
     }
