@@ -92,7 +92,7 @@ export async function fetchPath(
         key: decodeURI(href).replace(new RegExp("^" + escapeRegExp(WEBDAV_ENDPOINT)), ""),
         size: size ? Number(size) : 0,
         uploaded: lastModified!,
-        httpMetadata: { contentType: contentType! },
+        httpMetadata: { contentType: contentType || "" },
         customMetadata: { thumbnail },
       } as FileItem;
     });
@@ -245,61 +245,51 @@ export async function multipartUpload(
             return uploadPart();
           })
           .catch(uploadPart);
-      const response = await [1, 2].reduce(retryReducer, uploadPart());
-      return { partNumber: i, etag: response.headers.get("etag")! };
+      const res = await [1, 2].reduce(retryReducer, uploadPart());
+      return { partNumber: i, etag: res.headers.get("etag")! };
     })
   );
   const uploadedParts = await Promise.all(promises);
   const completeParams = new URLSearchParams({ uploadId });
-  const response = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
+  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
     method: "POST",
     headers: {
       ...(headers[HEADER_AUTHORIZATION] ? { [HEADER_AUTHORIZATION]: headers[HEADER_AUTHORIZATION] } : {}),
     },
     body: JSON.stringify({ parts: uploadedParts }),
   });
-  if (!response.ok) throw new Error(await response.text());
-  return response;
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`status=${res.status}, msg=${msg}`);
+  }
+  return res;
 }
 
 export async function copyPaste(source: string, target: string, auth: string | null, move = false) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(source)}`;
   const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${key2Path(target)}`, window.location.href);
-  await fetch(uploadUrl, {
+  const res = await fetch(uploadUrl, {
     method: move ? "MOVE" : "COPY",
     headers: {
       Destination: destinationUrl.href,
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
+  }
 }
 
-/**
- *
- * @param cwd
- * @param auth
- * @returns true if folder created
- */
-export async function createFolder(cwd: string, auth: string | null): Promise<boolean> {
-  try {
-    const folderName = window.prompt("Folder name");
-    if (!folderName) return false;
-    if (folderName.includes("/")) {
-      window.alert("Invalid folder name");
-      return false;
-    }
-    const folderKey = (cwd ? cwd + "/" : "") + folderName;
-    const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
-    await fetch(uploadUrl, {
-      method: "MKCOL",
-      headers: {
-        ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-      },
-    });
-    return true;
-  } catch (err) {
-    alert(`Create folder failed: ${err}`);
-    return false;
+export async function createFolder(folderKey: string, auth: string | null) {
+  const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
+  const res = await fetch(uploadUrl, {
+    method: "MKCOL",
+    headers: {
+      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
   }
 }
 
@@ -356,10 +346,10 @@ export async function processTransferTask({
           },
         });
         thumbnailDigest = digestHex;
-      } catch (error) {
+      } catch (err) {
         console.log(`Upload ${digestHex}.png failed`);
       }
-    } catch (error) {
+    } catch (err) {
       console.log(`Generate thumbnail failed`);
     }
   }

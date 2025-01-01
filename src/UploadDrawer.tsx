@@ -66,6 +66,7 @@ export default function UploadDrawer({
   setOpen,
   cwd,
   onUpload,
+  setError,
 }: {
   auth: string | null;
   permission: Permission;
@@ -73,6 +74,7 @@ export default function UploadDrawer({
   setOpen: (open: boolean) => void;
   cwd: string;
   onUpload: (created?: string) => void;
+  setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
   const uploadEnqueue = useUploadEnqueue();
 
@@ -124,17 +126,15 @@ export default function UploadDrawer({
       return
     }
     if (filename !== filename.trim()) {
-      alert("filename cann't start of end with space")
-      return
+      setError("invalid filename: cann't start or end with space")
     }
     const key = (cwd ? cwd + "/" : "") + filename
     try {
       await createFile(key, auth)
+      onUpload(key)
     } catch (e) {
-      alert(e);
-      return
+      setError(e)
     }
-    onUpload(key)
   }, [auth])
 
   return (
@@ -174,8 +174,21 @@ export default function UploadDrawer({
                 caption="Create Folder"
                 onClick={async () => {
                   setOpen(false);
-                  const created = await createFolder(cwd, auth);
-                  created && onUpload();
+                  const folderName = prompt("New folder name");
+                  if (!folderName) {
+                    return
+                  }
+                  if (folderName.includes("/") || folderName !== folderName.trim()) {
+                    setError(`invalid folder name: cann't contain '/', or start or end with space`);
+                    return
+                  }
+                  const folderKey = (cwd ? cwd + "/" : "") + folderName;
+                  try {
+                    await createFolder(folderKey, auth);
+                    onUpload();
+                  } catch (e) {
+                    setError(e)
+                  }
                 }}
               />
             </Grid>

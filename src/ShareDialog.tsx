@@ -21,6 +21,10 @@ import PasswordIcon from '@mui/icons-material/Password';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
+import LinkIcon from '@mui/icons-material/Link';
+import SaveIcon from '@mui/icons-material/Save';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
   basename, cut, dirname, fileUrl, trimPrefixSuffix
@@ -110,13 +114,18 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   }, [shareKey, referer, shareObject, ttl]);
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-    <DialogTitle sx={{ display: "flex" }}>
+    <DialogTitle component={Typography} className='single-line'>
       <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
         color={status !== Status.Creating ? "primary" : "disabled"}
         href={status !== Status.Creating ? link : ""}
       >
         <ShareIcon />
       </TooltipIconButton>
+      <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
+        e.preventDefault();
+        onClose();
+        navigate(targetParentLink);
+      }}><FolderOpenIcon /></IconButton>
       <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
         if (!targetIsDir) {
           return
@@ -125,11 +134,6 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         onClose();
         navigate(targetLink);
       }}>{shareObject.key}</Button>
-      <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
-        e.preventDefault();
-        onClose();
-        navigate(targetParentLink);
-      }}><FolderOpenIcon /></IconButton>
     </DialogTitle>
     <DialogContent>
       <Box sx={{ mt: 1 }}>
@@ -275,21 +279,23 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
       </Typography>}
     </DialogContent>
     <DialogActions>
-      <Button disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'>{
-        {
+      <IconButton disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'
+        title={{
           [Status.Creating]: "Create",
           [Status.Sharing]: "Updating...",
           [Status.Editing]: "Update",
-        }[status]
-      }</Button>
+        }[status]}
+      ><SaveIcon /></IconButton>
       {
         status != Status.Creating && <>
-          <CopyButton isLink text={link} disabled={status !== Status.Editing} color='primary'>Copy link</CopyButton>
-          <Button disabled={status !== Status.Editing} color='warning'
-            onClick={doDeleteShare} title="Delete share">Delete</Button>
+          <CopyButton isLink text={link} disabled={status !== Status.Editing} color='secondary'>
+            <LinkIcon />
+          </CopyButton>
+          <IconButton disabled={status !== Status.Editing} color='warning'
+            onClick={doDeleteShare} title="Delete share"><DeleteIcon /></IconButton>
         </>
       }
-      <Button onClick={onClose} color='secondary'>Close</Button>
+      <IconButton onClick={onClose} color='secondary'><CloseIcon /></IconButton>
     </DialogActions>
   </Dialog >;
 }

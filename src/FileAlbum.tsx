@@ -43,12 +43,13 @@ export default function FileAlbum({
           sx={{ width: THUMBNAIL_SIZE + 4, height: THUMBNAIL_SIZE + 28 }}>
           <Box className="file-album-item-image" sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}>
             {thumbnailUrl
-              ? <img title={title} src={thumbnailUrl} />
+              ?
+              <img title={title} src={thumbnailUrl} />
               : <MimeIcon titleAccess={title} contentType={f.httpMetadata.contentType}
                 sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }} />
             }
           </Box>
-          <Box className="file-album-item-title" sx={{ width: THUMBNAIL_SIZE, height: 24 }}>
+          <Box className="file-album-item-title single-line" sx={{ width: THUMBNAIL_SIZE, height: 24 }}>
             {name}
           </Box>
         </Box>

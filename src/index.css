@@ -30,6 +30,8 @@
 
 .file-album-item img {
   object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .file-album-item.selected {
@@ -41,8 +43,11 @@
 }
 
 .file-album-item-title {
+  text-align: center;
+}
+
+.single-line {
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
+  text-overflow: clip;
 }

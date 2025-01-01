@@ -100,11 +100,8 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
 
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-    <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
-      <span>Download file to "{cwd + "/"}</span>
-      <FormControlLabel disabled={uploading} label="Async" title="Async download mode" control={
-        <Checkbox checked={asyncMode} onChange={e => setAsyncMode(e.target.checked)} />
-      } />
+    <DialogTitle component={Typography} className='single-line'>
+      Download to "{cwd + "/"}"
     </DialogTitle>
     <DialogContent autoFocus>
       <form>
@@ -147,6 +144,9 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
         </Box>
         {!!error && <Typography>{error.toString()}</Typography>}
         <Box sx={{ mt: 1 }}>
+          <FormControlLabel disabled={uploading} label="Async" title="Async download mode" control={
+            <Checkbox checked={asyncMode} onChange={e => setAsyncMode(e.target.checked)} />
+          } />
           <Button disabled={uploading || !source} type="submit" onClick={onSubmit} color='primary'>
             {uploading ? "Uploading..." : "Upload"}
           </Button>

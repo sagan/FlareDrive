@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, CircularProgress, Link, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
-import EditIcon from '@mui/icons-material/Edit';
+import FileOpenIcon from '@mui/icons-material/FileOpen';
 import Lightbox, { RenderSlideProps, SlideImage, useLightboxProps, useLightboxState } from "yet-another-react-lightbox";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
@@ -16,7 +16,7 @@ import {
   HEADER_AUTHORIZATION, MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
   compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
 } from "../lib/commons";
-import { EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage, isTextFile } from "./commons";
+import { EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage, isTextual } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
 import MultiSelectToolbar from "./MultiSelectToolbar";
@@ -90,23 +90,26 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   }}>
     <Box sx={{ mb: 1 }}>
       <Button sx={{ m: 1 }} download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+        e.stopPropagation()
         e.preventDefault()
         downloadFile(src)
       }}>
         Download
       </Button>
-      {file.size <= EDIT_FILE_SIZE_LIMIT && isTextFile(file) && <Button
-        variant="contained" color="secondary" startIcon={<EditIcon />} onClick={(e) => {
+      {file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) && <Button
+        variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
           e.stopPropagation();
           e.preventDefault()
           edit({ index: currentIndex, key: file.key })
         }}>
-        Edit
+        Open
       </Button>
       }
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
-      <Link href={src}>{slide.description}</Link>
+      <Link href={src} onClick={e => {
+        e.stopPropagation()
+      }}>{slide.description}</Link>
     </Typography>
     <Box>
       {!file.customMetadata?.thumbnail
@@ -129,6 +132,7 @@ export default function Main({
   multiSelected,
   setMultiSelected,
   fetchFiles,
+  setError,
 }: {
   viewMode: ViewMode,
   cwd: string;
@@ -142,6 +146,7 @@ export default function Main({
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
+  setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
@@ -284,7 +289,7 @@ export default function Main({
         </DropZone>
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
-      <UploadDrawer auth={auth} open={showUploadDrawer} permission={permission}
+      <UploadDrawer auth={auth} open={showUploadDrawer} permission={permission} setError={setError}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
           if (created) {
@@ -317,8 +322,12 @@ export default function Main({
           if (!newName || oldName === newName) {
             return;
           }
-          await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, auth, true);
-          fetchFiles();
+          try {
+            await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, auth, true);
+            fetchFiles();
+          } catch (e) {
+            setError(e)
+          }
         }}
         onMove={async () => {
           let dir = cwd || "/";
@@ -337,10 +346,13 @@ export default function Main({
             const name = basename(file);
             const src = (cwd ? cwd + "/" : "") + name;
             const dst = trimPrefixSuffix(newdir + name, "/");
-            await copyPaste(src, dst, auth, true);
+            try {
+              await copyPaste(src, dst, auth, true);
+            } catch (e) {
+              setError(e)
+            }
           }
           fetchFiles();
-          return;
         }}
         onDelete={async () => {
           if (multiSelected.length == 0) {
@@ -352,22 +364,27 @@ export default function Main({
             return;
           }
           for (const key of multiSelected) {
-            await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
-              method: "DELETE",
-              headers: {
-                ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-              },
-            });
+            try {
+              await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
+                method: "DELETE",
+                headers: {
+                  ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+                },
+              });
+            } catch (e) {
+              setError(e)
+            }
           }
           fetchFiles();
         }}
       />
       {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={true} onClose={() => setSharing("")} />}
-      {editing !== null && <EditorDialog auth={auth} filekey={editing} open={true} close={() => setEditing(null)} />}
+      {editing !== null && <EditorDialog auth={auth} filekey={editing} open={true}
+        setError={setError} close={() => setEditing(null)} />}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}
-        animation={{ fade: 0, swipe: 0, navigation: 0 }}
+        animation={{ fade: 0, swipe: 250, navigation: 0 }}
         index={slideIndex}
         carousel={{ finite: true }}
         open={slideIndex >= 0 && editing === null}

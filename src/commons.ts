@@ -1,9 +1,11 @@
 import { SyntheticEvent } from "react";
-import { MIME_DIR, TXT_MIMES, mimeType } from "../lib/commons";
+import { MIME_DEFAULT, MIME_DIR, TXT_MIMES, extname, mimeType } from "../lib/commons";
 
 export const VIEWMODE_VARIABLE = "viewMode";
 
 export const EDITOR_PROMPT_VARIABLE = "editorPrompt";
+
+export const EDITOR_READ_ONLY_VARIABLE = "editorReadOnly";
 
 /**
  * Edit file size limiit , default is 10MiB
@@ -58,8 +60,11 @@ export function isImage(file: FileItem): boolean {
   return file.httpMetadata.contentType.startsWith("image/");
 }
 
-export function isTextFile(file: FileItem): boolean {
+export function isTextual(file: FileItem): boolean {
   const [mime] = mimeType(file.httpMetadata.contentType);
+  if (!mime || mime === MIME_DEFAULT) {
+    return file.size <= 1024 * 1024;
+  }
   return mime.startsWith("text/") || TXT_MIMES.includes(mime);
 }
 

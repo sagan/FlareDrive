@@ -30,8 +30,8 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
     return new Response(null, {
       headers: { etag: object.httpEtag },
     });
-  } catch (error: any) {
-    return responseBadRequest(error.message);
+  } catch (err: any) {
+    return responseBadRequest(`${err.message || err}}`);
   }
 }
 

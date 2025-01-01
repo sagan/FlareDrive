@@ -49,7 +49,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<any>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
@@ -164,14 +164,14 @@ export default function App() {
             cwd === SHARES_FOLDER_KEY
               ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
               : <Main viewMode={viewMode} cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-                permission={permission} authed={!!auth} auth={auth} files={files}
+                permission={permission} authed={!!auth} auth={auth} files={files} setError={setError}
                 multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
           }
         </Stack>
         <Snackbar
           autoHideDuration={5000}
-          open={Boolean(error)}
-          message={error?.message}
+          open={!!error}
+          message={error ? `${error.message || error}` : null}
           onClose={() => setError(null)}
         />
         <ProgressDialog
