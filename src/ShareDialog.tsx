@@ -1,10 +1,12 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogActions,
-  DialogTitle
+  DialogTitle,
+  Tab,
+  Tabs,
 } from "@mui/material";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -54,6 +56,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   shareObject?: ShareObject
   postDelete?: (sharekey: string) => void;
 }) {
+  const [tab, setTab] = useState(0);
   const filekey = otherProps.shareKey ? otherProps.shareObject!.key : otherProps.filekey!
   const name = basename(trimPrefixSuffix(filekey, "/"))
   const [shareKey, setSharekey] = useState(otherProps.shareKey || name)
@@ -63,6 +66,9 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   const [status, setStatus] = useState(otherProps.shareKey ? Status.Editing : Status.Creating)
   const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
+  const [linkTtl, setLinkTtl] = useState(0);
+  const [linkTs, setLinkTs] = useState(0);
+  const [linkFullControl, setLinkFullControl] = useState(false);
 
   const targetIsDir = shareObject.key.endsWith("/")
   const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({ key: shareObject.key, auth })
@@ -113,6 +119,14 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
     }
   }, [shareKey, referer, shareObject, ttl]);
 
+  const linkUrl = useMemo(() => fileUrl({
+    origin: location.origin,
+    key: shareObject.key,
+    auth,
+    expires: linkTtl ? linkTs + linkTtl : 0,
+    fullControl: linkFullControl,
+  }), [shareObject.key, linkTs, linkTtl, linkFullControl])
+
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} className='single-line'>
       <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
@@ -135,7 +149,16 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         navigate(targetLink);
       }}>{shareObject.key}</Button>
     </DialogTitle>
-    <DialogContent>
+    {!targetIsDir && <Tabs value={tab} onChange={(_, newTab) => {
+      setTab(newTab)
+      if (newTab === 1) {
+        setLinkTs(+new Date)
+      }
+    }} sx={{ width: "100%" }} >
+      <Tab label="Publish" />
+      <Tab label="Get Link" />
+    </Tabs>}
+    {tab === 0 && <DialogContent>
       <Box sx={{ mt: 1 }}>
         <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth
           helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
@@ -172,7 +195,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
               </>
           }} />
       </Box>
-      <div>
+      <Box>
         <TextField disabled={status === Status.Sharing} fullWidth
           helperText={`share password of username:password format`} value={shareObject.auth || ""}
           onChange={e => setShareObject({ ...shareObject, auth: e.target.value })}
@@ -211,13 +234,13 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
                 </IconButton>
               </>
           }} />
-      </div>
-      <div>
+      </Box>
+      <Box>
         <TextField disabled={status === Status.Sharing} fullWidth multiline
           placeholder='optional description' helperText={`share public description (html)`} value={shareObject.desc || ""}
           onChange={e => setShareObject({ ...shareObject, desc: e.target.value })} />
-      </div>
-      <div>
+      </Box>
+      <Box>
         <FormControl sx={{ m: 1, minWidth: 120 }}>
           <InputLabel variant="standard" htmlFor="share-ttl">Expiration</InputLabel>
           <NativeSelect
@@ -237,6 +260,16 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
             <option value={86400 * 365}>1 year</option>
           </NativeSelect>
         </FormControl>
+        <FormControlLabel label="Enable CORS" control={
+          <Checkbox checked={!!shareObject.cors} onChange={e => {
+            setShareObject({ ...shareObject, cors: +e.target.checked })
+          }} />} />
+        {targetIsDir &&
+          <FormControlLabel label="Disable dir index" control={
+            <Checkbox checked={shareObject.noindex || false} onChange={e => {
+              setShareObject({ ...shareObject, noindex: e.target.checked })
+            }} />} />
+        }
         <FormControl sx={{ m: 1, minWidth: 120 }}>
           <InputLabel variant="standard" htmlFor="referer-mode">Referer limit</InputLabel>
           <NativeSelect
@@ -250,7 +283,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
             <option value={ShareRefererMode.BlackListMode}>Blacklist</option>
           </NativeSelect>
         </FormControl>
-      </div>
+      </Box>
       {!!shareObject.refererMode && <div>
         <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
           helperText={<>
@@ -259,26 +292,57 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
           </>} value={referer} onChange={e => setReferer(e.target.value)}
         />
       </div>}
-      <Box sx={{ display: 'flex' }} >
-        <FormControlLabel label="Enable CORS" control={
-          <Checkbox checked={!!shareObject.cors} onChange={e => {
-            setShareObject({ ...shareObject, cors: +e.target.checked })
-          }} />} />
-        {targetIsDir &&
-          <FormControlLabel label="Disable dir index" control={
-            <Checkbox checked={shareObject.noindex || false} onChange={e => {
-              setShareObject({ ...shareObject, noindex: e.target.checked })
-            }} />} />
-        }
-      </Box>
       {!!error && <Typography>{error}</Typography>}
       {status === Status.Editing && <Typography>
         Shared link: <a href={link}>{new URL(link).pathname}</a>
         {!!shareObject.expiration &&
           <span>&nbsp;(Link expires on {new Date(shareObject.expiration * 1000).toISOString()})</span>}
       </Typography>}
-    </DialogContent>
-    <DialogActions>
+    </DialogContent>}
+    {tab === 1 && <DialogContent>
+      <Box>
+        <FormControl sx={{ m: 1, minWidth: 120 }}>
+          <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
+          <NativeSelect
+            value={linkTtl}
+            onChange={e => {
+              setLinkTs(+new Date)
+              setLinkTtl(parseInt(e.target.value))
+            }}
+            inputProps={{ id: 'link-ttl' }}
+          >
+            <option value={0}><em>Never expire</em></option>
+            <option value={300}>5 minutes</option>
+            <option value={3600}>1 hour</option>
+            <option value={86400}>1 day</option>
+            <option value={86400 * 7}>7 days</option>
+            <option value={86400 * 365}>1 year</option>
+          </NativeSelect>
+        </FormControl>
+        <FormControlLabel label="Full Control (allow write)" control={
+          <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
+        />
+      </Box>
+      <Box sx={{ mt: 1 }}>
+        <TextField disabled label={`Access link (${linkFullControl ? "full control" : "read only"})`}
+          fullWidth value={linkUrl}
+          InputProps={{
+            endAdornment:
+              <IconButton
+                disabled={false}
+                onClick={() => navigator.clipboard.writeText(linkUrl)}
+                title={`Copy`}
+                edge="end"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+          }} />
+      </Box>
+      {!!linkTtl && <Typography>
+        <span>Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}</span>
+      </Typography>}
+    </DialogContent>}
+    {tab === 0 && <DialogActions>
       <IconButton disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'
         title={{
           [Status.Creating]: "Create",
@@ -296,7 +360,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
         </>
       }
       <IconButton onClick={onClose} color='secondary'><CloseIcon /></IconButton>
-    </DialogActions>
+    </DialogActions>}
   </Dialog >;
 }
 
