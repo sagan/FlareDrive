@@ -8,9 +8,9 @@ import {
 } from "@mui/icons-material";
 import LinkIcon from '@mui/icons-material/Link';
 import { CopyButton } from "./components";
+import { useConfig } from "./commons";
 
 export default function MultiSelectToolbar({
-  readonly,
   multiSelected,
   onClose,
   getLink,
@@ -19,7 +19,6 @@ export default function MultiSelectToolbar({
   onDelete,
   onShare,
 }: {
-  readonly: boolean
   multiSelected: string[];
   onClose: () => void;
   /**
@@ -32,6 +31,7 @@ export default function MultiSelectToolbar({
   onDelete: () => void;
   onShare: (key: string) => void;
 }) {
+  const { auth } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false]
@@ -66,7 +66,7 @@ export default function MultiSelectToolbar({
         >
           <DownloadIcon />
         </IconButton>
-        <IconButton disabled={readonly} color="primary" onClick={onDelete}>
+        <IconButton disabled={!auth} color="primary" onClick={onDelete}>
           <DeleteIcon />
         </IconButton>
         <IconButton
@@ -82,15 +82,15 @@ export default function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            {multiSelected.length === 1 && <MenuItem disabled={readonly} onClick={() => {
+            {multiSelected.length === 1 && <MenuItem disabled={!auth} onClick={() => {
               setAnchorEl(null)
               onRename()
             }}>Rename</MenuItem>}
-            <MenuItem disabled={readonly} onClick={() => {
+            <MenuItem disabled={!auth} onClick={() => {
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>
-            {multiSelected.length === 1 && <MenuItem disabled={readonly} onClick={() => {
+            {multiSelected.length === 1 && <MenuItem disabled={!auth} onClick={() => {
               setAnchorEl(null)
               onShare(multiSelected[0])
             }}>Share</MenuItem>}

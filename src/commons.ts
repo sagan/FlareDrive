@@ -23,7 +23,7 @@ export enum ViewMode {
  * The context's value get assigned in `<App />`.
  */
 export interface Config {
-  auth: string | null;
+  auth: string;
   viewMode: number;
   editorPrompt: number;
   editorReadOnly: number;
@@ -31,7 +31,11 @@ export interface Config {
    * private file url default expires unix timestamp (miniseconds)
    */
   expires: number;
-  setAuth: React.Dispatch<React.SetStateAction<string | null>>;
+  /**
+   * auth info from search params: scope, expires, token
+   */
+  authSearchParams: URLSearchParams | null;
+  setAuth: React.Dispatch<React.SetStateAction<string>>;
   setViewMode: React.Dispatch<React.SetStateAction<number>>;
   setEditorPrompt: React.Dispatch<React.SetStateAction<number>>;
   setEditorReadOnly: React.Dispatch<React.SetStateAction<number>>;

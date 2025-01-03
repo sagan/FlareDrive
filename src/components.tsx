@@ -37,10 +37,10 @@ export function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PathBreadcrumb({ permission, path, onCwdChange }: {
+export function PathBreadcrumb({ permission, path, setCwd }: {
   permission: Permission;
   path: string;
-  onCwdChange: (newCwd: string) => void
+  setCwd: (newCwd: string) => void
 }) {
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
@@ -50,7 +50,7 @@ export function PathBreadcrumb({ permission, path, onCwdChange }: {
     <Breadcrumbs separator="›" sx={{ padding: 1 }}>
       <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
         e.preventDefault();
-        onCwdChange("");
+        setCwd("");
       }}>
         <HomeIcon />
       </Button>
@@ -59,10 +59,12 @@ export function PathBreadcrumb({ permission, path, onCwdChange }: {
         return index === parts.length - 1 ? (
           <Typography key={index} color="text.primary">{part}</Typography>
         ) : (
-          <Link key={index} href={url}>{part}</Link>
+          <Link key={index} href={url} onClick={e => {
+            e.preventDefault()
+            setCwd(url)
+          }}>{part}</Link>
         )
-      })
-      }
+      })}
       {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile) &&
         <Button sx={{ minWidth: 0, padding: 0 }}
           title={permissionDescriptions[permission]}

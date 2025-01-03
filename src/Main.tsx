@@ -14,7 +14,7 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   HEADER_AUTHORIZATION, MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath
+  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath, TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
@@ -33,7 +33,6 @@ import EditorDialog from "./EditorDialog";
 
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
-  const { expires } = useConfig();
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -146,8 +145,7 @@ export default function Main({
   fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
-  const { auth, viewMode, expires } = useConfig()
-  const authed = !!auth
+  const { auth, authSearchParams, viewMode, expires } = useConfig()
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
   const [sharing, setSharing] = useState(""); // sharing file key
@@ -209,7 +207,9 @@ export default function Main({
         src: fileUrl({
           key: file.key,
           auth: auth && permission == Permission.RequireAuth ? auth : "",
-          expires,
+          expires: str2int(authSearchParams?.get(EXPIRES_VARIABLE)) || expires,
+          scope: authSearchParams?.get(SCOPE_VARIABLE),
+          token: authSearchParams?.get(TOKEN_VARIABLE),
         }),
         type: isImage(file) ? "image" : undefined,
         thumbnail: fileUrl({
@@ -290,7 +290,7 @@ export default function Main({
           {viewElement}
         </DropZone>
       )}
-      {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
+      {!!auth && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer open={showUploadDrawer} permission={permission} setError={setError}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
@@ -299,7 +299,6 @@ export default function Main({
           }
         }} />
       <MultiSelectToolbar
-        readonly={!authed}
         multiSelected={multiSelected}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);

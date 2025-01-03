@@ -18,7 +18,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import {
-  HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, WEBDAV_ENDPOINT,
+  EXPIRES_VARIABLE,
+  HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE, WEBDAV_ENDPOINT,
   extname, fileUrl, humanReadableSize, key2Path, str2int
 } from '../lib/commons';
 import { EDIT_FILE_SIZE_LIMIT, useConfig } from './commons';
@@ -60,14 +61,21 @@ export default function EditorDialog({ filekey, open, close, setError }: {
   close: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
-  const { auth, expires, editorPrompt, setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
+  const { auth, authSearchParams, expires, editorPrompt, setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
   const language = extLanguages[extname(filekey)] || extLanguages[""]
   const [state, setState] = useState<State>(State.Idle)
   const [contents, setContents] = useState<string | undefined>(undefined)
   const [changed, setChanged] = useState(false)
   const [ts, setTs] = useState(+new Date);
   const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
-  const fileLink = useMemo(() => fileUrl({ key: filekey, auth, expires, ts }), [filekey, auth, ts])
+  const fileLink = useMemo(() => fileUrl({
+    key: filekey,
+    auth,
+    expires: str2int(authSearchParams?.get(EXPIRES_VARIABLE)) || expires,
+    scope: authSearchParams?.get(SCOPE_VARIABLE),
+    token: authSearchParams?.get(TOKEN_VARIABLE),
+    ts
+  }), [filekey, auth, ts])
 
   const onLoad = useCallback(() => {
     (async () => {

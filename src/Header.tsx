@@ -1,18 +1,16 @@
 import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { Permission } from "../lib/commons";
-import { ViewMode } from "./commons";
+import { ViewMode, useConfig } from "./commons";
 
 export default function Header({
-  permission,
-  authed,
   search,
   onSignOut,
+  onSignnIn,
   setViewMode,
   onSearchChange,
   onGenerateThumbnails,
@@ -20,16 +18,16 @@ export default function Header({
   fetchFiles,
 }: {
   setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>,
-  permission: Permission;
-  authed: boolean;
   search: string;
   onSignOut: () => void;
+  onSignnIn: () => void;
   onSearchChange: (newSearch: string) => void;
   onGenerateThumbnails: () => void;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
 }) {
-  const navigate = useNavigate();
+  const { auth } = useConfig();
+  const authed = !!auth
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
 
@@ -96,10 +94,8 @@ export default function Header({
         onClick={(e) => {
           if (authed) {
             setAnchorEl2(e.currentTarget)
-          } else if (permission === Permission.OpenDir) {
-            navigate("/")
           } else {
-            fetchFiles()
+            onSignnIn()
           }
         }}
       >

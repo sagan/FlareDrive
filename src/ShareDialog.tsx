@@ -123,9 +123,11 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
     origin: location.origin,
     key: shareObject.key,
     auth,
-    expires: linkTtl ? linkTs + linkTtl : 0,
+    expires: linkTtl ? linkTs + linkTtl * 1000 : 0,
     fullControl: linkFullControl,
-  }), [shareObject.key, linkTs, linkTtl, linkFullControl])
+    scope: targetIsDir ? shareObject.key : undefined,
+    isDir: targetIsDir,
+  }), [shareObject.key, linkTs, linkTtl, linkFullControl, targetIsDir])
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} className='single-line'>
@@ -149,7 +151,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
         navigate(targetLink);
       }}>{shareObject.key}</Button>
     </DialogTitle>
-    {!targetIsDir && <Tabs value={tab} onChange={(_, newTab) => {
+    <Tabs value={tab} onChange={(_, newTab) => {
       setTab(newTab)
       if (newTab === 1) {
         setLinkTs(+new Date)
@@ -157,7 +159,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
     }} sx={{ width: "100%" }} >
       <Tab label="Publish" />
       <Tab label="Get Link" />
-    </Tabs>}
+    </Tabs>
     {tab === 0 && <DialogContent>
       <Box sx={{ mt: 1 }}>
         <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth

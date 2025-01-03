@@ -13,13 +13,20 @@ import {
   HEADER_LAST_MODIFIED,
   HEADER_ETAG,
   fileUrl,
-  HEADER_INAPP,
   basicAuthorizationHeader,
   METHODS_DEFAULT,
   FULL_CONTROL_VARIABLE,
   EXPIRES_VARIABLE,
   HEADER_CONTENT_LENGTH,
   HEADER_IF_UNMODIFIED_SINCE,
+  SHARE_ENDPOINT,
+  SCOPE_VARIABLE,
+  dirUrlPath,
+  trimPrefix,
+  WEBDAV_ENDPOINT,
+  path2Key,
+  trimPrefixSuffix,
+  METHODS_AUTH_ONLY,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -201,26 +208,46 @@ export async function checkAuthFailure(
   let authed = false;
 
   if (token) {
-    const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
-    const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
-    if ((expires <= 0 || expires > +new Date()) && (fullControl || METHODS_DEFAULT.includes(request.method))) {
+    authed = await (async () => {
+      if (METHODS_AUTH_ONLY.includes(request.method)) {
+        return false;
+      }
+      const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
+      const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
+      if ((expires > 0 && expires <= +new Date()) || (!fullControl && !METHODS_DEFAULT.includes(request.method))) {
+        return false;
+      }
       for (const param of NOSIGN_VARIABLES) {
         searchParams.delete(param);
       }
       searchParams.sort();
-      const payload = url.pathname + (searchParams.size ? "?" : "") + searchParams.toString();
-      authed = await hmacSha256Verify(expectedAuth, token, payload);
-    }
+      let scope = searchParams.get(SCOPE_VARIABLE);
+      let payload = "";
+      if (!scope) {
+        payload += url.pathname;
+      } else {
+        scope = trimPrefixSuffix(scope, "/");
+        let key = url.pathname;
+        key = trimPrefix(url.pathname, SHARE_ENDPOINT);
+        key = trimPrefix(url.pathname, WEBDAV_ENDPOINT);
+        key = path2Key(key);
+        if (key !== scope && !key.startsWith(scope + "/")) {
+          return false;
+        }
+      }
+      payload += searchParams.size ? "?" + searchParams.toString() : "";
+      return await hmacSha256Verify(expectedAuth, token, payload);
+    })();
   } else {
     authed = auth === expectedAuth;
   }
 
   if (!authed) {
-    if (request.headers.has(HEADER_INAPP)) {
-      return responseUnauthorized();
+    if (url.pathname.startsWith(SHARE_ENDPOINT)) {
+      const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
+      return responseUnauthorized(basicAuthHeader);
     }
-    const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
-    return responseUnauthorized(basicAuthHeader);
+    return responseUnauthorized();
   }
   return null;
 }

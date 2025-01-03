@@ -24,6 +24,7 @@ import {
   HEADER_SOURCE_ASYNC,
   MIME_DEFAULT,
   HEADER_IF_UNMODIFIED_SINCE,
+  isBasicAuthHeader,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -35,19 +36,20 @@ const CLIENT_THUMBNAIL_TYPE = "image/png";
 
 export async function fetchPath(
   path: string,
-  auth?: string | null
+  auth: string
 ): Promise<{
   permission: Permission;
   authed: boolean;
-  auth: string | null;
+  auth: string;
   items: FileItem[] | null;
 }> {
-  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
+  const isBasicAuth = isBasicAuthHeader(auth);
+  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}` + (!isBasicAuth ? auth : ""), {
     method: "PROPFIND",
     headers: {
       Depth: "1",
       [HEADER_INAPP]: "1",
-      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+      ...(isBasicAuth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
   });
 
@@ -55,7 +57,7 @@ export async function fetchPath(
     if (res.status == 404) {
       return {
         authed: !!str2int(res.headers.get(HEADER_AUTHED)),
-        auth: res.headers.get(HEADER_AUTH),
+        auth: res.headers.get(HEADER_AUTH) || "",
         items: null,
         permission: Permission.RequireAuth,
       };
@@ -67,7 +69,7 @@ export async function fetchPath(
     throw new Error("Invalid response");
   }
 
-  auth = res.headers.get(HEADER_AUTH);
+  auth = res.headers.get(HEADER_AUTH) || "";
   const authed = !!str2int(res.headers.get(HEADER_AUTHED));
   const permission: Permission = str2int(res.headers.get(HEADER_PERMISSION), Permission.RequireAuth);
   const parser = new DOMParser();

@@ -50,9 +50,14 @@ export const FULL_CONTROL_VARIABLE = "fullControl";
 export const TS_VARIABLE = "_ts";
 
 /**
- * simple "read" http methods: ["GET", "HEAD", "OPTIONS"]
+ * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND]
  */
-export const METHODS_DEFAULT = ["GET", "HEAD", "OPTIONS"];
+export const METHODS_DEFAULT = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+
+/**
+ * methods that allow authed admin only: [MOVE, COPY]
+ */
+export const METHODS_AUTH_ONLY = ["MOVE", "COPY"];
 
 /**
  * These query string variables do not participate in signing:
@@ -435,7 +440,9 @@ function signUrl({
     signSearchParams.delete(param);
   }
   signSearchParams.sort();
-  const payload = pathname + (signSearchParams?.size ? "?" + signSearchParams.toString() : "");
+  const payload =
+    (!signSearchParams.has(SCOPE_VARIABLE) ? pathname : "") +
+    (signSearchParams.size ? "?" + signSearchParams.toString() : "");
   const signature = hmacSha256SignSync(key, payload);
   const qs = searchParams ? searchParams.toString() : "";
   return `${origin}${pathname}?${qs}${qs ? "&" : ""}${TOKEN_VARIABLE}=${encodeURIComponent(signature)}`;
@@ -452,25 +459,6 @@ export function dirUrlPath(dirkey: string): string {
   return dirkey;
 }
 
-export function dirUrl({
-  key,
-  scope = "",
-  token = "",
-  origin = "",
-}: {
-  key: string;
-  scope?: string;
-  token?: string;
-  origin?: string;
-}): string {
-  const searchParams = new URLSearchParams();
-  if (token && scope && key.startsWith(scope)) {
-    searchParams.set(TOKEN_VARIABLE, token);
-    searchParams.set(SCOPE_VARIABLE, scope);
-  }
-  return origin + dirUrlPath(key) + (searchParams.size ? "?" + searchParams.toString() : "");
-}
-
 /**
  * Generate file access url. If auth is set, the url will be signed by it.
  * @param expires: file link expiration unix timestamp (microseconds). 0 == infinite.
@@ -479,6 +467,7 @@ export function dirUrl({
 export function fileUrl({
   key,
   auth,
+  token,
   expires = 0,
   ts = 0,
   origin = "",
@@ -489,13 +478,15 @@ export function fileUrl({
   thumbnailColor = "",
   thumbnailContentType = "",
   fullControl = false,
+  isDir = false,
 }: {
   key: string;
+  token?: string | null;
   auth: string | null;
   expires?: number;
   ts?: number;
   origin?: string;
-  scope?: string;
+  scope?: string | null;
   /**
    * true, or digest
    */
@@ -505,14 +496,18 @@ export function fileUrl({
   thumbnailColor?: string;
   thumbnailContentType?: string;
   fullControl?: boolean;
+  isDir?: boolean;
 }): string {
   const searchParams = new URLSearchParams();
-  if (auth) {
-    if (expires > 0) {
+  if (auth || token) {
+    if (expires) {
       searchParams.set(EXPIRES_VARIABLE, `${expires}`);
     }
     if (scope) {
       searchParams.set(SCOPE_VARIABLE, scope);
+    }
+    if (fullControl) {
+      searchParams.set(FULL_CONTROL_VARIABLE, "1");
     }
   }
   if (thumbnail) {
@@ -537,11 +532,10 @@ export function fileUrl({
   if (ts) {
     searchParams.set(TS_VARIABLE, `${ts}`);
   }
-  if (fullControl) {
-    searchParams.set(FULL_CONTROL_VARIABLE, "1");
+  const pathname = isDir ? dirUrlPath(key) : `${WEBDAV_ENDPOINT}${key2Path(key)}`;
+  if (token) {
+    searchParams.set(TOKEN_VARIABLE, token);
   }
-
-  const pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   if (!auth) {
     return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
   }
@@ -595,6 +589,10 @@ export function headers2Obj(headers: Headers): Record<string, string> {
 
 export function basicAuthorizationHeader(user: string, pass: string): string {
   return `Basic ${btoa(`${user}:${pass}`)}`;
+}
+
+export function isBasicAuthHeader(auth: string): boolean {
+  return auth.startsWith(`Basic `);
 }
 
 /**

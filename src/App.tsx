@@ -7,11 +7,11 @@ import {
   Stack,
 } from "@mui/material";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
-  AUTH_VARIABLE, basicAuthorizationHeader, dirUrlPath, MIME_DIR, nextDayEndTimestamp, path2Key, Permission
+  AUTH_VARIABLE, basicAuthorizationHeader, dirUrlPath, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, nextDayEndTimestamp, path2Key, Permission, SCOPE_VARIABLE, TOKEN_VARIABLE
 } from "../lib/commons";
 import {
   FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
@@ -49,6 +49,7 @@ const theme = createTheme({
 });
 
 export default function App() {
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
@@ -59,14 +60,25 @@ export default function App() {
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [permission, setPermission] = useState<Permission>(Permission.Unknown);
 
-  const [auth, setAuth] = useLocalStorage<string | null>(AUTH_VARIABLE, null);
+  const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
   const [editorPrompt, setEditorPrompt] = useLocalStorage<number>(EDITOR_PROMPT_VARIABLE, 1)
   const [editorReadOnly, setEditorReadOnly] = useLocalStorage<number>(EDITOR_READ_ONLY_VARIABLE, 0)
   const [expires, setExpires] = useState(() => nextDayEndTimestamp());
+  const [requireSignIn, setRequireSignIn] = useState(false)
+
+  const authSearchParams = useMemo(() => {
+    const authSearchParams = new URLSearchParams();
+    searchParams.forEach((value, key) => {
+      if ([SCOPE_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE].includes(key)) {
+        authSearchParams.set(key, value)
+      }
+    })
+    return authSearchParams.size ? authSearchParams : null
+  }, [searchParams])
 
   const config: Config = {
-    auth, viewMode, editorPrompt, editorReadOnly, expires,
+    auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires,
     setAuth, setViewMode, setEditorPrompt, setEditorReadOnly
   }
 
@@ -78,9 +90,18 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const cwd = path2Key(location.pathname)
-  const setCwd = useCallback((cwd: string) => {
-    navigate(dirUrlPath(cwd));
-  }, [navigate])
+
+  const setCwd = (cwd: string) => {
+    const pathname = dirUrlPath(cwd)
+    const scope = searchParams.get(SCOPE_VARIABLE)
+    if (scope) {
+      if (pathname.startsWith(dirUrlPath(scope))) {
+        navigate({ pathname, search: "?" + searchParams.toString() })
+        return
+      }
+    }
+    navigate(pathname);
+  }
 
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
@@ -107,8 +128,13 @@ export default function App() {
       }).finally(() => setLoading(false))
       return
     }
-    fetchPath(cwd, auth).then(({ permission, auth: sentbackAuth, items }) => {
+    fetchPath(cwd, auth || (authSearchParams ? "?" + authSearchParams.toString() : "")).then(({
+      permission,
+      auth: sentbackAuth,
+      items
+    }) => {
       setPermission(permission)
+      setRequireSignIn(false)
       if (sentbackAuth && sentbackAuth !== auth) {
         setAuth(sentbackAuth)
       }
@@ -125,7 +151,10 @@ export default function App() {
       setError(e)
       setPermission(Permission.RequireAuth)
       if (`${e}`.includes("status=401")) {
-        setAuth(null)
+        if (auth) {
+          setAuth("")
+        }
+        setRequireSignIn(true)
       }
     }).finally(() => setLoading(false));
   }
@@ -140,8 +169,6 @@ export default function App() {
 
   useEffect(() => fetchFiles(), [cwd, auth]);
 
-  const requireSignIn = !auth && (permission === Permission.OpenFile || permission === Permission.RequireAuth)
-
   return (
     <ConfigContext.Provider value={config}>
       <ThemeProvider theme={theme}>
@@ -151,15 +178,15 @@ export default function App() {
           <Stack sx={{ height: "100%" }}>
             <Header
               onSignOut={() => {
-                setAuth(null);
+                setAuth("");
                 fetchFiles();
               }}
-              permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
+              onSignnIn={() => setRequireSignIn(true)} search={search} fetchFiles={fetchFiles}
               onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
             />
-            <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
+            <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />
             {
               cwd === SHARES_FOLDER_KEY
                 ? <ShareManager fetchFiles={fetchFiles} search={search} shares={shares} loading={loading} />
