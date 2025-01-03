@@ -14,10 +14,10 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   HEADER_AUTHORIZATION, MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
+  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath
 } from "../lib/commons";
 import {
-  EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile,
+  EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
   isDirectory, isImage, isTextual, useConfig
 } from "./commons";
 import FileGrid from "./FileGrid";

@@ -29,9 +29,9 @@ import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
-  basename, cut, dirname, fileUrl, trimPrefixSuffix
+  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath
 } from '../lib/commons';
-import { dirUrlPath, generatePassword, useConfig } from './commons';
+import { generatePassword, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton, TooltipIconButton } from './components';
 

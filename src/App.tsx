@@ -10,9 +10,11 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { AUTH_VARIABLE, basicAuthorizationHeader, MIME_DIR, nextDayEndTimestamp, path2Key, Permission, str2int } from "../lib/commons";
 import {
-  dirUrlPath, FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
+  AUTH_VARIABLE, basicAuthorizationHeader, dirUrlPath, MIME_DIR, nextDayEndTimestamp, path2Key, Permission
+} from "../lib/commons";
+import {
+  FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
   EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext
 } from "./commons";
 import Header from "./Header";

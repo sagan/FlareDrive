@@ -32,6 +32,8 @@ export const THUMBNAIL_NOFALLBACK = "thumbnailNoFallback";
 
 export const EXPIRES_VARIABLE = "expires";
 
+export const SCOPE_VARIABLE = "scope";
+
 export const TOKEN_VARIABLE = "token";
 
 export const AUTH_VARIABLE = "auth";
@@ -440,6 +442,36 @@ function signUrl({
 }
 
 /**
+ * Get url path of a dir file key. "foo/demo bar" => "/foo/demo%20bar/"
+ * @param dirkey
+ * @returns
+ */
+export function dirUrlPath(dirkey: string): string {
+  dirkey = (!dirkey.startsWith("/") ? "/" : "") + encodeURI(dirkey);
+  dirkey += !dirkey.endsWith("/") ? "/" : "";
+  return dirkey;
+}
+
+export function dirUrl({
+  key,
+  scope = "",
+  token = "",
+  origin = "",
+}: {
+  key: string;
+  scope?: string;
+  token?: string;
+  origin?: string;
+}): string {
+  const searchParams = new URLSearchParams();
+  if (token && scope && key.startsWith(scope)) {
+    searchParams.set(TOKEN_VARIABLE, token);
+    searchParams.set(SCOPE_VARIABLE, scope);
+  }
+  return origin + dirUrlPath(key) + (searchParams.size ? "?" + searchParams.toString() : "");
+}
+
+/**
  * Generate file access url. If auth is set, the url will be signed by it.
  * @param expires: file link expiration unix timestamp (microseconds). 0 == infinite.
  * @returns
@@ -450,6 +482,7 @@ export function fileUrl({
   expires = 0,
   ts = 0,
   origin = "",
+  scope = "",
   thumbnail = false,
   thumbnailNo404 = false,
   thumbNoFallback = false,
@@ -462,6 +495,7 @@ export function fileUrl({
   expires?: number;
   ts?: number;
   origin?: string;
+  scope?: string;
   /**
    * true, or digest
    */
@@ -473,8 +507,13 @@ export function fileUrl({
   fullControl?: boolean;
 }): string {
   const searchParams = new URLSearchParams();
-  if (auth && expires > 0) {
-    searchParams.set(EXPIRES_VARIABLE, `${expires}`);
+  if (auth) {
+    if (expires > 0) {
+      searchParams.set(EXPIRES_VARIABLE, `${expires}`);
+    }
+    if (scope) {
+      searchParams.set(SCOPE_VARIABLE, scope);
+    }
   }
   if (thumbnail) {
     if (auth && typeof thumbnail == "string") {

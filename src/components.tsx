@@ -6,8 +6,8 @@ import {
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
-import { Permission } from "../lib/commons";
-import { PreventDefaultEventCb, dirUrlPath } from "./commons";
+import { Permission, dirUrlPath } from "../lib/commons";
+import { PreventDefaultEventCb } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
   [Permission.Unknown]: "Dir permission unknown",

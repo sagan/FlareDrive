@@ -128,17 +128,6 @@ export function generatePassword(length: number) {
   return password;
 }
 
-/**
- * Get url path of a dir file key. "foo/demo bar" => "/foo/demo%20bar/"
- * @param dirkey
- * @returns
- */
-export function dirUrlPath(dirkey: string): string {
-  dirkey = (!dirkey.startsWith("/") ? "/" : "") + encodeURI(dirkey);
-  dirkey += !dirkey.endsWith("/") ? "/" : "";
-  return dirkey;
-}
-
 export const ConfigContext = React.createContext<Config | null>(null);
 
 /**
