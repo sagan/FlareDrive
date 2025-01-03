@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { processTransferTask } from "./transfer";
+import { useConfig } from "../commons";
 
 export interface TransferTask {
   type: "upload" | "download";
@@ -47,15 +48,15 @@ export function useUploadEnqueue() {
 }
 
 export function TransferQueueProvider({
-  auth,
   children,
 }: {
-  auth: string | null;
   children: React.ReactNode;
 }) {
   const [transferTasks, _setTransferTasks] = useState<TransferTask[]>([]);
   const taskProcessing = useRef<TransferTask | null>(null);
   const tasks = useRef<TransferTask[]>(transferTasks);
+
+  const { auth } = useConfig()
 
   // It's a ugly workaround:
   // If using strict mode, React 18+ trigger useEffect twice in dev env:

@@ -5,7 +5,7 @@ import {
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
 import { basename, fileUrl, humanReadableSize, THUMBNAIL_SIZE } from "../lib/commons";
-import { ViewProps } from "./commons";
+import { ViewProps, useConfig } from "./commons";
 
 
 export default function FileAlbum({
@@ -16,6 +16,8 @@ export default function FileAlbum({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
+  const { expires } = useConfig();
+
   if (files.length === 0) {
     return emptyMessage
   }
@@ -25,6 +27,7 @@ export default function FileAlbum({
       const thumbnailUrl = f.customMetadata?.thumbnail ? fileUrl({
         auth,
         key: f.key,
+        expires,
         thumbnail: auth && f.customMetadata?.thumbnail ? f.customMetadata.thumbnail : true,
         thumbnailContentType: f.httpMetadata.contentType,
       }) : "";

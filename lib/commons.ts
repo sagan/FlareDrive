@@ -439,6 +439,11 @@ function signUrl({
   return `${origin}${pathname}?${qs}${qs ? "&" : ""}${TOKEN_VARIABLE}=${encodeURIComponent(signature)}`;
 }
 
+/**
+ * Generate file access url. If auth is set, the url will be signed by it.
+ * @param expires: file link expiration unix timestamp (microseconds). 0 == infinite.
+ * @returns
+ */
 export function fileUrl({
   key,
   auth,
@@ -568,4 +573,17 @@ export function mimeType(contentType?: string | null): [string, string] {
   mime = mime.toLowerCase();
   const [mimeCat] = cut(mime, "/");
   return [mime, mimeCat];
+}
+
+/**
+ * Return the unix timestamp (miniseconds) of the end of the next day. Use UTC time.
+ * E.g. if now is (UTC time) 01-02 15:04, return timestamp of 01-04 00:00.
+ */
+export function nextDayEndTimestamp(): number {
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + 2);
+  now.setUTCHours(0);
+  now.setUTCMinutes(0);
+  now.setUTCSeconds(0, 0);
+  return +now;
 }

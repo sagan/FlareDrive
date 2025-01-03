@@ -17,8 +17,11 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import CloseIcon from '@mui/icons-material/Close';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
-import { HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, extname, fileUrl, humanReadableSize, key2Path, str2int } from '../lib/commons';
-import { EDIT_FILE_SIZE_LIMIT, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE } from './commons';
+import {
+  HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, WEBDAV_ENDPOINT,
+  extname, fileUrl, humanReadableSize, key2Path, str2int
+} from '../lib/commons';
+import { EDIT_FILE_SIZE_LIMIT, useConfig } from './commons';
 
 enum State {
   Idle,
@@ -51,38 +54,20 @@ const extLanguages: Record<string, string> = {
   ".xml": "xml",
 }
 
-export default function EditorDialog({ filekey, auth, open, close, setError }: {
+export default function EditorDialog({ filekey, open, close, setError }: {
   filekey: string;
-  auth: string | null;
   open: boolean;
   close: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
-  const [editorPrompt, setEditorPrompt] = useState<number>(
-    () => str2int(localStorage.getItem(EDITOR_PROMPT_VARIABLE), 1)
-  )
-  const [editorReadOnly, setEditorReadOnly] = useState<number>(
-    () => str2int(localStorage.getItem(EDITOR_READ_ONLY_VARIABLE))
-  )
+  const { auth, expires, editorPrompt, setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
   const language = extLanguages[extname(filekey)] || extLanguages[""]
   const [state, setState] = useState<State>(State.Idle)
   const [contents, setContents] = useState<string | undefined>(undefined)
   const [changed, setChanged] = useState(false)
   const [ts, setTs] = useState(+new Date);
   const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
-  const fileLink = useMemo(() => fileUrl({ key: filekey, auth, expires: ts + PRIVATE_URL_TTL }), [filekey, auth, ts])
-
-  useEffect(() => {
-    if (editorPrompt !== str2int(localStorage.getItem(EDITOR_PROMPT_VARIABLE), 1)) {
-      localStorage.setItem(EDITOR_PROMPT_VARIABLE, `${editorPrompt}`)
-    }
-  }, [editorPrompt])
-
-  useEffect(() => {
-    if (editorReadOnly !== str2int(localStorage.getItem(EDITOR_READ_ONLY_VARIABLE))) {
-      localStorage.setItem(EDITOR_READ_ONLY_VARIABLE, `${editorReadOnly}`)
-    }
-  }, [editorReadOnly])
+  const fileLink = useMemo(() => fileUrl({ key: filekey, auth, expires, ts }), [filekey, auth, ts])
 
   const onLoad = useCallback(() => {
     (async () => {

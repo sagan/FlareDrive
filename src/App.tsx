@@ -9,9 +9,11 @@ import {
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
-import { AUTH_VARIABLE, basicAuthorizationHeader, MIME_DIR, path2Key, Permission, str2int } from "../lib/commons";
+import { useLocalStorage } from "@uidotdev/usehooks";
+import { AUTH_VARIABLE, basicAuthorizationHeader, MIME_DIR, nextDayEndTimestamp, path2Key, Permission, str2int } from "../lib/commons";
 import {
-  dirUrlPath, FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE,
+  dirUrlPath, FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
+  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -53,17 +55,23 @@ export default function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [auth, setAuth] = useState<string | null>(() => localStorage.getItem(AUTH_VARIABLE))
   const [permission, setPermission] = useState<Permission>(Permission.Unknown);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return str2int(localStorage.getItem(VIEWMODE_VARIABLE))
-  })
+
+  const [auth, setAuth] = useLocalStorage<string | null>(AUTH_VARIABLE, null);
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
+  const [editorPrompt, setEditorPrompt] = useLocalStorage<number>(EDITOR_PROMPT_VARIABLE, 1)
+  const [editorReadOnly, setEditorReadOnly] = useLocalStorage<number>(EDITOR_READ_ONLY_VARIABLE, 0)
+  const [expires, setExpires] = useState(() => nextDayEndTimestamp());
+
+  const config: Config = {
+    auth, viewMode, editorPrompt, editorReadOnly, expires,
+    setAuth, setViewMode, setEditorPrompt, setEditorReadOnly
+  }
 
   useEffect(() => {
-    if (viewMode !== str2int(localStorage.getItem(VIEWMODE_VARIABLE))) {
-      localStorage.setItem(VIEWMODE_VARIABLE, `${viewMode}`)
-    }
-  }, [viewMode])
+    const iv = setInterval(() => setExpires(nextDayEndTimestamp()), 3600000 * 8)
+    return () => clearInterval(iv);
+  }, [])
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -84,27 +92,23 @@ export default function App() {
     return items
   }, [files, multiSelected])
 
-  const fetchFiles = useCallback(() => {
+  const fetchFiles = () => {
     setLoading(true);
     setMultiSelected([]);
     setFiles([]);
     setPermission(Permission.Unknown);
     console.log("fetch", cwd)
-    const savedAuth = localStorage.getItem(AUTH_VARIABLE)
     if (cwd == SHARES_FOLDER_KEY) {
-      listShares(savedAuth).then(setShares).catch(e => {
+      listShares(auth).then(setShares).catch(e => {
         setShares([])
         setError(e)
       }).finally(() => setLoading(false))
       return
     }
-    fetchPath(cwd, savedAuth).then(({ permission, auth, items }) => {
+    fetchPath(cwd, auth).then(({ permission, auth: sentbackAuth, items }) => {
       setPermission(permission)
-      if (auth) {
-        setAuth(auth)
-        if (auth !== localStorage.getItem(AUTH_VARIABLE)) {
-          localStorage.setItem(AUTH_VARIABLE, auth)
-        }
+      if (sentbackAuth && sentbackAuth !== auth) {
+        setAuth(sentbackAuth)
       }
       if (items) {
         if (!cwd) {
@@ -120,69 +124,64 @@ export default function App() {
       setPermission(Permission.RequireAuth)
       if (`${e}`.includes("status=401")) {
         setAuth(null)
-        if (savedAuth && savedAuth === localStorage.getItem(AUTH_VARIABLE)) {
-          localStorage.removeItem(AUTH_VARIABLE)
-        }
       }
     }).finally(() => setLoading(false));
-  }, [cwd, setError]);
+  }
 
-  const onSignIn = useCallback((user: string, pass: string) => {
+  const onSignIn = (user: string, pass: string) => {
     if (!user && !pass) {
       setError(new Error("username & password can not be both empty"))
       return
     }
-    localStorage.setItem(AUTH_VARIABLE, basicAuthorizationHeader(user, pass))
-    fetchFiles();
-  }, [fetchFiles])
+    setAuth(() => basicAuthorizationHeader(user, pass))
+  }
 
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+  useEffect(() => fetchFiles(), [cwd, auth]);
 
   const requireSignIn = !auth && (permission === Permission.OpenFile || permission === Permission.RequireAuth)
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {globalStyles}
-      <TransferQueueProvider auth={auth}>
-        <Stack sx={{ height: "100%" }}>
-          <Header
-            onSignOut={() => {
-              setAuth(null);
-              localStorage.removeItem(AUTH_VARIABLE)
-              fetchFiles();
-            }}
-            permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
-            onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
-            onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
-            setShowProgressDialog={setShowProgressDialog}
+    <ConfigContext.Provider value={config}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {globalStyles}
+        <TransferQueueProvider>
+          <Stack sx={{ height: "100%" }}>
+            <Header
+              onSignOut={() => {
+                setAuth(null);
+                fetchFiles();
+              }}
+              permission={permission} authed={!!auth} search={search} fetchFiles={fetchFiles}
+              onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
+              onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
+              setShowProgressDialog={setShowProgressDialog}
+            />
+            <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
+            {
+              cwd === SHARES_FOLDER_KEY
+                ? <ShareManager fetchFiles={fetchFiles} search={search} shares={shares} loading={loading} />
+                : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
+                  permission={permission} files={files} setError={setError}
+                  multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+            }
+          </Stack>
+          <Snackbar
+            autoHideDuration={5000}
+            open={!!error}
+            message={error ? `${error.message || error}` : null}
+            onClose={() => setError(null)}
           />
-          <PathBreadcrumb permission={permission} path={cwd} onCwdChange={setCwd} />
-          {
-            cwd === SHARES_FOLDER_KEY
-              ? <ShareManager fetchFiles={fetchFiles} auth={auth} search={search} shares={shares} loading={loading} />
-              : <Main viewMode={viewMode} cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-                permission={permission} authed={!!auth} auth={auth} files={files} setError={setError}
-                multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
-          }
-        </Stack>
-        <Snackbar
-          autoHideDuration={5000}
-          open={!!error}
-          message={error ? `${error.message || error}` : null}
-          onClose={() => setError(null)}
-        />
-        <ProgressDialog
-          open={showProgressDialog}
-          onClose={() => setShowProgressDialog(false)}
-        />
-        {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true} auth={auth}
-          onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
-        </GenerateThumbnailsDialog>}
-        {requireSignIn && <SignInDialog open={true} onSignIn={onSignIn} />}
-      </TransferQueueProvider>
-    </ThemeProvider>
+          <ProgressDialog
+            open={showProgressDialog}
+            onClose={() => setShowProgressDialog(false)}
+          />
+          {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
+            onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
+          </GenerateThumbnailsDialog>}
+          {requireSignIn && <SignInDialog open={true} onSignIn={onSignIn} />}
+        </TransferQueueProvider>
+      </ThemeProvider>
+    </ConfigContext.Provider>
   );
 }

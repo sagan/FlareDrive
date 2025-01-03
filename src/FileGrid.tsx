@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
 import { fileUrl, humanReadableSize, basename } from "../lib/commons";
-import { ViewProps, isDirectory } from "./commons";
+import { ViewProps, isDirectory, useConfig } from "./commons";
 
 
 export default function FileGrid({
@@ -18,6 +18,7 @@ export default function FileGrid({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
+  const { expires } = useConfig();
   if (files.length === 0) {
     return emptyMessage
   }
@@ -43,6 +44,7 @@ export default function FileGrid({
               <img src={fileUrl({
                 key: file.key,
                 auth: auth,
+                expires,
                 thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
                 thumbnailContentType: file.httpMetadata.contentType,
               })}

@@ -268,6 +268,7 @@ export async function generateFileThumbnail({
   force,
   origin,
   originIsBucket,
+  expires,
   thumbSize,
   workerUrl,
   workerToken,
@@ -279,6 +280,7 @@ export async function generateFileThumbnail({
   origin: string;
   originIsBucket: boolean;
   thumbSize: number;
+  expires: number;
   workerUrl: string;
   workerToken: string;
 }): Promise<number> {
@@ -300,7 +302,7 @@ export async function generateFileThumbnail({
 
   // Note: must put auth info in target url, cann't put it in options.headers,
   // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
-  const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin });
+  const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
   const thumbResponse = await fetch(workerUrl, {
     method: "POST",
     headers: {

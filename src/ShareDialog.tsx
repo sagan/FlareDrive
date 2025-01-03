@@ -31,7 +31,7 @@ import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
   basename, cut, dirname, fileUrl, trimPrefixSuffix
 } from '../lib/commons';
-import { dirUrlPath, generatePassword } from './commons';
+import { dirUrlPath, generatePassword, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton, TooltipIconButton } from './components';
 
@@ -47,8 +47,7 @@ enum Status {
  * @param param
  * @returns
  */
-export default function ShareDialog({ auth, open, onClose, postDelete, ...otherProps }: {
-  auth: string | null;
+export default function ShareDialog({ open, onClose, postDelete, ...otherProps }: {
   open: boolean;
   onClose: () => void;
   filekey?: string;
@@ -56,6 +55,7 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   shareObject?: ShareObject
   postDelete?: (sharekey: string) => void;
 }) {
+  const { auth, expires } = useConfig()
   const [tab, setTab] = useState(0);
   const filekey = otherProps.shareKey ? otherProps.shareObject!.key : otherProps.filekey!
   const name = basename(trimPrefixSuffix(filekey, "/"))
@@ -66,12 +66,12 @@ export default function ShareDialog({ auth, open, onClose, postDelete, ...otherP
   const [status, setStatus] = useState(otherProps.shareKey ? Status.Editing : Status.Creating)
   const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
-  const [linkTtl, setLinkTtl] = useState(0);
+  const [linkTtl, setLinkTtl] = useState(86400);
   const [linkTs, setLinkTs] = useState(0);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
   const targetIsDir = shareObject.key.endsWith("/")
-  const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({ key: shareObject.key, auth })
+  const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({ key: shareObject.key, auth, expires })
   const targetParentLink = dirUrlPath(dirname(shareObject.key))
   const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "")
   const shareKeyError = !shareKey ? "Share name can not be empty" :

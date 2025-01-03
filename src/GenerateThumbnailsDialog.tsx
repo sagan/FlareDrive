@@ -13,17 +13,17 @@ import {
   Checkbox
 } from "@mui/material";
 import { fileUrl } from '../lib/commons';
-import { FileItem, isImage } from './commons';
+import { FileItem, isImage, useConfig } from './commons';
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
 
 
-export default function GenerateThumbnailsDialog({ auth, files, open, onClose, onDone }: {
-  auth: string | null;
+export default function GenerateThumbnailsDialog({ files, open, onClose, onDone }: {
   open: boolean;
   onClose: () => void;
   onDone: () => void;
   files: FileItem[];
 }) {
+  const { auth, expires } = useConfig()
   const [ts, setTs] = useState(0)
   const [force, setForce] = useState(false);
   const [working, setWorking] = useState(false)
@@ -92,7 +92,8 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
         }
         try {
           setResult(result => ({ ...result, [file.key]: `Generating...` }))
-          const blob = await generateThumbnailFromUrl(fileUrl({ key: file.key, auth, }), file.httpMetadata.contentType)
+          const blob = await generateThumbnailFromUrl(fileUrl({ key: file.key, auth, expires }),
+            file.httpMetadata.contentType)
           const thumbnailObj = await putThumbnail(file.key, blob, auth)
           delete thumbnailError.current[thumbnailObj.digest]
           successCnt++
@@ -117,6 +118,7 @@ export default function GenerateThumbnailsDialog({ auth, files, open, onClose, o
           const thumbnailUrl = fileUrl({
             key: file.key,
             auth,
+            expires,
             thumbnail: file.customMetadata?.thumbnail || true,
             // an "image" (Content-Type: "image/*") response won't trigger onerror event of img,
             // even if it's status is 404 or some like.

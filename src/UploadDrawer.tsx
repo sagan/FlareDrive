@@ -13,6 +13,7 @@ import { Permission } from "../lib/commons";
 import { createFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
 import CloudDownloadDialog from "./CloudDownloadDialog";
+import { useConfig } from "./commons";
 
 
 function IconCaptionButton({
@@ -60,7 +61,6 @@ export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
 );
 
 export default function UploadDrawer({
-  auth,
   open,
   permission,
   setOpen,
@@ -68,7 +68,6 @@ export default function UploadDrawer({
   onUpload,
   setError,
 }: {
-  auth: string | null;
   permission: Permission;
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -76,6 +75,7 @@ export default function UploadDrawer({
   onUpload: (created?: string) => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
+  const { auth } = useConfig()
   const uploadEnqueue = useUploadEnqueue();
 
   const [uploadFromUrlOpen, setUploadFromUrlOpen] = useState(false);
@@ -209,7 +209,7 @@ export default function UploadDrawer({
           </Grid>
         </Card>
       </Drawer>
-      <CloudDownloadDialog cwd={cwd} auth={auth} open={uploadFromUrlOpen} onUpload={onUpload}
+      <CloudDownloadDialog cwd={cwd} open={uploadFromUrlOpen} onUpload={onUpload}
         permission={permission} close={() => setUploadFromUrlOpen(false)} />
     </>
   );

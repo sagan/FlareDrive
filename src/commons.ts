@@ -1,5 +1,6 @@
 import { SyntheticEvent } from "react";
-import { MIME_DEFAULT, MIME_DIR, TXT_MIMES, extname, mimeType } from "../lib/commons";
+import { MIME_DEFAULT, MIME_DIR, TXT_MIMES, mimeType } from "../lib/commons";
+import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
 
@@ -15,6 +16,25 @@ export const EDIT_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 export enum ViewMode {
   Default,
   Album,
+}
+
+/**
+ * Use it via ConfigContext & useConfig.
+ * The context's value get assigned in `<App />`.
+ */
+export interface Config {
+  auth: string | null;
+  viewMode: number;
+  editorPrompt: number;
+  editorReadOnly: number;
+  /**
+   * private file url default expires unix timestamp (miniseconds)
+   */
+  expires: number;
+  setAuth: React.Dispatch<React.SetStateAction<string | null>>;
+  setViewMode: React.Dispatch<React.SetStateAction<number>>;
+  setEditorPrompt: React.Dispatch<React.SetStateAction<number>>;
+  setEditorReadOnly: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export interface FileItem {
@@ -118,3 +138,10 @@ export function dirUrlPath(dirkey: string): string {
   dirkey += !dirkey.endsWith("/") ? "/" : "";
   return dirkey;
 }
+
+export const ConfigContext = React.createContext<Config | null>(null);
+
+/**
+ * ConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
+ */
+export const useConfig = () => React.useContext<Config | null>(ConfigContext)!;

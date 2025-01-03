@@ -13,10 +13,13 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
-  HEADER_AUTHORIZATION, MIME_DIR, PRIVATE_URL_TTL, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
+  HEADER_AUTHORIZATION, MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
   compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix
 } from "../lib/commons";
-import { EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile, isDirectory, isImage, isTextual } from "./commons";
+import {
+  EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, dirUrlPath, downloadFile,
+  isDirectory, isImage, isTextual, useConfig
+} from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
 import MultiSelectToolbar from "./MultiSelectToolbar";
@@ -30,6 +33,7 @@ import EditorDialog from "./EditorDialog";
 
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
+  const { expires } = useConfig();
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -120,34 +124,30 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
 }
 
 export default function Main({
-  viewMode,
   cwd,
   setCwd,
   loading,
   search,
   permission,
-  authed,
-  auth,
   files,
   multiSelected,
   setMultiSelected,
   fetchFiles,
   setError,
 }: {
-  viewMode: ViewMode,
   cwd: string;
   setCwd: (cwd: string) => void;
   loading: boolean;
   search: string;
   permission: Permission;
-  authed: boolean;
-  auth: string | null;
   files: FileItem[];
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
+  const { auth, viewMode, expires } = useConfig()
+  const authed = !!auth
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
   const [sharing, setSharing] = useState(""); // sharing file key
@@ -209,11 +209,13 @@ export default function Main({
         src: fileUrl({
           key: file.key,
           auth: auth && permission == Permission.RequireAuth ? auth : "",
+          expires,
         }),
         type: isImage(file) ? "image" : undefined,
         thumbnail: fileUrl({
           key: file.key,
           auth,
+          expires,
           thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
           thumbnailContentType: file.httpMetadata.contentType,
           thumbnailColor: "white",
@@ -242,7 +244,7 @@ export default function Main({
       downloadFile(fileUrl({
         key: file.key,
         auth: auth && permission == Permission.RequireAuth ? auth : "",
-        expires: (+new Date) + PRIVATE_URL_TTL
+        expires,
       }));
     }
   }, [multiSelected, slideIndexes, auth, permission]);
@@ -289,7 +291,7 @@ export default function Main({
         </DropZone>
       )}
       {authed && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
-      <UploadDrawer auth={auth} open={showUploadDrawer} permission={permission} setError={setError}
+      <UploadDrawer open={showUploadDrawer} permission={permission} setError={setError}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
           if (created) {
@@ -307,7 +309,7 @@ export default function Main({
           return [fileUrl({
             key,
             auth: auth && permission == Permission.RequireAuth ? auth : "",
-            expires: (+new Date) + PRIVATE_URL_TTL,
+            expires,
             origin: location.origin,
           }), false];
         }}
@@ -378,8 +380,8 @@ export default function Main({
           fetchFiles();
         }}
       />
-      {!!sharing && <ShareDialog auth={auth} filekey={sharing} open={true} onClose={() => setSharing("")} />}
-      {editing !== null && <EditorDialog auth={auth} filekey={editing} open={true}
+      {!!sharing && <ShareDialog filekey={sharing} open={true} onClose={() => setSharing("")} />}
+      {editing !== null && <EditorDialog filekey={editing} open={true}
         setError={setError} close={() => setEditing(null)} />}
       <Lightbox
         on={lightboxCallbacks}

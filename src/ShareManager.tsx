@@ -11,14 +11,15 @@ import { ShareObject } from "../lib/commons";
 import { Centered } from "./components";
 import { getShare } from "./app/share";
 import ShareDialog from "./ShareDialog";
+import { useConfig } from "./commons";
 
-export default function ShareManager({ search, auth, shares, loading, fetchFiles }: {
+export default function ShareManager({ search, shares, loading, fetchFiles }: {
   search: string;
-  auth: string | null;
   shares: string[];
   loading: boolean;
   fetchFiles: () => void
 }) {
+  const { auth } = useConfig()
   const [shareObject, setShareObject] = useState<ShareObject | null>(null)
   const [shareKey, setShareKey] = useState("")
 
@@ -61,7 +62,7 @@ export default function ShareManager({ search, auth, shares, loading, fetchFiles
       })}
     </Grid>
   )}
-    {!!shareObject && <ShareDialog auth={auth} shareKey={shareKey} shareObject={shareObject}
+    {!!shareObject && <ShareDialog shareKey={shareKey} shareObject={shareObject}
       open={!!shareObject} onClose={() => setShareObject(null)} postDelete={() => {
         fetchFiles();
         setShareObject(null)

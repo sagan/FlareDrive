@@ -19,21 +19,21 @@ import Box from '@mui/material/Box';
 import { Button, TextField } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
-import { Permission, basename, dirname, extname, fileUrl, humanReadableSize } from '../lib/commons';
-import { FileItem, dirUrlPath, generatePassword } from './commons';
+import { Permission, basename, extname, fileUrl, humanReadableSize } from '../lib/commons';
+import { FileItem, generatePassword, useConfig } from './commons';
 import { uploadFromUrl } from './app/transfer';
 import { useNavigate } from 'react-router-dom';
 
 
-export default function CloudDownloadDialog({ cwd, auth, permission, open, close, onUpload }: {
+export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
   cwd: string;
-  auth: string | null;
   permission: Permission;
   open: boolean;
   close: () => void;
   onUpload: () => void;
 }) {
   const navigate = useNavigate()
+  const { auth, expires } = useConfig()
   const [source, setSource] = useState("")
   const [name, setName] = useState("")
   const [uploaded, setUploaded] = useState<{
@@ -177,7 +177,7 @@ export default function CloudDownloadDialog({ cwd, auth, permission, open, close
                 return <TableRow key={i}>
                   <TableCell>
                     {item.file
-                      ? <a href={fileUrl({ key: item.file.key, auth })}>{item.saveName}</a>
+                      ? <a href={fileUrl({ key: item.file.key, auth, expires })}>{item.saveName}</a>
                       : <span>{item.saveName}</span>
                     }
                   </TableCell>
