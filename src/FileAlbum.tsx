@@ -4,7 +4,7 @@ import {
   Grid,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { basename, fileUrl, humanReadableSize, THUMBNAIL_SIZE } from "../lib/commons";
+import { basename, EXPIRES_VARIABLE, fileUrl, humanReadableSize, SCOPE_VARIABLE, str2int, THUMBNAIL_SIZE, TOKEN_VARIABLE } from "../lib/commons";
 import { ViewProps, useConfig } from "./commons";
 
 
@@ -16,7 +16,7 @@ export default function FileAlbum({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
-  const { expires } = useConfig();
+  const { expires, authSearchParams } = useConfig();
 
   if (files.length === 0) {
     return emptyMessage
@@ -27,9 +27,11 @@ export default function FileAlbum({
       const thumbnailUrl = f.customMetadata?.thumbnail ? fileUrl({
         auth,
         key: f.key,
-        expires,
         thumbnail: auth && f.customMetadata?.thumbnail ? f.customMetadata.thumbnail : true,
         thumbnailContentType: f.httpMetadata.contentType,
+        expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+        scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+        token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
       }) : "";
       const name = f.name || basename(f.key)
       const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded}`

@@ -71,9 +71,9 @@ export default function EditorDialog({ filekey, open, close, setError }: {
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
     auth,
-    expires: str2int(authSearchParams?.get(EXPIRES_VARIABLE)) || expires,
-    scope: authSearchParams?.get(SCOPE_VARIABLE),
-    token: authSearchParams?.get(TOKEN_VARIABLE),
+    expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+    scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+    token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
     ts
   }), [filekey, auth, ts])
 

@@ -1,15 +1,81 @@
-import { HEADER_AUTHORIZATION, THUMBNAIL_SIZE, WEBDAV_ENDPOINT, str2int } from "../../lib/commons";
+import {
+  THUMBNAIL_EXT_VARIABLE,
+  HEADER_AUTHED,
+  HEADER_AUTHORIZATION,
+  KEY_PREFIX_THUMBNAIL,
+  PRIVATE_URL_TTL,
+  THUMBNAIL_COLOR_VARIABLE,
+  THUMBNAIL_CONTENT_TYPE,
+  THUMBNAIL_NO404_VARIABLE,
+  THUMBNAIL_SIZE,
+  str2int,
+  THUMBNAIL_DIGEST_VARIABLE,
+} from "../../lib/commons";
 import {
   FdCfFunc,
   checkAuthFailure,
   generateFileThumbnail,
   jsonResponse,
+  responseBadRequest,
   responseInternalServerError,
 } from "../commons";
+import { fallbackIconResponse } from "../icons";
 
 interface PostBody {
   keys: string[];
 }
+
+/**
+ * GET: get thumbnail directly from thumbnail digest
+ * If always return a valid image. If auth fails or thumbnail does not exist, return a default mime icon.
+ * @param context
+ * @returns
+ */
+export const onRequestGet: FdCfFunc = async function (context) {
+  const bucket = context.env.BUCKET;
+  const env = context.env;
+  const request = context.request;
+  const searchParams = new URL(request.url).searchParams;
+  const digest = searchParams.get(THUMBNAIL_DIGEST_VARIABLE) || "";
+  const ext = searchParams.get(THUMBNAIL_EXT_VARIABLE) || "";
+  const color = searchParams.get(THUMBNAIL_COLOR_VARIABLE) || "";
+  const no404 = !!str2int(searchParams.get(THUMBNAIL_NO404_VARIABLE));
+  const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
+
+  if (await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD)) {
+    return fallbackIconResponse(ext, contentType, color, no404);
+  }
+
+  if (!digest) {
+    return responseBadRequest();
+  }
+
+  const obj = await bucket.get(KEY_PREFIX_THUMBNAIL + digest, {
+    onlyIf: request.headers,
+    range: request.headers,
+  });
+
+  if (obj === null) {
+    return fallbackIconResponse(ext, contentType, color, no404);
+  }
+
+  if (!("body" in obj)) {
+    return new Response("Preconditions failed", { status: 412, headers: { [HEADER_AUTHED]: "1" } });
+  }
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set(HEADER_AUTHED, "1");
+  headers.set("Cache-Control", "max-age=31536000");
+  return new Response(obj.body, { headers });
+};
+
+export const onRequestHead: FdCfFunc = async function (context) {
+  const res = await onRequestGet(context);
+  return new Response(null, {
+    status: res.status,
+    headers: res.headers,
+  });
+};
 
 /**
  * POST: Server-side thumbnails generation using Cloudflare images Transform:
@@ -46,6 +112,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
       bucket,
       key,
       force,
+      expires: +new Date() + PRIVATE_URL_TTL,
       thumbSize: THUMBNAIL_SIZE,
       origin: env.BUCKET_URL || url.origin,
       originIsBucket: !!env.BUCKET_URL,

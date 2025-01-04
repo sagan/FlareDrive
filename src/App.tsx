@@ -54,6 +54,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
+  const [showSignInDialog, setShowSignInDialog] = React.useState(false);
   const [error, setError] = useState<any>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
@@ -181,7 +182,7 @@ export default function App() {
                 setAuth("");
                 fetchFiles();
               }}
-              onSignnIn={() => setRequireSignIn(true)} search={search} fetchFiles={fetchFiles}
+              onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
               onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
@@ -208,7 +209,8 @@ export default function App() {
           {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
             onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
           </GenerateThumbnailsDialog>}
-          {requireSignIn && <SignInDialog open={true} onSignIn={onSignIn} />}
+          {(requireSignIn || showSignInDialog) && <SignInDialog
+            open={true} onClose={() => setShowSignInDialog(false)} onSignIn={onSignIn} />}
         </TransferQueueProvider>
       </ThemeProvider>
     </ConfigContext.Provider>

@@ -6,8 +6,8 @@ import {
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
-import { Permission, dirUrlPath } from "../lib/commons";
-import { PreventDefaultEventCb } from "./commons";
+import { EXPIRES_VARIABLE, Permission, SCOPE_VARIABLE, TOKEN_VARIABLE, dirUrlPath, fileUrl, str2int } from "../lib/commons";
+import { PreventDefaultEventCb, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
   [Permission.Unknown]: "Dir permission unknown",
@@ -42,6 +42,7 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
   path: string;
   setCwd: (newCwd: string) => void
 }) {
+  const { auth, authSearchParams, expires } = useConfig()
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
   const cwdHref = dirUrlPath(path);
@@ -55,13 +56,21 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
         <HomeIcon />
       </Button>
       {parts.map((part, index) => {
-        const url = dirUrlPath(parts.slice(0, index + 1).join("/"));
+        const key = parts.slice(0, index + 1).join("/")
+        const url = fileUrl({
+          key,
+          isDir: true,
+          auth,
+          expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+          scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+          token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+        })
         return index === parts.length - 1 ? (
           <Typography key={index} color="text.primary">{part}</Typography>
         ) : (
           <Link key={index} href={url} onClick={e => {
             e.preventDefault()
-            setCwd(url)
+            setCwd(key)
           }}>{part}</Link>
         )
       })}

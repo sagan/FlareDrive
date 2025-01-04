@@ -8,7 +8,7 @@
 # Start local dev environment:
 #   npm i
 #   npm run build
-#   npm run cfdev
+#   npm start
 # It's using Wrangler: https://developers.cloudflare.com/workers/wrangler/
 # wrangler.toml: https://developers.cloudflare.com/workers/wrangler/configuration/
 compatibility_date = "2024-12-03"
@@ -23,8 +23,6 @@ pages_build_output_dir = "dist"
 # It will copy ".env.local" to ".dev.vars" file when vite starts, as wrangler only recognize the latter.
 # See https://github.com/cloudflare/workers-sdk/issues/3106 .
 [vars]
-# Uncomment to mark as local dev environment: enable CORS for functions
-#DEV = "1"
 WEBDAV_USERNAME = "root"
 WEBDAV_PASSWORD = "pass"
 # comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed (read)

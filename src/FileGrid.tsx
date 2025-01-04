@@ -6,7 +6,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { fileUrl, humanReadableSize, basename } from "../lib/commons";
+import { fileUrl, humanReadableSize, basename, EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE, str2int } from "../lib/commons";
 import { ViewProps, isDirectory, useConfig } from "./commons";
 
 
@@ -18,7 +18,7 @@ export default function FileGrid({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
-  const { expires } = useConfig();
+  const { expires, authSearchParams } = useConfig();
   if (files.length === 0) {
     return emptyMessage
   }
@@ -44,9 +44,11 @@ export default function FileGrid({
               <img src={fileUrl({
                 key: file.key,
                 auth: auth,
-                expires,
                 thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
                 thumbnailContentType: file.httpMetadata.contentType,
+                expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+                scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+                token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
               })}
                 alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
             ) : (

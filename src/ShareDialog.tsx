@@ -29,7 +29,7 @@ import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
-  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath
+  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, THIRTEEN_MONTHS_DAYS
 } from '../lib/commons';
 import { generatePassword, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
@@ -67,7 +67,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
   const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
   const [linkTtl, setLinkTtl] = useState(86400);
-  const [linkTs, setLinkTs] = useState(0);
+  const [linkTs, setLinkTs] = useState(+new Date);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
   const targetIsDir = shareObject.key.endsWith("/")
@@ -153,14 +153,14 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
     </DialogTitle>
     <Tabs value={tab} onChange={(_, newTab) => {
       setTab(newTab)
-      if (newTab === 1) {
+      if (newTab === 0) {
         setLinkTs(+new Date)
       }
     }} sx={{ width: "100%" }} >
-      <Tab label="Publish" />
       <Tab label="Get Link" />
+      <Tab label="Publish" />
     </Tabs>
-    {tab === 0 && <DialogContent>
+    {tab === 1 && <DialogContent>
       <Box sx={{ mt: 1 }}>
         <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth
           helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
@@ -259,7 +259,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
             <option value={86400 * 7}>7 days</option>
-            <option value={86400 * 365}>1 year</option>
+            <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
           </NativeSelect>
         </FormControl>
         <FormControlLabel label="Enable CORS" control={
@@ -301,7 +301,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
           <span>&nbsp;(Link expires on {new Date(shareObject.expiration * 1000).toISOString()})</span>}
       </Typography>}
     </DialogContent>}
-    {tab === 1 && <DialogContent>
+    {tab === 0 && <DialogContent>
       <Box>
         <FormControl sx={{ m: 1, minWidth: 120 }}>
           <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
@@ -318,11 +318,12 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
             <option value={86400 * 7}>7 days</option>
-            <option value={86400 * 365}>1 year</option>
+            <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
           </NativeSelect>
         </FormControl>
         <FormControlLabel label="Full Control (allow write)" control={
-          <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
+          <Checkbox disabled={targetIsDir} checked={linkFullControl}
+            onChange={e => setLinkFullControl(e.target.checked)} />}
         />
       </Box>
       <Box sx={{ mt: 1 }}>
@@ -340,8 +341,13 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
               </IconButton>
           }} />
       </Box>
-      {!!linkTtl && <Typography>
-        <span>Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}</span>
+      {!!linkTtl ? <Typography>
+        Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
+      </Typography> : <Typography sx={{ color: "red" }}>
+        Link will never expire (unless the admin password is changed)
+      </Typography>}
+      {linkFullControl && <Typography sx={{ color: "red" }}>
+        Link has write access, send a "PUT" request to update the file contents.
       </Typography>}
     </DialogContent>}
     {tab === 0 && <DialogActions>

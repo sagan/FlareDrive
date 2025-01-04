@@ -9,37 +9,18 @@ import {
   THUMBNAIL_VARIABLE,
   str2int,
 } from "@/lib/commons";
-import {
-  jsonResponse,
-  responseForbidden,
-  responseNotFound,
-  responseNotModified,
-  writeR2ObjectHeaders,
-} from "../commons";
+import { jsonResponse, responseNotFound, responseNotModified, writeR2ObjectHeaders } from "../commons";
 import { RequestHandlerParams } from "./utils";
-import { fallbackIconResponse } from "./icons";
+import { fallbackIconResponse } from "../icons";
 
 export async function handleRequestGet({ bucket, path, request, authed }: RequestHandlerParams) {
   const url = new URL(request.url);
   const searchParams = new URL(url).searchParams;
   const requestMeta = authed && !!str2int(searchParams.get(META_VARIABLE));
-  const thumbnail = searchParams.get(THUMBNAIL_VARIABLE) || "";
-  const thumbnailIsDigest = thumbnail.length > 1;
-  const requestThumbnail = !!thumbnail && thumbnail !== "0";
 
-  if (requestThumbnail) {
-    let digest: string;
-    let obj: R2Object | null = null;
-    if (thumbnailIsDigest) {
-      if (!authed) {
-        // must be authorized to directly access thumbnail by digest
-        return responseForbidden();
-      }
-      digest = thumbnail;
-    } else {
-      obj = await bucket.head(path);
-      digest = obj?.customMetadata?.[THUMBNAIL_VARIABLE] || "";
-    }
+  if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
+    const obj = await bucket.head(path);
+    const digest = obj?.customMetadata?.[THUMBNAIL_VARIABLE] || "";
     let thumbObj: R2ObjectBody | R2Object | null = null;
     if (digest) {
       if (requestMeta) {

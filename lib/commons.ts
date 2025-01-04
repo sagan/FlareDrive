@@ -13,11 +13,21 @@ export const CLOUD_DOWNLOAD_SIZE_LIMIT = 50 * 1024 * 1024;
 export const THUMBNAIL_SIZE = 144;
 
 /**
+ * 13 monthes = 398 days.
+ * See: https://stackoverflow.com/questions/62659149/why-was-398-days-chosen-for-tls-expiration
+ */
+export const THIRTEEN_MONTHS_DAYS = 398;
+
+/**
  * thumbnail variable.
- * When getting object thumbnail, set it to thumbnail's digest, or a simple "1".
- * When setting (updating), set it to "1".
+ * set to 1 to request or update the file's thumbnail.
  */
 export const THUMBNAIL_VARIABLE = "thumbnail";
+
+/**
+ * For thumbnail api: set to to the thumbnail file digest.
+ */
+export const THUMBNAIL_DIGEST_VARIABLE = "thumbnailDigest";
 
 export const THUMBNAIL_NO404_VARIABLE = "thumbnailNo404";
 
@@ -29,6 +39,8 @@ export const THUMBNAIL_CONTENT_TYPE = "thumbnailContentType";
 export const THUMBNAIL_COLOR_VARIABLE = "thumbnailColor";
 
 export const THUMBNAIL_NOFALLBACK = "thumbnailNoFallback";
+
+export const THUMBNAIL_EXT_VARIABLE = "thumbnailExt";
 
 export const EXPIRES_VARIABLE = "expires";
 
@@ -61,9 +73,18 @@ export const METHODS_AUTH_ONLY = ["MOVE", "COPY"];
 
 /**
  * These query string variables do not participate in signing:
- * ["token", "ts"]
+ * [token, ts, thumbnail*... (except thumbnailDigest)]
  */
-export const NOSIGN_VARIABLES: string[] = [TOKEN_VARIABLE, TS_VARIABLE];
+export const NOSIGN_VARIABLES: string[] = [
+  TOKEN_VARIABLE,
+  TS_VARIABLE,
+  THUMBNAIL_VARIABLE,
+  THUMBNAIL_COLOR_VARIABLE,
+  THUMBNAIL_CONTENT_TYPE,
+  THUMBNAIL_EXT_VARIABLE,
+  THUMBNAIL_NO404_VARIABLE,
+  THUMBNAIL_NOFALLBACK,
+];
 
 /**
  * private file url default valid time in milliseconds.
@@ -503,16 +524,19 @@ export function fileUrl({
     if (expires) {
       searchParams.set(EXPIRES_VARIABLE, `${expires}`);
     }
-    if (scope) {
-      searchParams.set(SCOPE_VARIABLE, scope);
-    }
     if (fullControl) {
       searchParams.set(FULL_CONTROL_VARIABLE, "1");
+    }
+    if (token) {
+      searchParams.set(TOKEN_VARIABLE, token);
+    }
+    if (scope) {
+      searchParams.set(SCOPE_VARIABLE, scope);
     }
   }
   if (thumbnail) {
     if (auth && typeof thumbnail == "string") {
-      searchParams.set(THUMBNAIL_VARIABLE, thumbnail);
+      searchParams.set(THUMBNAIL_DIGEST_VARIABLE, thumbnail);
     } else {
       searchParams.set(THUMBNAIL_VARIABLE, "1");
     }
@@ -532,9 +556,13 @@ export function fileUrl({
   if (ts) {
     searchParams.set(TS_VARIABLE, `${ts}`);
   }
-  const pathname = isDir ? dirUrlPath(key) : `${WEBDAV_ENDPOINT}${key2Path(key)}`;
-  if (token) {
-    searchParams.set(TOKEN_VARIABLE, token);
+  let pathname: string;
+  if (isDir) {
+    pathname = dirUrlPath(key);
+  } else if (auth && thumbnail) {
+    pathname = THUMBNAIL_API;
+  } else {
+    pathname = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   }
   if (!auth) {
     return origin + pathname + (searchParams.size ? "?" + searchParams.toString() : "");
@@ -591,6 +619,11 @@ export function basicAuthorizationHeader(user: string, pass: string): string {
   return `Basic ${btoa(`${user}:${pass}`)}`;
 }
 
+/**
+ * Return true is auth is likely a http basic authorization header (starts with `Basic `)
+ * @param auth
+ * @returns
+ */
 export function isBasicAuthHeader(auth: string): boolean {
   return auth.startsWith(`Basic `);
 }
