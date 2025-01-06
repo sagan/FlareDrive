@@ -32,12 +32,16 @@ export const ROOT_OBJECT = {
 /**
  * Test a R2 key has strict prefix.
  * "foo/bar" and "foo" has "foo" prefix, but "foobar" doesn't.
+ * Note empty key is not a valid "prefix" and will be silently ignored.
  * @param key
  * @param prefixesCsv comma-separated prefixes. If key has any of these prefix, return true.
  * @returns
  */
 function testKeyHasPrefix(key: string, prefixesCsv: string): boolean {
-  const prefixes = prefixesCsv.split(/\s*,\s*/).map((prefix) => trimPrefixSuffix(prefix, "/"));
+  const prefixes = prefixesCsv
+    .split(/\s*,\s*/)
+    .map((prefix) => trimPrefixSuffix(prefix, "/"))
+    .filter((prefix) => prefix);
   if (prefixes.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
     return true;
   }

@@ -6,11 +6,10 @@ import {
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
-import { EXPIRES_VARIABLE, Permission, SCOPE_VARIABLE, TOKEN_VARIABLE, dirUrlPath, fileUrl, str2int } from "../lib/commons";
+import { EXPIRES_VARIABLE, Permission, SCOPE_VARIABLE, dirUrlPath, fileUrl, str2int } from "../lib/commons";
 import { PreventDefaultEventCb, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
-  [Permission.Unknown]: "Dir permission unknown",
   [Permission.RequireAuth]: "Private dir: this dir can only be accessed by authorized user",
   [Permission.OpenDir]: "Public Dir Permalink: this dir can be publicly accessed (read)",
   [Permission.OpenFile]: "Files inside this dir can be publicly accessed (read), but dir browsing is not available",
@@ -47,6 +46,8 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
 
   const cwdHref = dirUrlPath(path);
 
+  const scope = authSearchParams?.get(SCOPE_VARIABLE) || ""
+
   return (
     <Breadcrumbs separator="›" sx={{ padding: 1 }}>
       <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
@@ -57,18 +58,19 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
       </Button>
       {parts.map((part, index) => {
         const key = parts.slice(0, index + 1).join("/")
+        const sx = (scope === key || scope === key + "/") ? { color: "red", fontWeight: "bold" } : undefined
         const url = fileUrl({
           key,
           isDir: true,
           auth,
           expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
-          scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
-          token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+          scope: auth ? "" : scope,
+          token: auth ? "" : scope,
         })
         return index === parts.length - 1 ? (
-          <Typography key={index} color="text.primary">{part}</Typography>
+          <Typography key={index} color="text.primary" sx={sx}>{part}</Typography>
         ) : (
-          <Link key={index} href={url} onClick={e => {
+          <Link key={index} href={url} sx={sx} onClick={e => {
             e.preventDefault()
             setCwd(key)
           }}>{part}</Link>
@@ -84,6 +86,9 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
           <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
         </Button>
       }
+      {!auth && !!authSearchParams?.get(EXPIRES_VARIABLE) && <span>
+        ! Expires at {new Date(parseInt(authSearchParams.get(EXPIRES_VARIABLE)!)).toISOString()}
+      </span>}
     </Breadcrumbs >
   );
 }

@@ -16,23 +16,11 @@ name = "flaredrive"
 pages_build_output_dir = "dist"
 
 
-# Environment Variables are available only in the build phase of the website.
-# Any changes need re-deploy (re-build) to make effect.
-# Note: in local dev mode, the below front side env could be overridden by ".env.local":
-#   SITENAME
+# Use ".env.local" file to setup env variables.
 # It will copy ".env.local" to ".dev.vars" file when vite starts, as wrangler only recognize the latter.
 # See https://github.com/cloudflare/workers-sdk/issues/3106 .
 [vars]
-WEBDAV_USERNAME = "root"
-WEBDAV_PASSWORD = "pass"
-# comma separated prefixes, files which key starts with any of these prefixes can be publicly accessed (read)
-# E.g. "http://127.0.0.1:8788/dav/public/foo.png"
-PUBLIC_PREFIX = "public_files"
-# Similar to PUBLIC_PREFIX.
-# Additionally, pathes of these prefixs allow publicly dir browsing
-PUBLIC_DIR_PREFIX = "public"
-SITENAME = "MyDrive"
-SHORT_SITENAME = "Drive"
+#SITENAME = "MyDrive"
 
 # Change bucket_name to the real one
 [[r2_buckets]]

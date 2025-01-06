@@ -6,6 +6,7 @@ import {
   Download as DownloadIcon,
   MoreHoriz as MoreHorizIcon,
 } from "@mui/icons-material";
+import ShareIcon from '@mui/icons-material/Share';
 import LinkIcon from '@mui/icons-material/Link';
 import { CopyButton } from "./components";
 import { useConfig } from "./commons";
@@ -53,7 +54,12 @@ export default function MultiSelectToolbar({
         <IconButton color="primary" onClick={onClose}>
           <CloseIcon />
         </IconButton>
-        <CopyButton color="primary" href={link} isIcon={true} text={link}><LinkIcon /></CopyButton>
+        {auth
+          ? <IconButton color="primary" disabled={multiSelected.length !== 1} title="Share & Publish" onClick={() => {
+            onShare(multiSelected[0])
+          }}><ShareIcon /></IconButton>
+          : <CopyButton color="primary" href={link} isIcon={true} text={link}><LinkIcon /></CopyButton>
+        }
         <IconButton
           color="primary"
           disabled={!link || linkIsDir}
@@ -90,10 +96,6 @@ export default function MultiSelectToolbar({
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>
-            {multiSelected.length === 1 && <MenuItem disabled={!auth} onClick={() => {
-              setAnchorEl(null)
-              onShare(multiSelected[0])
-            }}>Share</MenuItem>}
           </Menu>
         )}
       </Toolbar>

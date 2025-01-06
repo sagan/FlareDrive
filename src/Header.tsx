@@ -16,6 +16,7 @@ export default function Header({
   onGenerateThumbnails,
   setShowProgressDialog,
   fetchFiles,
+  onShare,
 }: {
   setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>,
   search: string;
@@ -25,6 +26,7 @@ export default function Header({
   onGenerateThumbnails: () => void;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
+  onShare?: () => void;
 }) {
   const { auth } = useConfig();
   const authed = !!auth
@@ -89,6 +91,14 @@ export default function Header({
         >
           Progress
         </MenuItem>
+        {!!auth && !!onShare && <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            onShare()
+          }}
+        >
+          Share & Publish
+        </MenuItem>}
       </Menu>
       <IconButton title={authed ? "Authorized" : "Unauthorized. Click to sign in"}
         onClick={(e) => {

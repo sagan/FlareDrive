@@ -129,6 +129,8 @@ export default function Main({
   search,
   permission,
   files,
+  sharing,
+  setSharing,
   multiSelected,
   setMultiSelected,
   fetchFiles,
@@ -140,6 +142,8 @@ export default function Main({
   search: string;
   permission: Permission;
   files: FileItem[];
+  sharing: string;
+  setSharing: React.Dispatch<React.SetStateAction<string>>;
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
@@ -148,7 +152,6 @@ export default function Main({
   const { auth, authSearchParams, viewMode, expires } = useConfig()
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(""); // sharing file key
   const [editing, setEditing] = useState<string | null>(null); // text editing file key
 
   const transferQueue = useTransferQueue();
@@ -304,15 +307,16 @@ export default function Main({
         multiSelected={multiSelected}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);
-          if (file && isDirectory(file)) {
-            return [`${location.origin}${dirUrlPath(key)}`, true];
-          }
+          const isDir = !!file && isDirectory(file)
           return [fileUrl({
             key,
             auth: auth && permission == Permission.RequireAuth ? auth : "",
-            expires,
             origin: location.origin,
-          }), false];
+            expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+            scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+            token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+            isDir,
+          }), isDir];
         }}
         onShare={(key: string) => {
           const file = files.find(f => f.key === key)

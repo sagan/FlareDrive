@@ -1,5 +1,5 @@
 import { SyntheticEvent } from "react";
-import { MIME_DEFAULT, MIME_DIR, TXT_MIMES, mimeType } from "../lib/commons";
+import { MIME_DEFAULT, MIME_DIR, Permission, TXT_MIMES, mimeType, trimPrefixSuffix } from "../lib/commons";
 import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
@@ -138,3 +138,16 @@ export const ConfigContext = React.createContext<Config | null>(null);
  * ConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
  */
 export const useConfig = () => React.useContext<Config | null>(ConfigContext)!;
+
+/**
+ * Get permission of a dir / file key.
+ */
+export function getFilePermission(key: string): Permission {
+  if (window.__PUBLIC_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
+    return Permission.OpenFile;
+  }
+  if (window.__PUBLIC_DIR_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
+    return Permission.OpenDir;
+  }
+  return Permission.RequireAuth;
+}

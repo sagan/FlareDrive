@@ -137,8 +137,6 @@ export const TXT_MIMES = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
 
 export const HEADER_AUTHED = "X-Authed";
 
-export const HEADER_PERMISSION = "X-Permission";
-
 export const HEADER_INAPP = "X-In-App";
 
 /**
@@ -177,9 +175,9 @@ export const HEADER_SOURCE_ASYNC = "X-Source-Async";
  */
 export enum Permission {
   /**
-   * Unknown permission
+   * Request target file requires authentication for reading
    */
-  Unknown = 0,
+  RequireAuth = 0,
   /**
    * Request target file is open (can be anonymously read)
    */
@@ -189,10 +187,6 @@ export enum Permission {
    * the whole dir with all inside files can be anonymously read / listed)
    */
   OpenDir = 2,
-  /**
-   * Request target file requires authentication for reading
-   */
-  RequireAuth = 3,
 }
 
 export enum ShareRefererMode {
@@ -503,7 +497,7 @@ export function fileUrl({
 }: {
   key: string;
   token?: string | null;
-  auth: string | null;
+  auth?: string | null;
   expires?: number;
   ts?: number;
   origin?: string;

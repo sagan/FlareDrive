@@ -8,7 +8,24 @@
         window.__SITENAME__ = `%SITENAME%`;
         // https://v3.vitejs.dev/guide/env-and-mode.html
         window.__DEV__ = `%DEV%` === "true";
+        window.__PUBLIC_PREFIX__ = processPrefix(`%PUBLIC_PREFIX%`);
+        window.__PUBLIC_DIR_PREFIX__ = processPrefix(`%PUBLIC_DIR_PREFIX%`);
         document.title = window.__SITENAME__;
+
+        function processPrefix(prefix) {
+          return prefix
+            .split(/\s*,\s*/)
+            .map(function (prefix) {
+              if (prefix.startsWith("/")) {
+                prefix = prefix.slice(1);
+              }
+              if (prefix.endsWith("/")) {
+                prefix = prefix.slice(0, prefix.length - 1);
+              }
+              return prefix;
+            })
+            .filter((prefix) => prefix);
+        }
       })();
     </script>
     <link rel="icon" href="/favicon.png" />

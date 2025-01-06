@@ -11,6 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DefaultPublicVariables = {
   SITENAME: "FlareDrive",
   SHORT_SITENAME: "", // Optional, if not present, app will use SITENAME instead.
+  PUBLIC_PREFIX: "",
+  PUBLIC_DIR_PREFIX: "",
 };
 
 // `npm run cfdev`
@@ -68,7 +70,7 @@ export default defineConfig(async ({ command, mode }) => {
 
   if (command === "serve") {
     try {
-      // CF wrangler backend use .dev.vars in dev mode.
+      // vite use ".env.local", but CF wrangler backend use .dev.vars in dev mode.
       // https://developers.cloudflare.com/workers/configuration/environment-variables/
       await fs.copyFile(path.join(__dirname, ".env.local"), path.join(__dirname, ".dev.vars"));
     } catch (e) {}

@@ -27,13 +27,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
+import InputAdornment from '@mui/material/InputAdornment';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
-  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, THIRTEEN_MONTHS_DAYS
+  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, THIRTEEN_MONTHS_DAYS, Permission
 } from '../lib/commons';
-import { generatePassword, useConfig } from './commons';
+import { generatePassword, getFilePermission, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
-import { CopyButton, TooltipIconButton } from './components';
+import { CopyButton } from './components';
 
 enum Status {
   Creating,
@@ -44,7 +45,7 @@ enum Status {
 /**
  * Either filekey, or shareKey & shareObject must be provided.
  * If shareKey & shareObject is present, editing it. Otherwise creaing a new share with key of filekey.
- * @param param
+ * @param filekey: share target file key, with a trailing "/" if it's a dir.
  * @returns
  */
 export default function ShareDialog({ open, onClose, postDelete, ...otherProps }: {
@@ -56,12 +57,13 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
   postDelete?: (sharekey: string) => void;
 }) {
   const { auth, expires } = useConfig()
-  const [tab, setTab] = useState(0);
-  const filekey = otherProps.shareKey ? otherProps.shareObject!.key : otherProps.filekey!
-  const name = basename(trimPrefixSuffix(filekey, "/"))
+  const [tab, setTab] = useState(otherProps.shareKey ? 1 : 0);
+  const fileKeyWithDirSlash = otherProps.shareKey ? otherProps.shareObject!.key : otherProps.filekey!
+  const fileKey = trimPrefixSuffix(fileKeyWithDirSlash, "/")
+  const name = basename(fileKey)
   const [shareKey, setSharekey] = useState(otherProps.shareKey || name)
   const [shareObject, setShareObject] = useState<ShareObject>(
-    otherProps.shareKey ? otherProps.shareObject! : { key: filekey })
+    otherProps.shareKey ? otherProps.shareObject! : { key: fileKeyWithDirSlash })
   const [referer, setReferer] = useState(otherProps.shareKey ? list2Referer(otherProps.shareObject!.refererList) : "")
   const [status, setStatus] = useState(otherProps.shareKey ? Status.Editing : Status.Creating)
   const [error, setError] = useState("")
@@ -70,8 +72,13 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
   const [linkTs, setLinkTs] = useState(+new Date);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
+  const permission = useMemo(() => getFilePermission(fileKey), [fileKey])
   const targetIsDir = shareObject.key.endsWith("/")
-  const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({ key: shareObject.key, auth, expires })
+  const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({
+    key: shareObject.key,
+    auth: permission === Permission.RequireAuth ? auth : undefined,
+    expires
+  })
   const targetParentLink = dirUrlPath(dirname(shareObject.key))
   const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "")
   const shareKeyError = !shareKey ? "Share name can not be empty" :
@@ -119,24 +126,32 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
     }
   }, [shareKey, referer, shareObject, ttl]);
 
+  const isOpen = permission === Permission.OpenDir || (!targetIsDir && permission === Permission.OpenFile)
+
+  const linkOpenUrl = useMemo(() => fileUrl({
+    origin: location.origin,
+    key: fileKey,
+    isDir: targetIsDir,
+  }), [fileKey, targetIsDir])
+
   const linkUrl = useMemo(() => fileUrl({
     origin: location.origin,
-    key: shareObject.key,
+    key: fileKey,
     auth,
     expires: linkTtl ? linkTs + linkTtl * 1000 : 0,
     fullControl: linkFullControl,
-    scope: targetIsDir ? shareObject.key : undefined,
+    scope: targetIsDir ? fileKeyWithDirSlash : undefined,
     isDir: targetIsDir,
-  }), [shareObject.key, linkTs, linkTtl, linkFullControl, targetIsDir])
+  }), [fileKey, targetIsDir, linkTs, linkTtl, linkFullControl])
+
+
+  function nativeShare() {
+    navigator.share({ url: isOpen ? linkOpenUrl : linkUrl, title: name });
+  }
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-    <DialogTitle component={Typography} className='single-line'>
-      <TooltipIconButton title={status !== Status.Creating ? "Share link" : "Create share"}
-        color={status !== Status.Creating ? "primary" : "disabled"}
-        href={status !== Status.Creating ? link : ""}
-      >
-        <ShareIcon />
-      </TooltipIconButton>
+    <DialogTitle component={Typography} sx={{ p: 1, pb: 0 }} className='single-line'>
+      <IconButton><ShareIcon /></IconButton>
       <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
         e.preventDefault();
         onClose();
@@ -157,17 +172,131 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
         setLinkTs(+new Date)
       }
     }} sx={{ width: "100%" }} >
-      <Tab label="Get Link" />
+      <Tab label="Share" />
       <Tab label="Publish" />
     </Tabs>
-    {tab === 1 && <DialogContent>
+    {tab === 0 && <DialogContent sx={{ p: 1 }} >
       <Box sx={{ mt: 1 }}>
-        <TextField disabled={status !== Status.Creating} label="Share name" error={!!shareKeyError} fullWidth
-          helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
-          placeholder='Share name' InputProps={{
+        <TextField disabled label={`File key`}
+          fullWidth value={fileKey}
+          InputProps={{
             startAdornment: <IconButton edge="start">
               {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
             </IconButton>,
+            endAdornment:
+              <IconButton
+                disabled={false}
+                onClick={() => navigator.clipboard.writeText(fileKey)}
+                title={`Copy`}
+                edge="end"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+          }} />
+      </Box>
+      <Box sx={{ mt: 1 }}>
+        <TextField disabled label={`File name`} fullWidth value={name} InputProps={{
+          startAdornment: <IconButton edge="start">
+            {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+          </IconButton>,
+          endAdornment:
+            <IconButton
+              disabled={false}
+              onClick={() => navigator.clipboard.writeText(name)}
+              title={`Copy`}
+              edge="end"
+            >
+              <ContentCopyIcon />
+            </IconButton>
+        }} />
+      </Box>
+      {isOpen && <>
+        <Box sx={{ mt: 1 }}>
+          <TextField disabled label={`Public link (read-only)`} fullWidth value={linkOpenUrl} InputProps={{
+            startAdornment: <IconButton edge="start">
+              {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+            </IconButton>,
+            endAdornment: <>
+              <IconButton
+                disabled={false}
+                onClick={() => navigator.clipboard.writeText(linkOpenUrl)}
+                title={`Copy`}
+                edge="end"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+              <IconButton title='Share' onClick={nativeShare}><ShareIcon /></IconButton>
+            </>
+          }} />
+        </Box>
+        <Typography>
+          This {targetIsDir ? "dir" : "file"} is publicly accessible according to your env config.
+        </Typography>
+      </>}
+      {!isOpen && <>
+        <Box sx={{ mt: 1 }}>
+          <FormControl sx={{ m: 1, minWidth: 120 }}>
+            <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
+            <NativeSelect value={linkTtl} inputProps={{ id: 'link-ttl' }} onChange={e => {
+              setLinkTs(+new Date)
+              setLinkTtl(parseInt(e.target.value))
+            }}>
+              <option value={0}>Never expire</option>
+              {window.__DEV__ && <option value={60}>60 seconds</option>}
+              <option value={300}>5 minutes</option>
+              <option value={3600}>1 hour</option>
+              <option value={86400}>1 day</option>
+              <option value={86400 * 7}>7 days</option>
+              <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
+            </NativeSelect>
+          </FormControl>
+          <FormControlLabel label="Full Control (allow write)" control={
+            <Checkbox disabled={targetIsDir} checked={linkFullControl}
+              onChange={e => setLinkFullControl(e.target.checked)} />}
+          />
+        </Box>
+        <Box>
+          <TextField disabled label={`Access link (${linkFullControl ? "full control" : "read only"})`}
+            fullWidth value={linkUrl}
+            InputProps={{
+              startAdornment: <IconButton edge="start">
+                {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+              </IconButton>,
+              endAdornment: <>
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(linkUrl)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+                <IconButton title='Share' onClick={nativeShare}><ShareIcon /></IconButton>
+              </>
+            }} />
+        </Box>
+        {!!linkTtl ? <Typography>
+          Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
+        </Typography> : <Typography sx={{ color: "red" }}>
+          Link will never expire (unless the admin password is changed)
+        </Typography>}
+        {linkFullControl && <Typography sx={{ color: "red" }}>
+          Link has write access, send a "PUT" request to update the file contents.
+        </Typography>}
+      </>}
+    </DialogContent>}
+    {tab === 1 && <DialogContent sx={{ p: 1 }} >
+      <Box sx={{ mt: 1 }}>
+        <TextField disabled={status !== Status.Creating} label="Public url" error={!!shareKeyError} fullWidth
+          helperText={shareKeyError} value={shareKey} onChange={e => setSharekey(e.target.value)}
+          placeholder='share name' InputProps={{
+            startAdornment: <>
+              <IconButton title={status !== Status.Creating ? "Share link" : "Create share"}
+                color={status !== Status.Creating ? "primary" : "default"} edge="start">
+                {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+              </IconButton>
+              <InputAdornment position="start">{SHARE_ENDPOINT}</InputAdornment>
+            </>,
             endAdornment:
               <>
                 <IconButton
@@ -193,6 +322,14 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
                   edge="end"
                 >
                   <RestoreIcon />
+                </IconButton>
+                <IconButton
+                  disabled={status === Status.Creating}
+                  onClick={() => navigator.clipboard.writeText(link)}
+                  title={`Copy link`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
                 </IconButton>
               </>
           }} />
@@ -251,8 +388,8 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
             onChange={e => setTtl(parseInt(e.target.value))}
             inputProps={{ id: 'share-ttl' }}
           >
-            {status !== Status.Creating && <option value={-1}><em>Do not change</em></option>}
-            <option value={0}><em>Never expire</em></option>
+            {status !== Status.Creating && <option value={-1}>Do not change</option>}
+            <option value={0}>Never expire</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
             {window.__DEV__ && <option value={60}>60 seconds</option>}
             <option value={300}>5 minutes</option>
@@ -301,56 +438,7 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
           <span>&nbsp;(Link expires on {new Date(shareObject.expiration * 1000).toISOString()})</span>}
       </Typography>}
     </DialogContent>}
-    {tab === 0 && <DialogContent>
-      <Box>
-        <FormControl sx={{ m: 1, minWidth: 120 }}>
-          <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
-          <NativeSelect
-            value={linkTtl}
-            onChange={e => {
-              setLinkTs(+new Date)
-              setLinkTtl(parseInt(e.target.value))
-            }}
-            inputProps={{ id: 'link-ttl' }}
-          >
-            <option value={0}><em>Never expire</em></option>
-            <option value={300}>5 minutes</option>
-            <option value={3600}>1 hour</option>
-            <option value={86400}>1 day</option>
-            <option value={86400 * 7}>7 days</option>
-            <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
-          </NativeSelect>
-        </FormControl>
-        <FormControlLabel label="Full Control (allow write)" control={
-          <Checkbox disabled={targetIsDir} checked={linkFullControl}
-            onChange={e => setLinkFullControl(e.target.checked)} />}
-        />
-      </Box>
-      <Box sx={{ mt: 1 }}>
-        <TextField disabled label={`Access link (${linkFullControl ? "full control" : "read only"})`}
-          fullWidth value={linkUrl}
-          InputProps={{
-            endAdornment:
-              <IconButton
-                disabled={false}
-                onClick={() => navigator.clipboard.writeText(linkUrl)}
-                title={`Copy`}
-                edge="end"
-              >
-                <ContentCopyIcon />
-              </IconButton>
-          }} />
-      </Box>
-      {!!linkTtl ? <Typography>
-        Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
-      </Typography> : <Typography sx={{ color: "red" }}>
-        Link will never expire (unless the admin password is changed)
-      </Typography>}
-      {linkFullControl && <Typography sx={{ color: "red" }}>
-        Link has write access, send a "PUT" request to update the file contents.
-      </Typography>}
-    </DialogContent>}
-    {tab === 0 && <DialogActions>
+    {tab === 1 && <DialogActions>
       <IconButton disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'
         title={{
           [Status.Creating]: "Create",

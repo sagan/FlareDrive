@@ -6,7 +6,7 @@ import {
   Snackbar,
   Stack,
 } from "@mui/material";
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
@@ -15,7 +15,7 @@ import {
 } from "../lib/commons";
 import {
   FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
-  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext
+  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext, getFilePermission, isDirectory
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -59,7 +59,7 @@ export default function App() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [permission, setPermission] = useState<Permission>(Permission.Unknown);
+  const [sharing, setSharing] = useState(""); // sharing file key
 
   const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
@@ -78,10 +78,12 @@ export default function App() {
     return authSearchParams.size ? authSearchParams : null
   }, [searchParams])
 
-  const config: Config = {
-    auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires,
-    setAuth, setViewMode, setEditorPrompt, setEditorReadOnly
-  }
+  const config: Config = useMemo(() => {
+    return {
+      auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires,
+      setAuth, setViewMode, setEditorPrompt, setEditorReadOnly
+    }
+  }, [auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires])
 
   useEffect(() => {
     const iv = setInterval(() => setExpires(nextDayEndTimestamp()), 3600000 * 8)
@@ -104,6 +106,8 @@ export default function App() {
     navigate(pathname);
   }
 
+  const permission = useMemo(() => getFilePermission(cwd), [cwd])
+
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
   }, [cwd]);
@@ -120,7 +124,6 @@ export default function App() {
     setLoading(true);
     setMultiSelected([]);
     setFiles([]);
-    setPermission(Permission.Unknown);
     console.log("fetch", cwd)
     if (cwd == SHARES_FOLDER_KEY) {
       listShares(auth).then(setShares).catch(e => {
@@ -130,11 +133,9 @@ export default function App() {
       return
     }
     fetchPath(cwd, auth || (authSearchParams ? "?" + authSearchParams.toString() : "")).then(({
-      permission,
       auth: sentbackAuth,
       items
     }) => {
-      setPermission(permission)
       setRequireSignIn(false)
       if (sentbackAuth && sentbackAuth !== auth) {
         setAuth(sentbackAuth)
@@ -148,9 +149,8 @@ export default function App() {
         setError(new Error("dir not found"))
       }
     }).catch(e => {
-      setFiles([]);
+      setFiles([])
       setError(e)
-      setPermission(Permission.RequireAuth)
       if (`${e}`.includes("status=401")) {
         if (auth) {
           setAuth("")
@@ -186,12 +186,22 @@ export default function App() {
               onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
+              onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd) ? () => {
+                if (multiSelected[0]) {
+                  const file = files.find(f => f.key === multiSelected[0])
+                  const isDir = file ? isDirectory(file) : false
+                  setSharing(multiSelected[0] + (isDir ? "/" : ""))
+                } else {
+                  setSharing(cwd + "/")
+                }
+              } : undefined}
             />
             <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />
             {
               cwd === SHARES_FOLDER_KEY
                 ? <ShareManager fetchFiles={fetchFiles} search={search} shares={shares} loading={loading} />
                 : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
+                  sharing={sharing} setSharing={setSharing}
                   permission={permission} files={files} setError={setError}
                   multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
             }

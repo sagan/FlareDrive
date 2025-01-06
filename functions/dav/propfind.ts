@@ -4,11 +4,9 @@ import {
   HEADER_AUTHORIZATION,
   HEADER_CONTENT_TYPE,
   HEADER_INAPP,
-  HEADER_PERMISSION,
   isHttpsOrLocalUrl,
   MIME_DIR,
   MIME_XML,
-  str2int,
   WEBDAV_ENDPOINT,
 } from "../../lib/commons";
 import { findChildren, responseNotFound } from "../commons";
@@ -51,7 +49,6 @@ export async function handleRequestPropfind({ bucket, path, request, permission,
     sentBackAuthHeader = request.headers.get(HEADER_AUTHORIZATION);
   }
   const fixedHeaders = {
-    [HEADER_PERMISSION]: `${permission}`,
     [HEADER_AUTHED]: `${authed ? 1 : 0}`,
     ...(sentBackAuthHeader
       ? {

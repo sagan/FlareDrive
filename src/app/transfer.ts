@@ -4,9 +4,7 @@ import {
   key2Path,
   escapeRegExp,
   str2int,
-  Permission,
   WEBDAV_ENDPOINT,
-  HEADER_PERMISSION,
   HEADER_AUTHED,
   HEADER_INAPP,
   HEADER_AUTH,
@@ -38,7 +36,6 @@ export async function fetchPath(
   path: string,
   auth: string
 ): Promise<{
-  permission: Permission;
   authed: boolean;
   auth: string;
   items: FileItem[] | null;
@@ -59,7 +56,6 @@ export async function fetchPath(
         authed: !!str2int(res.headers.get(HEADER_AUTHED)),
         auth: res.headers.get(HEADER_AUTH) || "",
         items: null,
-        permission: Permission.RequireAuth,
       };
     }
     throw new Error(`Failed to fetch: status=${res.status}`);
@@ -71,7 +67,6 @@ export async function fetchPath(
 
   auth = res.headers.get(HEADER_AUTH) || "";
   const authed = !!str2int(res.headers.get(HEADER_AUTHED));
-  const permission: Permission = str2int(res.headers.get(HEADER_PERMISSION), Permission.RequireAuth);
   const parser = new DOMParser();
   const text = await res.text();
   const document = parser.parseFromString(text, MIME_XML);
@@ -98,7 +93,7 @@ export async function fetchPath(
         customMetadata: { thumbnail },
       } as FileItem;
     });
-  return { permission, authed, auth, items };
+  return { authed, auth, items };
 }
 
 export async function generateThumbnailFromFile(file: File): Promise<Blob> {
