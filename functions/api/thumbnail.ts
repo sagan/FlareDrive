@@ -42,12 +42,8 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const no404 = !!str2int(searchParams.get(THUMBNAIL_NO404_VARIABLE));
   const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
 
-  if (await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD)) {
+  if (!digest || (await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD))) {
     return fallbackIconResponse(ext, contentType, color, no404);
-  }
-
-  if (!digest) {
-    return responseBadRequest();
   }
 
   const obj = await bucket.get(KEY_PREFIX_THUMBNAIL + digest, {
