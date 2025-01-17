@@ -1,4 +1,5 @@
 import {
+  encodeHex,
   HEADER_AUTH,
   HEADER_AUTHED,
   HEADER_AUTHORIZATION,
@@ -22,9 +23,22 @@ type DavProperties = {
   getlastmodified: string | undefined;
   resourcetype: string;
   "fd:thumbnail": string | undefined;
+  "oc:checksums": string | undefined;
 };
 
 function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
+  // owncloud compatible checksum fields
+  let checksums = `<oc:checksum>${
+    "checksums" in object
+      ? [
+          object.checksums.md5 ? `MD5:${encodeHex(object.checksums.md5)}` : "",
+          object.checksums.sha1 ? `SHA1:${encodeHex(object.checksums.sha1)}` : "",
+          object.checksums.sha256 ? `SHA256:${encodeHex(object.checksums.sha256)}` : "",
+        ]
+          .filter((a) => a)
+          .join(" ")
+      : ""
+  }</oc:checksum>`;
   return {
     creationdate: object.uploaded.toUTCString(),
     displayname: object.httpMetadata?.contentDisposition,
@@ -35,12 +49,13 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     getlastmodified: object.uploaded.toUTCString(),
     resourcetype: object.httpMetadata?.contentType === MIME_DIR ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
+    "oc:checksums": checksums,
   };
 }
 
-export async function handleRequestPropfind({ bucket, path, request, permission, authed }: RequestHandlerParams) {
+export async function handleRequestPropfind({ bucket, path, request, authed }: RequestHandlerParams) {
   const responseTemplate = `<?xml version="1.0" encoding="utf-8" ?>
-<multistatus xmlns="DAV:" xmlns:fd="flaredrive">
+<multistatus xmlns="DAV:" xmlns:fd="flaredrive" xmlns:oc="http://owncloud.org/ns">
 {{items}}
 </multistatus>`;
 

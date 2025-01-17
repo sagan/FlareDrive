@@ -23,6 +23,7 @@ import {
   MIME_DEFAULT,
   HEADER_IF_UNMODIFIED_SINCE,
   isBasicAuthHeader,
+  cut,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -85,12 +86,32 @@ export async function fetchPath(
       const size = response.querySelector("getcontentlength")?.textContent;
       const lastModified = response.querySelector("getlastmodified")?.textContent;
       const thumbnail = response.getElementsByTagNameNS("flaredrive", "thumbnail")[0]?.textContent;
+      const checksums = response.getElementsByTagName("oc:checksum")[0]?.textContent || "";
+
       return {
         key: decodeURI(href).replace(new RegExp("^" + escapeRegExp(WEBDAV_ENDPOINT)), ""),
         size: size ? Number(size) : 0,
         uploaded: lastModified!,
         httpMetadata: { contentType: contentType || "" },
         customMetadata: { thumbnail },
+        checksums: checksums
+          .split(" ")
+          .filter((a) => a)
+          .reduce<FileItem["checksums"]>((pv, v) => {
+            const [hash, value] = cut(v, ":");
+            switch (hash.toLowerCase()) {
+              case "md5":
+                pv.md5 = value;
+                break;
+              case "sha1":
+                pv.sha1 = value;
+                break;
+              case "sha256":
+                pv.sha256 = value;
+                break;
+            }
+            return pv;
+          }, {}),
       } as FileItem;
     });
   return { authed, auth, items };
@@ -462,5 +483,6 @@ export async function uploadFromUrl({
       ...(asyncMode ? { [HEADER_SOURCE_ASYNC]: "1" } : {}),
     },
     customMetadata: obj.customMetadata,
+    checksums: {},
   };
 }

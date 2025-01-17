@@ -76,13 +76,15 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
     await bucket.put(KEY_PREFIX_THUMBNAIL + digest, blob, {
       httpMetadata: request.headers,
     });
-    await bucket.put(path, object.body, {
-      httpMetadata: object.httpMetadata,
-      customMetadata: Object.assign({}, object.customMetadata, { thumbnail: digest }),
-    });
-    if (object.customMetadata?.thumbnail) {
-      // delete old thumbnail
-      await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${object.customMetadata.thumbnail}`);
+    if (object.customMetadata?.thumbnail !== digest) {
+      await bucket.put(path, object.body, {
+        httpMetadata: object.httpMetadata,
+        customMetadata: Object.assign({}, object.customMetadata, { thumbnail: digest }),
+      });
+      if (object.customMetadata?.thumbnail) {
+        // delete old thumbnail
+        await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${object.customMetadata.thumbnail}`);
+      }
     }
     return jsonResponse<ThumbnailObject>({ digest });
   }

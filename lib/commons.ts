@@ -392,8 +392,9 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
   }
 }
 
-export function encodeHex(array: Uint8Array): string {
+export function encodeHex(input: Uint8Array | ArrayBuffer): string {
   let result = "";
+  const array = "buffer" in input ? input : new Uint8Array(input);
   for (const value of array) {
     result += value.toString(16).padStart(2, "0");
   }

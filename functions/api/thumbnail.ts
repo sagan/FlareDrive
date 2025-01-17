@@ -10,6 +10,7 @@ import {
   THUMBNAIL_SIZE,
   str2int,
   THUMBNAIL_DIGEST_VARIABLE,
+  THUMBNAIL_NOFALLBACK,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -18,6 +19,7 @@ import {
   jsonResponse,
   responseBadRequest,
   responseInternalServerError,
+  responseNotFound,
 } from "../commons";
 import { fallbackIconResponse } from "../icons";
 
@@ -40,9 +42,13 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const ext = searchParams.get(THUMBNAIL_EXT_VARIABLE) || "";
   const color = searchParams.get(THUMBNAIL_COLOR_VARIABLE) || "";
   const no404 = !!str2int(searchParams.get(THUMBNAIL_NO404_VARIABLE));
+  const noFallback = !!str2int(searchParams.get(THUMBNAIL_NOFALLBACK));
   const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
 
   if (!digest || (await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD))) {
+    if (noFallback) {
+      return responseNotFound();
+    }
     return fallbackIconResponse(ext, contentType, color, no404);
   }
 
@@ -52,6 +58,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
   });
 
   if (obj === null) {
+    if (noFallback) {
+      return responseNotFound();
+    }
     return fallbackIconResponse(ext, contentType, color, no404);
   }
 

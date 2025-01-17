@@ -60,6 +60,11 @@ export interface FileItem {
   uploaded: string;
   httpMetadata: { contentType: string };
   customMetadata?: { thumbnail?: string };
+  checksums: {
+    md5?: string;
+    sha1?: string;
+    sha256?: string;
+  };
 }
 
 export interface ViewProps {

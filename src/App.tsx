@@ -37,6 +37,7 @@ const systemFolders: FileItem[] = [
     size: 0,
     uploaded: "",
     httpMetadata: { contentType: MIME_DIR },
+    checksums: {},
   }
 ]
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,18 +17,21 @@ import { FileItem, isImage, useConfig } from './commons';
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
 
 
-export default function GenerateThumbnailsDialog({ files, open, onClose, onDone }: {
+export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...others }: {
   open: boolean;
   onClose: () => void;
   onDone: () => void;
   files: FileItem[];
 }) {
+  const initialFilenames = useMemo(() => others.files.map(f => f.key), [])
   const { auth, expires } = useConfig()
   const [ts, setTs] = useState(0)
-  const [force, setForce] = useState(false);
+  const [force, setForce] = useState(false)
   const [working, setWorking] = useState(false)
   const [result, setResult] = useState<Record<string, string>>({})
   const mountedRef = useRef(true)
+  const files = others.files.filter(f => initialFilenames.includes(f.key))
+
   /**
    * Record key is digest, if target thumbnail image fails to load (not exists), set value to 1.
    */

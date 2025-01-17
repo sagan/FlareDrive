@@ -16,6 +16,7 @@ export default function MultiSelectToolbar({
   onClose,
   getLink,
   onRename,
+  onDuplicate,
   onMove,
   onDelete,
   onShare,
@@ -28,6 +29,7 @@ export default function MultiSelectToolbar({
    */
   getLink: (key: string) => [string, boolean];
   onRename: () => void;
+  onDuplicate: () => void;
   onMove: () => void;
   onDelete: () => void;
   onShare: (key: string) => void;
@@ -92,6 +94,10 @@ export default function MultiSelectToolbar({
               setAnchorEl(null)
               onRename()
             }}>Rename</MenuItem>}
+            {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!auth} onClick={() => {
+              setAnchorEl(null)
+              onDuplicate()
+            }}>Create Copy</MenuItem>}
             <MenuItem disabled={!auth} onClick={() => {
               setAnchorEl(null)
               onMove()

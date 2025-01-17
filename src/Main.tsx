@@ -14,7 +14,7 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   HEADER_AUTHORIZATION, MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath, TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int
+  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath, TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
@@ -336,6 +336,19 @@ export default function Main({
             setError(e)
           }
         }}
+        onDuplicate={async () => {
+          let newkey = prompt(`Create a copy of "${multiSelected[0]}" at path`,
+            getDuplicateName(multiSelected[0], files))
+          if (!newkey) {
+            return
+          }
+          try {
+            await copyPaste(multiSelected[0], newkey, auth, false);
+            fetchFiles();
+          } catch (e) {
+            setError(e)
+          }
+        }}
         onMove={async () => {
           let dir = cwd || "/";
           let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
@@ -404,4 +417,24 @@ export default function Main({
       />
     </>
   );
+}
+
+function getDuplicateName(filekey: string, files: FileItem[]): string {
+  const dir = dirname(filekey)
+  const filename = basename(filekey);
+  const ext = extname(filename)
+  let base = filename.slice(0, filename.length - ext.length)
+  let i = 1
+  let match = base.match(/^(.*) \((\d+)\)$/)
+  if (match) {
+    base = match[1]
+    i = str2int(match[2]) + 1
+  }
+  while (true) {
+    const newkey = `${dir ? dir + "/" : ""}${base} (${i})${ext}`
+    if (!files.find(a => a.key === newkey)) {
+      return newkey
+    }
+    i++
+  }
 }
