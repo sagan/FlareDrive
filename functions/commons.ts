@@ -243,7 +243,7 @@ export async function checkAuthFailure(
   }
 
   if (!authed) {
-    if (url.pathname.startsWith(SHARE_ENDPOINT)) {
+    if (url.pathname.startsWith(SHARE_ENDPOINT) && METHODS_DEFAULT.includes(request.method)) {
       const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
       return responseUnauthorized(basicAuthHeader);
     }

@@ -188,13 +188,7 @@ export default function App() {
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd) ? () => {
-                if (multiSelected[0]) {
-                  const file = files.find(f => f.key === multiSelected[0])
-                  const isDir = file ? isDirectory(file) : false
-                  setSharing(multiSelected[0] + (isDir ? "/" : ""))
-                } else {
-                  setSharing(cwd + "/")
-                }
+                setSharing(multiSelected[0] || cwd)
               } : undefined}
             />
             <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />

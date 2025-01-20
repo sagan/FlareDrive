@@ -60,7 +60,7 @@ export default function MultiSelectToolbar({
           ? <IconButton color="primary" disabled={multiSelected.length !== 1} title="Share & Publish" onClick={() => {
             onShare(multiSelected[0])
           }}><ShareIcon /></IconButton>
-          : <CopyButton color="primary" href={link} isIcon={true} text={link}><LinkIcon /></CopyButton>
+          : <CopyButton isIcon isLink color="primary" href={link} text={link}><LinkIcon /></CopyButton>
         }
         <IconButton
           color="primary"

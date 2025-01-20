@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, CircularProgress, Link, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
-import Lightbox, { RenderSlideProps, SlideImage, useLightboxProps, useLightboxState } from "yet-another-react-lightbox";
+import Lightbox, {
+  Callbacks, RenderSlideProps, ShareFunctionProps, SlideImage, useLightboxProps, useLightboxState
+} from "yet-another-react-lightbox";
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Download from "yet-another-react-lightbox/plugins/download";
@@ -13,8 +15,9 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
-  HEADER_AUTHORIZATION, MIME_DIR, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix, dirUrlPath, TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname
+  HEADER_AUTHORIZATION, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
+  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix,
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname, HEADER_CONTENT_TYPE, MIME_DIR
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
@@ -65,7 +68,7 @@ function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (fi
 }
 
 type SlideCallback = ({ index, key }: { index: number, key: string }) => void;
-
+type SlidesExtendedCallbacks = Callbacks & { edit: SlideCallback }
 
 function SlideRender({ slide, rect }: RenderSlideProps) {
   const lightbox = useLightboxProps();
@@ -73,7 +76,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   const src = (slide as { src: string }).src || ""
 
   const click = lightbox.on.click
-  const edit = (lightbox.on as Record<string, SlideCallback>).edit
+  const { edit } = lightbox.on as SlidesExtendedCallbacks
 
   const onClick = useCallback(() => {
     if (click) {
@@ -261,12 +264,14 @@ export default function Main({
     handleMultiSelect(file.key);
   }, [])
 
-  const lightboxCallbacks: Record<string, SlideCallback> = {
+  //  Record<string, SlideCallback>
+  const lightboxCallbacks: SlidesExtendedCallbacks = {
     click: toggleLightboxControls,
+    // custom callbacks:
     edit: ({ key }) => {
       setSlideIndex(-1)
       setEditing(key)
-    }, // custom callback
+    }
   }
 
   const viewProps: ViewProps = {
@@ -278,7 +283,11 @@ export default function Main({
     emptyMessage: <Centered>No files or folders</Centered>,
   }
   const viewElement = viewMode === ViewMode.Default ? <FileGrid {...viewProps} />
-    : <FileAlbum {...viewProps} />
+    : <FileAlbum {...viewProps} />;
+
+  const sharingFile = useMemo(() => {
+    return sharing ? (sharing === cwd ? getDirObj(cwd) : files.find(f => f.key === sharing)) : undefined
+  }, [sharing, cwd, files])
 
   return (
     <>
@@ -318,10 +327,7 @@ export default function Main({
             isDir,
           }), isDir];
         }}
-        onShare={(key: string) => {
-          const file = files.find(f => f.key === key)
-          setSharing(key + (file?.httpMetadata.contentType === MIME_DIR ? "/" : ""))
-        }}
+        onShare={setSharing}
         onClose={() => setMultiSelected([])}
         onRename={async () => {
           const oldName = basename(multiSelected[0]);
@@ -398,7 +404,7 @@ export default function Main({
           fetchFiles();
         }}
       />
-      {!!sharing && <ShareDialog filekey={sharing} open={true} onClose={() => setSharing("")} />}
+      {!!sharingFile && <ShareDialog file={sharingFile} open={true} onClose={() => setSharing("")} />}
       {editing !== null && <EditorDialog filekey={editing} open={true}
         setError={setError} close={() => setEditing(null)} />}
       <Lightbox
@@ -407,13 +413,18 @@ export default function Main({
         animation={{ fade: 0, swipe: 250, navigation: 0 }}
         index={slideIndex}
         carousel={{ finite: true }}
-        open={slideIndex >= 0 && editing === null}
+        open={slideIndex >= 0}
         close={() => setSlideIndex(-1)}
         slides={slides}
         render={{ slide: SlideRender }}
-        plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download,
-          ...(permission === Permission.OpenDir || permission === Permission.OpenFile ? [Share] : []),
-        ]}
+        plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download, Share]}
+        share={auth ? {
+          share: ({ slide }: ShareFunctionProps) => {
+            const file: FileItem = (slide as any)._file
+            setSharing(file.key)
+            // setSlideIndex(-1)
+          }
+        } : undefined}
       />
     </>
   );
@@ -436,5 +447,15 @@ function getDuplicateName(filekey: string, files: FileItem[]): string {
       return newkey
     }
     i++
+  }
+}
+
+function getDirObj(key: string): FileItem {
+  return {
+    key,
+    size: 0,
+    uploaded: "",
+    checksums: {},
+    httpMetadata: { contentType: MIME_DIR },
   }
 }

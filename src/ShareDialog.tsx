@@ -32,7 +32,7 @@ import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
   basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, THIRTEEN_MONTHS_DAYS, Permission
 } from '../lib/commons';
-import { generatePassword, getFilePermission, useConfig } from './commons';
+import { FileItem, generatePassword, getFilePermission, isDirectory, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton } from './components';
 
@@ -43,29 +43,30 @@ enum Status {
 }
 
 /**
- * Either filekey, or shareKey & shareObject must be provided.
- * If shareKey & shareObject is present, editing it. Otherwise creaing a new share with key of filekey.
- * @param filekey: share target file key, with a trailing "/" if it's a dir.
+ * Either file, or shareKey & shareObject must be provided.
+ * If shareKey & shareObject is present, editing it. Otherwise creaing a new share with file.
  * @returns
  */
 export default function ShareDialog({ open, onClose, postDelete, ...otherProps }: {
   open: boolean;
   onClose: () => void;
-  filekey?: string;
-  shareKey?: string;
-  shareObject?: ShareObject
   postDelete?: (sharekey: string) => void;
-}) {
+} & ({ file: FileItem } | {
+  shareKey: string;
+  shareObject: ShareObject
+})) {
   const { auth, expires } = useConfig()
-  const [tab, setTab] = useState(otherProps.shareKey ? 1 : 0);
-  const fileKeyWithDirSlash = otherProps.shareKey ? otherProps.shareObject!.key : otherProps.filekey!
+  const [tab, setTab] = useState("shareKey" in otherProps ? 1 : 0);
+  const fileKeyWithDirSlash = "shareKey" in otherProps ? otherProps.shareObject.key :
+    (otherProps.file.key + (isDirectory(otherProps.file) ? "/" : ""))
   const fileKey = trimPrefixSuffix(fileKeyWithDirSlash, "/")
   const name = basename(fileKey)
-  const [shareKey, setSharekey] = useState(otherProps.shareKey || name)
+  const [shareKey, setSharekey] = useState("shareKey" in otherProps ? otherProps.shareKey : name)
   const [shareObject, setShareObject] = useState<ShareObject>(
-    otherProps.shareKey ? otherProps.shareObject! : { key: fileKeyWithDirSlash })
-  const [referer, setReferer] = useState(otherProps.shareKey ? list2Referer(otherProps.shareObject!.refererList) : "")
-  const [status, setStatus] = useState(otherProps.shareKey ? Status.Editing : Status.Creating)
+    "shareKey" in otherProps ? otherProps.shareObject! : { key: fileKeyWithDirSlash })
+  const [referer, setReferer] = useState("shareKey" in otherProps ?
+    list2Referer(otherProps.shareObject.refererList) : "")
+  const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating)
   const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
   const [linkTtl, setLinkTtl] = useState(86400);
@@ -210,6 +211,52 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
             </IconButton>
         }} />
       </Box>
+      {
+        "file" in otherProps && !isDirectory(otherProps.file) && <>
+          {!!otherProps.file.checksums.md5 && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`MD5`} fullWidth value={otherProps.file.checksums.md5} InputProps={{
+              endAdornment:
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.md5!)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+            }} />
+          </Box>
+          }
+          {!!otherProps.file.checksums.sha1 && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`SHA1`} fullWidth value={otherProps.file.checksums.sha1} InputProps={{
+              endAdornment:
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.sha1!)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+            }} />
+          </Box>
+          }
+          {!!otherProps.file.checksums.sha256 && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`SHA256`} fullWidth value={otherProps.file.checksums.sha256} InputProps={{
+              endAdornment:
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.sha256!)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+            }} />
+          </Box>
+          }
+        </>
+      }
       {isOpen && <>
         <Box sx={{ mt: 1 }}>
           <TextField disabled label={`Public link (read-only)`} fullWidth value={linkOpenUrl} InputProps={{
@@ -439,6 +486,12 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
       </Typography>}
     </DialogContent>}
     {tab === 1 && <DialogActions>
+      {
+        status != Status.Creating &&
+        <CopyButton isIcon isLink text={link} disabled={status !== Status.Editing} color='secondary'>
+          <LinkIcon />
+        </CopyButton>
+      }
       <IconButton disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'
         title={{
           [Status.Creating]: "Create",
@@ -447,13 +500,10 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
         }[status]}
       ><SaveIcon /></IconButton>
       {
-        status != Status.Creating && <>
-          <CopyButton isLink text={link} disabled={status !== Status.Editing} color='secondary'>
-            <LinkIcon />
-          </CopyButton>
-          <IconButton disabled={status !== Status.Editing} color='warning'
-            onClick={doDeleteShare} title="Delete share"><DeleteIcon /></IconButton>
-        </>
+        status != Status.Creating &&
+        <IconButton disabled={status !== Status.Editing} color='warning'
+          onClick={doDeleteShare} title="Delete share"><DeleteIcon />
+        </IconButton>
       }
       <IconButton onClick={onClose} color='secondary'><CloseIcon /></IconButton>
     </DialogActions>}

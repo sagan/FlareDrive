@@ -22,6 +22,8 @@
 
 :root {
   --yarl__color_button_active: #f38020;
+  /* default is 9999, which is higher then material ui dialog */
+  --yarl__portal_zindex: 1000;
 }
 
 .file-album-item {
