@@ -13,11 +13,12 @@ import { getShare } from "./app/share";
 import ShareDialog from "./ShareDialog";
 import { useConfig } from "./commons";
 
-export default function ShareManager({ search, shares, loading, fetchFiles }: {
+export default function ShareManager({ search, shares, loading, fetchFiles, setError }: {
   search: string;
   shares: string[];
   loading: boolean;
   fetchFiles: () => void
+  setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
   const { auth } = useConfig()
   const [shareObject, setShareObject] = useState<ShareObject | null>(null)
@@ -62,7 +63,7 @@ export default function ShareManager({ search, shares, loading, fetchFiles }: {
       })}
     </Grid>
   )}
-    {!!shareObject && <ShareDialog shareKey={shareKey} shareObject={shareObject}
+    {!!shareObject && <ShareDialog shareKey={shareKey} shareObject={shareObject} setError={setError}
       open={!!shareObject} onClose={() => setShareObject(null)} postDelete={() => {
         fetchFiles();
         setShareObject(null)

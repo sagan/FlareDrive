@@ -1,5 +1,6 @@
 import pLimit from "p-limit";
 import mime from "mime";
+import { pdfjs } from "react-pdf";
 import {
   key2Path,
   escapeRegExp,
@@ -152,12 +153,7 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
     });
     ctx.drawImage(video, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
   } else if (contentType === "application/pdf") {
-    const pdfjsLib = await import(
-      // @ts-ignore
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs"
-    );
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
-    const pdf = await pdfjsLib.getDocument(url).promise;
+    const pdf = await pdfjs.getDocument(url).promise;
     const page = await pdf.getPage(1);
     const { width, height } = page.getViewport({ scale: 1 });
     var scale = THUMBNAIL_SIZE / Math.max(width, height);

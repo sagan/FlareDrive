@@ -194,7 +194,8 @@ export default function App() {
             <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />
             {
               cwd === SHARES_FOLDER_KEY
-                ? <ShareManager fetchFiles={fetchFiles} search={search} shares={shares} loading={loading} />
+                ? <ShareManager setError={setError} fetchFiles={fetchFiles}
+                  search={search} shares={shares} loading={loading} />
                 : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
                   sharing={sharing} setSharing={setSharing}
                   permission={permission} files={files} setError={setError}

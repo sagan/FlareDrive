@@ -76,6 +76,13 @@ export interface ViewProps {
   emptyMessage?: React.ReactNode;
 }
 
+export interface FileViewerProps {
+  filekey: string;
+  open: boolean;
+  close: () => void;
+  setError: React.Dispatch<React.SetStateAction<any>>;
+}
+
 export function isDirectory(file: FileItem) {
   return file.httpMetadata?.contentType === MIME_DIR;
 }

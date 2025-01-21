@@ -17,7 +17,7 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   HEADER_AUTHORIZATION, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
   compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix,
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname, HEADER_CONTENT_TYPE, MIME_DIR
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname, HEADER_CONTENT_TYPE, MIME_DIR, MIME_PDF
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
@@ -33,6 +33,8 @@ import { copyPaste } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
 import MimeIcon from "./MimeIcon";
 import EditorDialog from "./EditorDialog";
+import PdfDialog from "./PdfDialog";
+import ImageEditorDialog from "./ImageEditorDialog";
 
 
 function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
@@ -67,8 +69,7 @@ function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (fi
   );
 }
 
-type SlideCallback = ({ index, key }: { index: number, key: string }) => void;
-type SlidesExtendedCallbacks = Callbacks & { edit: SlideCallback }
+type SlidesExtendedCallbacks = Callbacks & { edit: (file: FileItem) => void }
 
 function SlideRender({ slide, rect }: RenderSlideProps) {
   const lightbox = useLightboxProps();
@@ -102,11 +103,11 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       }}>
         Download
       </Button>
-      {file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) && <Button
+      {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) || file.httpMetadata.contentType === MIME_PDF) && <Button
         variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
           e.stopPropagation();
           e.preventDefault()
-          edit({ index: currentIndex, key: file.key })
+          edit(file)
         }}>
         Open
       </Button>
@@ -156,6 +157,8 @@ export default function Main({
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // text editing file key
+  const [displayedPdf, setDisplayedPdf] = useState<string | null>(null);
+  const [editingImage, setEditingImage] = useState<string | null>(null);
 
   const transferQueue = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
@@ -268,9 +271,19 @@ export default function Main({
   const lightboxCallbacks: SlidesExtendedCallbacks = {
     click: toggleLightboxControls,
     // custom callbacks:
-    edit: ({ key }) => {
+    edit: (file) => {
+      if (file.httpMetadata.contentType === MIME_PDF) {
+        setDisplayedPdf(file.key)
+      } else if (isTextual(file)) {
+        setEditing(file.key)
+      } else if (isImage(file)) {
+        setEditingImage(file.key)
+      } else {
+        setError(`View of ${file.httpMetadata.contentType} type file is not supported`)
+        return
+      }
       setSlideIndex(-1)
-      setEditing(key)
+      setSharing("")
     }
   }
 
@@ -288,6 +301,17 @@ export default function Main({
   const sharingFile = useMemo(() => {
     return sharing ? (sharing === cwd ? getDirObj(cwd) : files.find(f => f.key === sharing)) : undefined
   }, [sharing, cwd, files])
+
+
+  const fileViewerProps = {
+    open: true,
+    setError,
+    close: () => {
+      setEditing(null)
+      setDisplayedPdf(null)
+      setEditingImage(null)
+    },
+  }
 
   return (
     <>
@@ -404,9 +428,11 @@ export default function Main({
           fetchFiles();
         }}
       />
-      {!!sharingFile && <ShareDialog file={sharingFile} open={true} onClose={() => setSharing("")} />}
-      {editing !== null && <EditorDialog filekey={editing} open={true}
-        setError={setError} close={() => setEditing(null)} />}
+      {!!sharingFile && <ShareDialog setError={setError} file={sharingFile} open={true} onClose={() => setSharing("")}
+        onEdit={() => lightboxCallbacks.edit(sharingFile)} />}
+      {editing !== null && <EditorDialog filekey={editing} {...fileViewerProps} />}
+      {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
+      {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}
@@ -417,7 +443,7 @@ export default function Main({
         close={() => setSlideIndex(-1)}
         slides={slides}
         render={{ slide: SlideRender }}
-        plugins={[Captions, Counter, Fullscreen, Slideshow, Thumbnails, Video, Zoom, Download, Share]}
+        plugins={[Captions, Counter, Fullscreen, Thumbnails, Video, Share, Download, Slideshow, Zoom]}
         share={auth ? {
           share: ({ slide }: ShareFunctionProps) => {
             const file: FileItem = (slide as any)._file

@@ -25,6 +25,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -47,10 +48,12 @@ enum Status {
  * If shareKey & shareObject is present, editing it. Otherwise creaing a new share with file.
  * @returns
  */
-export default function ShareDialog({ open, onClose, postDelete, ...otherProps }: {
+export default function ShareDialog({ open, onClose, setError, postDelete, onEdit, ...otherProps }: {
   open: boolean;
   onClose: () => void;
+  setError: React.Dispatch<any>;
   postDelete?: (sharekey: string) => void;
+  onEdit?: () => void;
 } & ({ file: FileItem } | {
   shareKey: string;
   shareObject: ShareObject
@@ -67,7 +70,6 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
   const [referer, setReferer] = useState("shareKey" in otherProps ?
     list2Referer(otherProps.shareObject.refererList) : "")
   const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating)
-  const [error, setError] = useState("")
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
   const [linkTtl, setLinkTtl] = useState(86400);
   const [linkTs, setLinkTs] = useState(+new Date);
@@ -118,7 +120,6 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
     }
     try {
       await createShare(shareKey, newShareObject, auth)
-      setError("")
       setStatus(Status.Editing)
       setShareObject(newShareObject)
     } catch (e) {
@@ -184,15 +185,22 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
             startAdornment: <IconButton edge="start">
               {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
             </IconButton>,
-            endAdornment:
+            endAdornment: <>
+              {!!onEdit && <IconButton
+                onClick={onEdit}
+                title={`View / Edit`}
+                edge="end"
+              >
+                <EditIcon />
+              </IconButton>}
               <IconButton
-                disabled={false}
                 onClick={() => navigator.clipboard.writeText(fileKey)}
                 title={`Copy`}
                 edge="end"
               >
                 <ContentCopyIcon />
               </IconButton>
+            </>
           }} />
       </Box>
       <Box sx={{ mt: 1 }}>
@@ -478,7 +486,6 @@ export default function ShareDialog({ open, onClose, postDelete, ...otherProps }
           </>} value={referer} onChange={e => setReferer(e.target.value)}
         />
       </div>}
-      {!!error && <Typography>{error}</Typography>}
       {status === Status.Editing && <Typography>
         Shared link: <a href={link}>{new URL(link).pathname}</a>
         {!!shareObject.expiration &&

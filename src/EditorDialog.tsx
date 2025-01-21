@@ -23,7 +23,7 @@ import {
   HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE, WEBDAV_ENDPOINT,
   extname, fileUrl, humanReadableSize, key2Path, str2int
 } from '../lib/commons';
-import { EDIT_FILE_SIZE_LIMIT, useConfig } from './commons';
+import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, useConfig } from './commons';
 import { CopyButton } from './components';
 
 enum State {
@@ -32,7 +32,6 @@ enum State {
   Loading,
   Saving,
 }
-
 
 const extLanguages: Record<string, string> = {
   "": "plain", // fallback
@@ -57,12 +56,7 @@ const extLanguages: Record<string, string> = {
   ".xml": "xml",
 }
 
-export default function EditorDialog({ filekey, open, close, setError }: {
-  filekey: string;
-  open: boolean;
-  close: () => void;
-  setError: React.Dispatch<React.SetStateAction<any>>;
-}) {
+export default function EditorDialog({ filekey, open, close, setError }: FileViewerProps) {
   const { auth, authSearchParams, expires, editorPrompt, setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
   const language = extLanguages[extname(filekey)] || extLanguages[""]
   const [state, setState] = useState<State>(State.Idle)
@@ -180,7 +174,9 @@ export default function EditorDialog({ filekey, open, close, setError }: {
   const roMode = !auth || !!editorReadOnly || state !== State.Editing
 
   return <Dialog open={open} onClose={onCloseNoPrompt} fullWidth maxWidth="xl">
-    <DialogTitle component={Typography} className='single-line'>
+    <DialogTitle component={Typography} className='single-line' sx={{ p: 1 }}>
+      <IconButton title="Close" color='secondary' disabled={state !== State.Editing && state !== State.Idle}
+        onClick={onClose}><CloseIcon /></IconButton>
       {({
         [State.Editing]: roMode ? "View" : "Edit",
         [State.Idle]: roMode ? "View" : "Edit",
@@ -211,7 +207,7 @@ export default function EditorDialog({ filekey, open, close, setError }: {
             <RestoreIcon />
           </IconButton>
         </>}
-        <CopyButton disabled={state === State.Loading} text={() => {
+        <CopyButton isIcon disabled={state === State.Loading} text={() => {
           if (!editorRef.current) {
             return ""
           }
@@ -221,16 +217,14 @@ export default function EditorDialog({ filekey, open, close, setError }: {
           disabled={changed || (state !== State.Editing && state !== State.Idle)}>
           <RefreshIcon />
         </IconButton>
-        <IconButton title="Close" color='secondary' disabled={state !== State.Editing && state !== State.Idle}
-          onClick={onClose}><CloseIcon /></IconButton>
       </Typography>
       {/*
       Dialog max-height: calc(100vh - 64px)
-      DialogTitle height: 32px + 16px (padding-top & padding-bottom ) * 2 = 64px
+      DialogTitle height: 40px + 16px (padding-top + padding-bottom ) = 56px
       Toolbar height: 40px
       DialogContent padding-bottom: 20px
       */}
-      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 188px)" }}>
+      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 180px)" }}>
         {contents !== undefined && <Editor
           key={filekey}
           defaultLanguage={language}
