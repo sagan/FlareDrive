@@ -51,7 +51,12 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
       if (url.pathname.endsWith("/")) {
         return "index.html"
       }
-      return basename(url.pathname)
+      let name = basename(url.pathname)
+      let ext = extname(name)
+      if (!ext) {
+        name += ".html"
+      }
+      return name
     } catch (e) { }
     return ""
   }, [source])

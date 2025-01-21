@@ -17,12 +17,14 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import CloseIcon from '@mui/icons-material/Close';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {
   EXPIRES_VARIABLE,
   HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE, WEBDAV_ENDPOINT,
   extname, fileUrl, humanReadableSize, key2Path, str2int
 } from '../lib/commons';
 import { EDIT_FILE_SIZE_LIMIT, useConfig } from './commons';
+import { CopyButton } from './components';
 
 enum State {
   Idle,
@@ -209,6 +211,12 @@ export default function EditorDialog({ filekey, open, close, setError }: {
             <RestoreIcon />
           </IconButton>
         </>}
+        <CopyButton disabled={state === State.Loading} text={() => {
+          if (!editorRef.current) {
+            return ""
+          }
+          return editorRef.current.getValue()
+        }}><ContentCopyIcon /></CopyButton>
         <IconButton title="Refresh" color='secondary' onClick={onLoad}
           disabled={changed || (state !== State.Editing && state !== State.Idle)}>
           <RefreshIcon />

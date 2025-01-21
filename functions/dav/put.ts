@@ -136,11 +136,9 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
       }
       return responseInternalServerError(`source url return status=${sourceReponse.status}`);
     }
-    if (!context.env.CLOUD_DOWNLOAD_UNLIMITED) {
-      const size = str2int(sourceReponse.headers.get(HEADER_CONTENT_LENGTH));
-      if (size > CLOUD_DOWNLOAD_SIZE_LIMIT) {
-        return responseInternalServerError(`source url file is too large: ${humanReadableSize(size)}`);
-      }
+    const contentLength = str2int(sourceReponse.headers.get(HEADER_CONTENT_LENGTH));
+    if (!context.env.CLOUD_DOWNLOAD_UNLIMITED && contentLength > CLOUD_DOWNLOAD_SIZE_LIMIT) {
+      return responseInternalServerError(`source url file is too large: ${humanReadableSize(contentLength)}`);
     }
 
     const [sourceContentType] = mimeType(sourceReponse.headers.get(HEADER_CONTENT_TYPE));
@@ -149,11 +147,26 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
     }
     contentType = contentType || sourceContentType || mime.getType(path) || MIME_DEFAULT;
     request.headers.set(HEADER_CONTENT_TYPE, contentType);
+    let r2req: Promise<R2Object>;
+    if (contentLength > 0) {
+      // Provided readable stream must have a known length (Content-Length)
+      r2req = bucket.put(path, sourceReponse.body, {
+        httpMetadata: sourceReponse.headers,
+        customMetadata,
+      });
+    } else {
+      r2req = new Promise((resolve) => {
+        setTimeout(async () => {
+          let body = await sourceReponse.blob();
+          let obj = await bucket.put(path, body, {
+            httpMetadata: sourceReponse.headers,
+            customMetadata,
+          });
+          resolve(obj);
+        }, 0);
+      });
+    }
 
-    const r2req = bucket.put(path, sourceReponse.body, {
-      httpMetadata: sourceReponse.headers,
-      customMetadata,
-    });
     if (str2int(request.headers.get(HEADER_SOURCE_ASYNC))) {
       context.waitUntil(r2req);
       return responseNoContent();
