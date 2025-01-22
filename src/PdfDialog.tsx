@@ -29,18 +29,17 @@ export default function PdfDialog({ filekey, open, close }: FileViewerProps) {
     setNumPages(nextNumPages);
   }
 
-  return <Dialog open={open} onClose={close} fullWidth maxWidth="xl">
+  return <Dialog open={open} onClose={close} fullScreen>
     <DialogTitle component={Typography} className='single-line' sx={{ p: 1 }}>
       <IconButton title="Close" color='secondary' onClick={close}><CloseIcon /></IconButton>
       <Link href={fileLink}><span title={filekey}>{filekey}</span></Link>
     </DialogTitle>
     <DialogContent>
       {/*
-      Dialog max-height: calc(100vh - 64px)
       DialogTitle height: 40px + 16px (padding-top + padding-bottom ) = 56px
       DialogContent padding-bottom: 20px
       */}
-      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 140px)" }}>
+      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 76px)" }}>
         <Document file={fileLink} onLoadSuccess={onDocumentLoadSuccess} >
           {Array.from(new Array(numPages), (_el, index) => (
             <Page

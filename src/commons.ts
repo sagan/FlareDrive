@@ -163,3 +163,20 @@ export function getFilePermission(key: string): Permission {
   }
   return Permission.RequireAuth;
 }
+
+export function dataUrltoBlob(dataUrl: string): Blob {
+  const [meta, data] = dataUrl.split(",");
+
+  // Convert the base64 encoded data to a binary string.
+  const byteString = atob(data);
+
+  // Get the MIME type.
+  const [mimeTypeWithDataPrefix] = meta.split(";");
+  const mimeType = mimeTypeWithDataPrefix.replace("data:", "");
+
+  // Convert the binary string to an ArrayBuffer.
+  const arrayBuffer = Uint8Array.from(byteString, (c) => c.charCodeAt(0)).buffer;
+
+  // Create a blob from the ArrayBuffer.
+  return new Blob([arrayBuffer], { type: mimeType });
+}

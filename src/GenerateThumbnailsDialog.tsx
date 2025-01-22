@@ -27,6 +27,7 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
   const { auth, expires } = useConfig()
   const [ts, setTs] = useState(0)
   const [force, setForce] = useState(false)
+  const [ss, setSs] = useState(false) // server side
   const [working, setWorking] = useState(false)
   const [result, setResult] = useState<Record<string, string>>({})
   const mountedRef = useRef(true)
@@ -60,12 +61,12 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
         }
         try {
           setResult(result => ({ ...result, [file.key]: `Generating...` }))
-          const result = await generateThumbnailsServerSide([file.key], auth, force)
-          if (result[file.key] === 0) {
+          const response = await generateThumbnailsServerSide([file.key], auth, force)
+          if (response[file.key] === 0) {
             successCnt++
             setResult(result => ({ ...result, [file.key]: `Generated` }))
           } else {
-            setResult(result => ({ ...result, [file.key]: `Result: ${result[file.key]}` }))
+            setResult(result => ({ ...result, [file.key]: `Result: ${response[file.key]}` }))
           }
         } catch (e) {
           setResult(result => ({ ...result, [file.key]: `${e}` }))
@@ -153,13 +154,11 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
       {working && <span>...&nbsp;</span>}
       <FormControlLabel control={<Checkbox checked={force} onChange={e => setForce(e.target.checked)} />}
         label="Force" title='Re-generate existing thumbnails' />
-      <Button title="Generate thumbnails"
-        disabled={working || !files.length} onClick={() => onGenerateThumbnails(force)}>
+      <FormControlLabel control={<Checkbox checked={ss} onChange={e => setSs(e.target.checked)} />}
+        label="SS" title='Server side thumbnails generation' />
+      <Button title="Generate thumbnails" disabled={working || !files.length}
+        onClick={() => ss ? onGenerateThumbnailsSS(force) : onGenerateThumbnails(force)}>
         Go
-      </Button>
-      <Button title="Generate thumbnails at the server side"
-        disabled={working || !files.length} onClick={() => onGenerateThumbnailsSS(force)}>
-        Go (SS)
       </Button>
     </DialogActions>
   </Dialog>

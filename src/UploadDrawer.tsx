@@ -10,7 +10,7 @@ import {
 import CreateIcon from '@mui/icons-material/Create';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { Permission } from "../lib/commons";
-import { createFile, createFolder } from "./app/transfer";
+import { putFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
 import CloudDownloadDialog from "./CloudDownloadDialog";
 import { useConfig } from "./commons";
@@ -130,7 +130,7 @@ export default function UploadDrawer({
     }
     const key = (cwd ? cwd + "/" : "") + filename
     try {
-      await createFile(key, auth)
+      await putFile({ key, auth, create: true })
       onUpload(key)
     } catch (e) {
       setError(e)

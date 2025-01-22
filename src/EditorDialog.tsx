@@ -173,7 +173,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
 
   const roMode = !auth || !!editorReadOnly || state !== State.Editing
 
-  return <Dialog open={open} onClose={onCloseNoPrompt} fullWidth maxWidth="xl">
+  return <Dialog open={open} onClose={onCloseNoPrompt} fullScreen>
     <DialogTitle component={Typography} className='single-line' sx={{ p: 1 }}>
       <IconButton title="Close" color='secondary' disabled={state !== State.Editing && state !== State.Idle}
         onClick={onClose}><CloseIcon /></IconButton>
@@ -207,7 +207,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
             <RestoreIcon />
           </IconButton>
         </>}
-        <CopyButton isIcon disabled={state === State.Loading} text={() => {
+        <CopyButton isIcon color="secondary" disabled={state === State.Loading} text={() => {
           if (!editorRef.current) {
             return ""
           }
@@ -219,12 +219,11 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
         </IconButton>
       </Typography>
       {/*
-      Dialog max-height: calc(100vh - 64px)
       DialogTitle height: 40px + 16px (padding-top + padding-bottom ) = 56px
       Toolbar height: 40px
       DialogContent padding-bottom: 20px
       */}
-      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 180px)" }}>
+      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 116px)" }}>
         {contents !== undefined && <Editor
           key={filekey}
           defaultLanguage={language}

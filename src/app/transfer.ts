@@ -308,21 +308,33 @@ export async function createFolder(folderKey: string, auth: string | null) {
 }
 
 /**
- * Create empty new file
+ * Update / Create a file
  * @param key
  * @param auth
  * @returns
  */
-export async function createFile(key: string, auth: string | null) {
+export async function putFile({
+  create,
+  key,
+  auth,
+  body,
+  contentType,
+}: {
+  key: string;
+  auth: string | null;
+  create?: boolean;
+  body?: BodyInit;
+  contentType?: string;
+}) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
   const res = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
-      [HEADER_CONTENT_TYPE]: mime.getType(key) || MIME_DEFAULT,
-      [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString(),
+      [HEADER_CONTENT_TYPE]: contentType || mime.getType(key) || MIME_DEFAULT,
+      ...(create ? { [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString() } : {}),
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
-    body: "",
+    body,
   });
   if (!res.ok) {
     throw new Error(`status=${res.status}`);

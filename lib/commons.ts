@@ -256,7 +256,18 @@ export function dirname(path: string): string {
 }
 
 export function basename(path: string): string {
+  path = trimPrefixSuffix(path, "/");
   return path.split(/[\\/]/).pop()!;
+}
+
+export function parseFilePath(path: string): { dirname: string; basename: string; ext: string; base: string } {
+  path = trimPrefixSuffix(path, "/");
+  const pathes = path.split(/[\\/]/);
+  const dirname = pathes.slice(0, -1).join("/");
+  const basename = pathes[pathes.length - 1];
+  const ext = extname(basename);
+  const base = basename.slice(0, basename.length - ext.length);
+  return { dirname, basename, ext, base };
 }
 
 export function humanReadableSize(size: number) {
