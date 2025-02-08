@@ -6,7 +6,9 @@ import {
   ListItemText,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { fileUrl, humanReadableSize, basename, EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE, str2int } from "../lib/commons";
+import {
+  fileUrl, humanReadableSize, basename, str2int, EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE
+} from "../lib/commons";
 import { ViewProps, isDirectory, useConfig } from "./commons";
 
 
@@ -18,7 +20,7 @@ export default function FileGrid({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
-  const { expires, authSearchParams } = useConfig();
+  const { expires, authSearchParams, fullControl } = useConfig();
   if (files.length === 0) {
     return emptyMessage
   }
@@ -49,6 +51,7 @@ export default function FileGrid({
                 expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
                 scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
                 token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+                fullControl: auth ? undefined : fullControl,
               })}
                 alt={file.key} style={{ width: 36, height: 36, objectFit: "cover" }} />
             ) : (
@@ -68,7 +71,7 @@ export default function FileGrid({
                   minWidth: "160px",
                   marginRight: 1,
                 }}>
-                  {file.system ? file.key : new Date(file.uploaded).toLocaleString()}
+                  {file.system ? file.key : file.uploaded.toLocaleString()}
                 </span>
                 {!isDirectory(file) && humanReadableSize(file.size)}
               </>

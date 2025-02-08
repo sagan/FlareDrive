@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
-import { EXPIRES_VARIABLE, Permission, SCOPE_VARIABLE, dirUrlPath, fileUrl, str2int } from "../lib/commons";
+import { EXPIRES_VARIABLE, SCOPE_VARIABLE, Permission, dirUrlPath, fileUrl, str2int } from "../lib/commons";
 import { PreventDefaultEventCb, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
@@ -41,7 +41,7 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
   path: string;
   setCwd: (newCwd: string) => void
 }) {
-  const { auth, authSearchParams, expires } = useConfig()
+  const { auth, authSearchParams, expires, fullControl } = useConfig()
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
   const cwdHref = dirUrlPath(path);
@@ -66,6 +66,7 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
           expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
           scope: auth ? "" : scope,
           token: auth ? "" : scope,
+          fullControl: auth ? undefined : fullControl,
         })
         return index === parts.length - 1 ? (
           <Typography key={index} color="text.primary" sx={sx}>{part}</Typography>

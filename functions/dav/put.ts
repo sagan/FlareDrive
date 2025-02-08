@@ -11,8 +11,10 @@ import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
   MIME_DEFAULT,
+  PART_NUMBER_VARIABLE,
   THUMBNAIL_VARIABLE,
   ThumbnailObject,
+  UPLOAD_ID_VARIABLE,
   humanReadableSize,
   mimeType,
   sha256,
@@ -36,8 +38,8 @@ import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 async function handleRequestPutMultipart({ bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
 
-  const uploadId = new URLSearchParams(url.search).get("uploadId");
-  const partNumberStr = new URLSearchParams(url.search).get("partNumber");
+  const uploadId = new URLSearchParams(url.search).get(UPLOAD_ID_VARIABLE);
+  const partNumberStr = new URLSearchParams(url.search).get(PART_NUMBER_VARIABLE);
   if (!uploadId || !partNumberStr || !request.body) {
     return responseBadRequest();
   }
@@ -51,7 +53,7 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   });
 }
 
-export async function handleRequestPut({ context, bucket, path, request }: RequestHandlerParams) {
+export async function handleRequestPut({ context, bucket, path, request, scope }: RequestHandlerParams) {
   const searchParams = new URLSearchParams(new URL(request.url).search);
 
   if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {
@@ -89,8 +91,8 @@ export async function handleRequestPut({ context, bucket, path, request }: Reque
     return jsonResponse<ThumbnailObject>({ digest });
   }
 
-  if (searchParams.has("uploadId")) {
-    return handleRequestPutMultipart({ bucket, path, request, context });
+  if (searchParams.has(UPLOAD_ID_VARIABLE)) {
+    return handleRequestPutMultipart({ bucket, path, request, context, scope });
   }
 
   if (request.url.endsWith("/")) {

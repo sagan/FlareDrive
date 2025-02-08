@@ -25,6 +25,12 @@ import {
   HEADER_IF_UNMODIFIED_SINCE,
   isBasicAuthHeader,
   cut,
+  HEADER_CONTENT_LENGTH,
+  PART_NUMBER_VARIABLE,
+  UPLOAD_ID_VARIABLE,
+  HEADER_ETAG,
+  HEADER_RETRY_AFTER,
+  HEADER_DESTINATION,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -34,6 +40,33 @@ import { TransferTask } from "./transferQueue";
  */
 const CLIENT_THUMBNAIL_TYPE = "image/png";
 
+function appendQueryStringToUrl(url: string, qs: string): string {
+  if (qs.startsWith("?") || qs.startsWith("&")) {
+    qs = qs.slice(1);
+  }
+  if (url.includes("?")) {
+    if (!url.endsWith("&")) {
+      url += "&";
+    }
+  } else {
+    url += "?";
+  }
+  url += qs;
+  return url;
+}
+
+function applyAuth(req: Request, auth: string): Request {
+  if (auth) {
+    const isBasicAuth = isBasicAuthHeader(auth);
+    if (isBasicAuth) {
+      req.headers.set(HEADER_AUTHORIZATION, auth);
+    } else {
+      req = new Request(appendQueryStringToUrl(req.url, auth), req);
+    }
+  }
+  return req;
+}
+
 export async function fetchPath(
   path: string,
   auth: string
@@ -42,15 +75,17 @@ export async function fetchPath(
   auth: string;
   items: FileItem[] | null;
 }> {
-  const isBasicAuth = isBasicAuthHeader(auth);
-  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(path)}` + (!isBasicAuth ? auth : ""), {
-    method: "PROPFIND",
-    headers: {
-      Depth: "1",
-      [HEADER_INAPP]: "1",
-      ...(isBasicAuth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-    },
-  });
+  const req = applyAuth(
+    new Request(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
+      method: "PROPFIND",
+      headers: {
+        Depth: "1",
+        [HEADER_INAPP]: "1",
+      },
+    }),
+    auth
+  );
+  const res = await fetch(req);
 
   if (!res.ok) {
     if (res.status == 404) {
@@ -92,7 +127,7 @@ export async function fetchPath(
       return {
         key: decodeURI(href).replace(new RegExp("^" + escapeRegExp(WEBDAV_ENDPOINT)), ""),
         size: size ? Number(size) : 0,
-        uploaded: lastModified!,
+        uploaded: new Date(lastModified || 0),
         httpMetadata: { contentType: contentType || "" },
         customMetadata: { thumbnail },
         checksums: checksums
@@ -174,16 +209,25 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
 export const SIZE_LIMIT = 100 * 1000 * 1000; // 100MB
 
 function xhrFetch(
-  url: RequestInfo | URL,
+  url: string,
   requestInit: RequestInit & {
     onUploadProgress?: (progressEvent: ProgressEvent) => void;
-  }
+  },
+  auth: string
 ) {
   return new Promise<Response>((resolve, reject) => {
+    const headers = new Headers(requestInit.headers);
+    if (auth) {
+      const isBasicAuth = isBasicAuthHeader(auth);
+      if (isBasicAuth) {
+        headers.set(HEADER_AUTHORIZATION, auth);
+      } else {
+        url = appendQueryStringToUrl(url, auth);
+      }
+    }
     const xhr = new XMLHttpRequest();
     xhr.upload.onprogress = requestInit.onUploadProgress ?? null;
-    xhr.open(requestInit.method ?? "GET", url instanceof Request ? url.url : url);
-    const headers = new Headers(requestInit.headers);
+    xhr.open(requestInit.method ?? "GET", url);
     headers.forEach((value, key) => xhr.setRequestHeader(key, value));
     xhr.onload = () => {
       const headers = xhr
@@ -207,6 +251,7 @@ function xhrFetch(
 export async function multipartUpload(
   key: string,
   file: File,
+  auth: string,
   options?: {
     headers?: Record<string, string>;
     onUploadProgress?: (progressEvent: { loaded: number; total: number }) => void;
@@ -215,10 +260,17 @@ export async function multipartUpload(
   const headers = options?.headers || {};
   headers[HEADER_CONTENT_TYPE] = file.type;
 
-  const uploadResponse = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
-    headers,
-    method: "POST",
-  });
+  const uploadRequest = applyAuth(
+    new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
+      headers,
+      method: "POST",
+    }),
+    auth
+  );
+  const uploadResponse = await fetch(uploadRequest);
+  if (!uploadResponse.ok) {
+    throw new Error(`multiform upload error: status=${uploadResponse.status}`);
+  }
   const { uploadId } = await uploadResponse.json<{ uploadId: string }>();
   const totalChunks = Math.ceil(file.size / SIZE_LIMIT);
 
@@ -229,49 +281,61 @@ export async function multipartUpload(
     limit(async () => {
       const chunk = file.slice((i - 1) * SIZE_LIMIT, i * SIZE_LIMIT);
       const searchParams = new URLSearchParams({
-        partNumber: i.toString(),
-        uploadId,
+        [PART_NUMBER_VARIABLE]: i.toString(),
+        [UPLOAD_ID_VARIABLE]: uploadId,
       });
       const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}?${searchParams}`;
       if (i === limit.concurrency) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const uploadPart = () =>
-        xhrFetch(uploadUrl, {
-          method: "PUT",
-          headers,
-          body: chunk,
-          onUploadProgress: (progressEvent) => {
-            partsLoaded[i] = progressEvent.loaded;
-            options?.onUploadProgress?.({
-              loaded: partsLoaded.reduce((a, b) => a + b),
-              total: file.size,
-            });
+      const uploadPart = async () => {
+        const res = await xhrFetch(
+          uploadUrl,
+          {
+            method: "PUT",
+            headers,
+            body: chunk,
+            onUploadProgress: (progressEvent) => {
+              partsLoaded[i] = progressEvent.loaded;
+              options?.onUploadProgress?.({
+                loaded: partsLoaded.reduce((a, b) => a + b),
+                total: file.size,
+              });
+            },
           },
-        });
+          auth
+        );
+        if (!res.ok) {
+          throw new Error(`part upload error: status=${res.status}`);
+        }
+        return res;
+      };
 
       const retryReducer = (acc: Promise<Response>) =>
         acc
           .then((res) => {
-            const retryAfter = res.headers.get("retry-after");
-            if (!retryAfter) return res;
+            const retryAfter = res.headers.get(HEADER_RETRY_AFTER);
+            if (!retryAfter) {
+              return res;
+            }
             return uploadPart();
           })
           .catch(uploadPart);
       const res = await [1, 2].reduce(retryReducer, uploadPart());
-      return { partNumber: i, etag: res.headers.get("etag")! };
+      return { partNumber: i, etag: res.headers.get(HEADER_ETAG)! };
     })
   );
   const uploadedParts = await Promise.all(promises);
   const completeParams = new URLSearchParams({ uploadId });
-  const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
-    method: "POST",
-    headers: {
-      ...(headers[HEADER_AUTHORIZATION] ? { [HEADER_AUTHORIZATION]: headers[HEADER_AUTHORIZATION] } : {}),
-    },
-    body: JSON.stringify({ parts: uploadedParts }),
-  });
+  const req = applyAuth(
+    new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
+      method: "POST",
+      body: JSON.stringify({ parts: uploadedParts }),
+    }),
+    auth
+  );
+  const res = await fetch(req);
   if (!res.ok) {
     const msg = await res.text();
     throw new Error(`status=${res.status}, msg=${msg}`);
@@ -279,29 +343,41 @@ export async function multipartUpload(
   return res;
 }
 
-export async function copyPaste(source: string, target: string, auth: string | null, move = false) {
+export async function copyPaste(source: string, target: string, auth: string, move = false) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(source)}`;
   const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${key2Path(target)}`, window.location.href);
-  const res = await fetch(uploadUrl, {
-    method: move ? "MOVE" : "COPY",
-    headers: {
-      Destination: destinationUrl.href,
-      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-    },
-  });
+  const req = applyAuth(
+    new Request(uploadUrl, {
+      method: move ? "MOVE" : "COPY",
+      headers: {
+        [HEADER_DESTINATION]: destinationUrl.href,
+      },
+    }),
+    auth
+  );
+  const res = await fetch(req);
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
 }
 
-export async function createFolder(folderKey: string, auth: string | null) {
+export async function createFolder(folderKey: string, auth: string) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
-  const res = await fetch(uploadUrl, {
-    method: "MKCOL",
-    headers: {
-      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-    },
-  });
+  const req = applyAuth(new Request(uploadUrl, { method: "MKCOL" }), auth);
+  const res = await fetch(req);
+  if (!res.ok) {
+    throw new Error(`status=${res.status}`);
+  }
+}
+
+/**
+ * Delete a file
+ * @param key
+ * @param auth
+ */
+export async function deleteFile(key: string, auth: string) {
+  const req = applyAuth(new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}`, { method: "DELETE" }), auth);
+  const res = await fetch(req);
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
@@ -321,21 +397,29 @@ export async function putFile({
   contentType,
 }: {
   key: string;
-  auth: string | null;
+  auth: string;
   create?: boolean;
   body?: BodyInit;
   contentType?: string;
 }) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
-  const res = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      [HEADER_CONTENT_TYPE]: contentType || mime.getType(key) || MIME_DEFAULT,
-      ...(create ? { [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString() } : {}),
-      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-    },
-    body,
-  });
+  const req = applyAuth(
+    new Request(uploadUrl, {
+      method: "PUT",
+      headers: {
+        [HEADER_CONTENT_TYPE]: contentType || mime.getType(key) || MIME_DEFAULT,
+        ...(create ? { [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString() } : {}),
+        ...(typeof body == "string" || (typeof body == "object" && "length" in body)
+          ? {
+              [HEADER_CONTENT_LENGTH]: `${body.length}`,
+            }
+          : {}),
+      },
+      body,
+    }),
+    auth
+  );
+  const res = await fetch(req);
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
@@ -346,7 +430,7 @@ export async function processTransferTask({
   task,
   onTaskProgress,
 }: {
-  auth: string | null;
+  auth: string;
   task: TransferTask;
   onTaskProgress?: (event: { loaded: number; total: number }) => void;
 }) {
@@ -354,23 +438,29 @@ export async function processTransferTask({
   if (task.type !== "upload" || !file) {
     throw new Error("Invalid task");
   }
-  let thumbnailDigest = null;
+  let thumbnailDigest = "";
   console.log("upload", task);
-  if (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf") {
+  if (
+    isBasicAuthHeader(auth) &&
+    (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf")
+  ) {
     try {
       const thumbnailBlob = await generateThumbnailFromFile(file);
       const digestHex = await sha256(thumbnailBlob);
 
       const thumbnailUploadUrl = `${WEBDAV_ENDPOINT}${KEY_PREFIX_THUMBNAIL}${digestHex}`;
       try {
-        await fetch(thumbnailUploadUrl, {
-          method: "PUT",
-          body: thumbnailBlob,
-          headers: {
-            [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
-            ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-          },
-        });
+        const req = applyAuth(
+          new Request(thumbnailUploadUrl, {
+            method: "PUT",
+            body: thumbnailBlob,
+            headers: {
+              [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
+            },
+          }),
+          auth
+        );
+        await fetch(req);
         thumbnailDigest = digestHex;
       } catch (err) {
         console.log(`Upload ${digestHex}.png failed`);
@@ -382,22 +472,29 @@ export async function processTransferTask({
 
   const headers: Record<string, string> = {
     [HEADER_CONTENT_TYPE]: file.type,
-    ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };
   if (file.size >= SIZE_LIMIT) {
-    return await multipartUpload(remoteKey, file, {
+    return await multipartUpload(remoteKey, file, auth, {
       headers,
       onUploadProgress: onTaskProgress,
     });
   } else {
     const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(remoteKey)}`;
-    return await xhrFetch(uploadUrl, {
-      method: "PUT",
-      headers,
-      body: file,
-      onUploadProgress: onTaskProgress,
-    });
+    const res = await xhrFetch(
+      uploadUrl,
+      {
+        method: "PUT",
+        headers,
+        body: file,
+        onUploadProgress: onTaskProgress,
+      },
+      auth
+    );
+    if (!res.ok) {
+      throw new Error(`Upload error: status=${res.status}`);
+    }
+    return res;
   }
 }
 
@@ -485,7 +582,7 @@ export async function uploadFromUrl({
   return {
     key: obj.key,
     size: obj.size,
-    uploaded: (obj as any).uploaded,
+    uploaded: new Date((obj as any).uploaded),
     httpMetadata: {
       contentType: obj.httpMetadata?.contentType || "",
       ...(asyncMode ? { [HEADER_SOURCE_ASYNC]: "1" } : {}),

@@ -21,12 +21,11 @@ import {
   HEADER_IF_UNMODIFIED_SINCE,
   SHARE_ENDPOINT,
   SCOPE_VARIABLE,
-  dirUrlPath,
   trimPrefix,
   WEBDAV_ENDPOINT,
   path2Key,
   trimPrefixSuffix,
-  METHODS_AUTH_ONLY,
+  HEADER_CF_RESIZED,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -185,6 +184,7 @@ export function htmlResponse(html: string) {
 /**
  * If authentication fails, return a failure response.
  * Otherwise return null.
+ * Besides, return auth's valid scope
  * @param request
  * @param user
  * @param pass
@@ -195,9 +195,9 @@ export async function checkAuthFailure(
   user: string,
   pass: string,
   realm = "WebDAV"
-): Promise<Response | null> {
+): Promise<[failResponse: Response | null, scope: string | undefined | null]> {
   if (!user && !pass) {
-    return responseForbidden();
+    return [responseForbidden(), undefined];
   }
 
   const url = new URL(request.url);
@@ -206,12 +206,10 @@ export async function checkAuthFailure(
   const token = searchParams.get(TOKEN_VARIABLE);
   const expectedAuth = basicAuthorizationHeader(user, pass);
   let authed = false;
+  let scope: string | undefined | null = undefined;
 
   if (token) {
     authed = await (async () => {
-      if (METHODS_AUTH_ONLY.includes(request.method)) {
-        return false;
-      }
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
       const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
       if ((expires > 0 && expires <= +new Date()) || (!fullControl && !METHODS_DEFAULT.includes(request.method))) {
@@ -221,7 +219,7 @@ export async function checkAuthFailure(
         searchParams.delete(param);
       }
       searchParams.sort();
-      let scope = searchParams.get(SCOPE_VARIABLE);
+      scope = searchParams.get(SCOPE_VARIABLE);
       let payload = "";
       if (!scope) {
         payload += url.pathname;
@@ -245,11 +243,11 @@ export async function checkAuthFailure(
   if (!authed) {
     if (url.pathname.startsWith(SHARE_ENDPOINT) && METHODS_DEFAULT.includes(request.method)) {
       const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
-      return responseUnauthorized(basicAuthHeader);
+      return [responseUnauthorized(basicAuthHeader), scope];
     }
-    return responseUnauthorized();
+    return [responseUnauthorized(), scope];
   }
-  return null;
+  return [null, scope];
 }
 
 export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: boolean = false) {
@@ -346,10 +344,10 @@ export async function generateFileThumbnail({
   if (!thumbResponse.ok) {
     throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
   }
-  if (!thumbResponse.headers.get("cf-resized")) {
+  if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
     return 4;
   }
-  let thumbResponseSize = str2int(thumbResponse.headers.get("Content-Length"));
+  let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
   if (!thumbResponseSize || thumbResponseSize >= file.size) {
     return 5;
   }

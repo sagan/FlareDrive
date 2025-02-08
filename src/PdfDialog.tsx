@@ -15,13 +15,14 @@ import { EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE, fileUrl, str2int } fr
 import { FileViewerProps, useConfig } from './commons';
 
 export default function PdfDialog({ filekey, open, close }: FileViewerProps) {
-  const { auth, authSearchParams, expires } = useConfig()
+  const { auth, authSearchParams, expires, fullControl } = useConfig()
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
     auth,
     expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+    fullControl: auth ? undefined : fullControl,
   }), [filekey, auth])
   const [numPages, setNumPages] = useState<number>();
 

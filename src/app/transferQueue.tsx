@@ -25,7 +25,7 @@ const SetTransferQueueContext = createContext<
 >(() => { });
 
 export function useTransferQueue() {
-  return useContext(TransferQueueContext);
+  return [useContext(TransferQueueContext), useContext(SetTransferQueueContext)] as const;
 }
 
 export function useUploadEnqueue() {
@@ -56,7 +56,7 @@ export function TransferQueueProvider({
   const taskProcessing = useRef<TransferTask | null>(null);
   const tasks = useRef<TransferTask[]>(transferTasks);
 
-  const { auth } = useConfig()
+  const { effectiveAuth } = useConfig()
 
   // It's a ugly workaround:
   // If using strict mode, React 18+ trigger useEffect twice in dev env:
@@ -101,7 +101,7 @@ export function TransferQueueProvider({
     taskProcessing.current = taskToProcess;
     setTransferTasks(currentTaskUpdater({ status: "in-progress" }));
     processTransferTask({
-      auth,
+      auth: effectiveAuth,
       task: taskToProcess,
       onTaskProgress: ({ loaded }) => {
         setTransferTasks(currentTaskUpdater({ loaded }));
@@ -113,6 +113,7 @@ export function TransferQueueProvider({
       })
       .catch((error) => {
         setTransferTasks(currentTaskUpdater({ status: "failed", error }));
+        taskProcessing.current = null;
       });
   }, [transferTasks]);
 

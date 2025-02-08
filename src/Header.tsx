@@ -1,16 +1,19 @@
-import { IconButton, InputBase, Menu, MenuItem, Toolbar } from "@mui/material";
+import { IconButton, InputBase, ListItemIcon, Menu, MenuItem, Toolbar } from "@mui/material";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreHoriz as MoreHorizIcon } from "@mui/icons-material";
 import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { ViewMode, useConfig } from "./commons";
+import CheckIcon from '@mui/icons-material/Check';
+import { Sort, ViewMode, sortLabels, useConfig } from "./commons";
 
 export default function Header({
+  sort,
   search,
   onSignOut,
   onSignnIn,
+  setSort,
   setViewMode,
   onSearchChange,
   onGenerateThumbnails,
@@ -18,7 +21,9 @@ export default function Header({
   fetchFiles,
   onShare,
 }: {
-  setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>,
+  sort: Sort;
+  setSort: React.Dispatch<React.SetStateAction<Sort>>;
+  setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
   search: string;
   onSignOut: () => void;
   onSignnIn: () => void;
@@ -28,10 +33,11 @@ export default function Header({
   fetchFiles: () => void;
   onShare?: () => void;
 }) {
-  const { auth } = useConfig();
-  const authed = !!auth
+  const { auth, effectiveAuth, fullControl } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
+
+  const permitWrite = !!auth || (!!effectiveAuth && fullControl);
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>
@@ -78,19 +84,27 @@ export default function Header({
           setAnchorEl(null);
           setViewMode(vm => vm ? ViewMode.Default : ViewMode.Album)
         }}>Toggle view</MenuItem>
-        <MenuItem>Sort by</MenuItem>
-        {authed && <MenuItem onClick={() => {
+        {sortLabels.map((label, index) => <MenuItem key={index} onClick={e => {
+          setAnchorEl(null);
+          setSort(index)
+        }}>
+          {label}
+          {index === sort && <ListItemIcon>
+            <CheckIcon />
+          </ListItemIcon>}
+        </MenuItem>)}
+        {!!auth && <MenuItem onClick={() => {
           setAnchorEl(null);
           onGenerateThumbnails();
         }}>Generate thumbnails</MenuItem>}
-        <MenuItem
+        {permitWrite && <MenuItem
           onClick={() => {
             setAnchorEl(null);
             setShowProgressDialog(true);
           }}
         >
-          Progress
-        </MenuItem>
+          Uploads progress
+        </MenuItem>}
         {!!auth && !!onShare && <MenuItem
           onClick={() => {
             setAnchorEl(null);
@@ -100,16 +114,16 @@ export default function Header({
           Share & Publish
         </MenuItem>}
       </Menu>
-      <IconButton title={authed ? "Authorized" : "Unauthorized. Click to sign in"}
+      <IconButton title={auth ? "Authorized" : "Unauthorized. Click to sign in"}
         onClick={(e) => {
-          if (authed) {
+          if (auth) {
             setAnchorEl2(e.currentTarget)
           } else {
             onSignnIn()
           }
         }}
       >
-        {authed ? <PersonIcon /> : <LoginIcon />}
+        {auth ? <PersonIcon /> : <LoginIcon />}
       </IconButton>
       <Menu
         anchorEl={anchorEl2}

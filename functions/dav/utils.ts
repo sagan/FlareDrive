@@ -7,6 +7,10 @@ export interface RequestHandlerParams {
   path: string;
   request: Request;
   /**
+   * current auth valid scope
+   */
+  scope: string | null | undefined;
+  /**
    * Current request target file permission
    */
   permission?: Permission;

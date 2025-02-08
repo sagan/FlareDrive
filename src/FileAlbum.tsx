@@ -4,7 +4,10 @@ import {
   Grid,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
-import { basename, EXPIRES_VARIABLE, fileUrl, humanReadableSize, SCOPE_VARIABLE, str2int, THUMBNAIL_SIZE, TOKEN_VARIABLE } from "../lib/commons";
+import {
+  basename, EXPIRES_VARIABLE, fileUrl, humanReadableSize, SCOPE_VARIABLE, str2int,
+  THUMBNAIL_SIZE, TOKEN_VARIABLE
+} from "../lib/commons";
 import { ViewProps, useConfig } from "./commons";
 
 
@@ -16,7 +19,7 @@ export default function FileAlbum({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
-  const { expires, authSearchParams } = useConfig();
+  const { expires, authSearchParams, fullControl } = useConfig();
 
   if (files.length === 0) {
     return emptyMessage
@@ -32,9 +35,10 @@ export default function FileAlbum({
         expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
         scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
         token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+        fullControl: auth ? undefined : fullControl,
       }) : "";
       const name = f.name || basename(f.key)
-      const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded}`
+      const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
       return <Grid item xs="auto" key={f.key}
         onContextMenu={(e) => {
           e.preventDefault()

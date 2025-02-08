@@ -34,10 +34,11 @@ export default function MultiSelectToolbar({
   onDelete: () => void;
   onShare: (key: string) => void;
 }) {
-  const { auth } = useConfig();
+  const { auth, effectiveAuth, fullControl } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false]
+  const permitWrite = !!auth || (!!effectiveAuth && fullControl)
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -74,7 +75,7 @@ export default function MultiSelectToolbar({
         >
           <DownloadIcon />
         </IconButton>
-        <IconButton disabled={!auth} color="primary" onClick={onDelete}>
+        <IconButton disabled={!permitWrite} color="primary" onClick={onDelete}>
           <DeleteIcon />
         </IconButton>
         <IconButton
@@ -90,15 +91,15 @@ export default function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            {multiSelected.length === 1 && <MenuItem disabled={!auth} onClick={() => {
+            {multiSelected.length === 1 && <MenuItem disabled={!permitWrite} onClick={() => {
               setAnchorEl(null)
               onRename()
             }}>Rename</MenuItem>}
-            {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!auth} onClick={() => {
+            {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!permitWrite} onClick={() => {
               setAnchorEl(null)
               onDuplicate()
             }}>Create Copy</MenuItem>}
-            <MenuItem disabled={!auth} onClick={() => {
+            <MenuItem disabled={!permitWrite} onClick={() => {
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>

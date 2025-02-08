@@ -1,20 +1,21 @@
 import pLimit from "p-limit";
 
-import { MIME_DIR, WEBDAV_ENDPOINT } from "../../lib/commons";
+import { HEADER_DEPTH, HEADER_DESTINATION, HEADER_OVERWRITE, MIME_DIR, WEBDAV_ENDPOINT } from "../../lib/commons";
 import {
   listAll,
   responseBadRequest,
   responseConflict,
   responseCreated,
+  responseForbidden,
   responseNoContent,
   responseNotFound,
   responsePreconditionsFailed,
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
-export async function handleRequestCopy({ bucket, path, request }: RequestHandlerParams) {
-  const dontOverwrite = request.headers.get("Overwrite") === "F";
-  const destinationHeader = request.headers.get("Destination");
+export async function handleRequestCopy({ bucket, path, request, scope }: RequestHandlerParams) {
+  const dontOverwrite = request.headers.get(HEADER_OVERWRITE) === "F";
+  const destinationHeader = request.headers.get(HEADER_DESTINATION);
   if (destinationHeader === null) {
     return responseBadRequest();
   }
@@ -33,6 +34,9 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
 
   if (destination === path || (src.httpMetadata?.contentType === MIME_DIR && destination.startsWith(path + "/"))) {
     return responseBadRequest();
+  }
+  if (scope && scope !== destination && !destination.startsWith(scope + "/")) {
+    return responseForbidden();
   }
 
   // Check if the destination already exists
@@ -54,7 +58,7 @@ export async function handleRequestCopy({ bucket, path, request }: RequestHandle
 
   const isDirectory = src.httpMetadata?.contentType === MIME_DIR;
   if (isDirectory) {
-    const depth = request.headers.get("Depth") ?? "infinity";
+    const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
     switch (depth) {
       case "0":
         break;

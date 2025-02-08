@@ -17,7 +17,6 @@ import {
   checkAuthFailure,
   generateFileThumbnail,
   jsonResponse,
-  responseBadRequest,
   responseInternalServerError,
   responseNotFound,
 } from "../commons";
@@ -45,7 +44,8 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const noFallback = !!str2int(searchParams.get(THUMBNAIL_NOFALLBACK));
   const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
 
-  if (!digest || (await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD))) {
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  if (!digest || failResponse) {
     if (noFallback) {
       return responseNotFound();
     }
@@ -94,7 +94,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
 
-  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }

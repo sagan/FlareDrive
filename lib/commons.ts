@@ -62,14 +62,22 @@ export const FULL_CONTROL_VARIABLE = "fullControl";
 export const TS_VARIABLE = "_ts";
 
 /**
+ * Used in multipart upload.
+ */
+export const UPLOADS_VARIABLE = "uploads";
+/**
+ * Used in multipart upload.
+ */
+export const UPLOAD_ID_VARIABLE = "uploadId";
+/**
+ * Used in multipart upload.
+ */
+export const PART_NUMBER_VARIABLE = "partNumber";
+
+/**
  * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND]
  */
 export const METHODS_DEFAULT = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
-
-/**
- * methods that allow authed admin only: [MOVE, COPY]
- */
-export const METHODS_AUTH_ONLY = ["MOVE", "COPY"];
 
 /**
  * These query string variables do not participate in signing:
@@ -84,6 +92,9 @@ export const NOSIGN_VARIABLES: string[] = [
   THUMBNAIL_EXT_VARIABLE,
   THUMBNAIL_NO404_VARIABLE,
   THUMBNAIL_NOFALLBACK,
+  UPLOADS_VARIABLE,
+  UPLOAD_ID_VARIABLE,
+  PART_NUMBER_VARIABLE,
 ];
 
 /**
@@ -156,9 +167,35 @@ export const HEADER_CONTENT_LENGTH = "Content-Length";
 
 export const HEADER_ETAG = "ETag";
 
+export const HEADER_RETRY_AFTER = "Retry-After";
+
 export const HEADER_LAST_MODIFIED = "Last-Modified";
 
 export const HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
+
+export const HEADER_REFERER = "Referer";
+
+/**
+ * CF image header.
+ * See: https://developers.cloudflare.com/images/reference/troubleshooting/
+ */
+export const HEADER_CF_RESIZED = "Cf-Resized";
+
+/**
+ * WebDAV "PROPFIND" method Depth header
+ */
+export const HEADER_DEPTH = "Depth";
+
+/**
+ * WebDAV Destination header, used in server-side file move / copy.
+ */
+export const HEADER_DESTINATION = "Destination";
+
+/**
+ * WebDAV Overwrite header.
+ * https://learn.microsoft.com/en-us/previous-versions/office/developer/exchange-server-2003/aa142944(v=exchg.65)
+ */
+export const HEADER_OVERWRITE = "Overwrite";
 
 /**
  * Sent back by server. The client sent "Authorization" header value.

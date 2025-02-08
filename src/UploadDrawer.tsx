@@ -65,6 +65,7 @@ export default function UploadDrawer({
   permission,
   setOpen,
   cwd,
+  onStartUpload,
   onUpload,
   setError,
 }: {
@@ -72,10 +73,11 @@ export default function UploadDrawer({
   open: boolean;
   setOpen: (open: boolean) => void;
   cwd: string;
+  onStartUpload: () => void,
   onUpload: (created?: string) => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
-  const { auth } = useConfig()
+  const { auth, effectiveAuth } = useConfig()
   const uploadEnqueue = useUploadEnqueue();
 
   const [uploadFromUrlOpen, setUploadFromUrlOpen] = useState(false);
@@ -103,6 +105,7 @@ export default function UploadDrawer({
         }
         const files = Array.from(input.files);
         uploadEnqueue(...files.map((file) => ({ file, basedir: cwd })));
+        onStartUpload();
         setOpen(false);
       };
       input.click();
@@ -130,12 +133,12 @@ export default function UploadDrawer({
     }
     const key = (cwd ? cwd + "/" : "") + filename
     try {
-      await putFile({ key, auth, create: true })
+      await putFile({ key, auth: effectiveAuth, create: true })
       onUpload(key)
     } catch (e) {
       setError(e)
     }
-  }, [auth])
+  }, [effectiveAuth])
 
   return (
     <>
@@ -184,7 +187,7 @@ export default function UploadDrawer({
                   }
                   const folderKey = (cwd ? cwd + "/" : "") + folderName;
                   try {
-                    await createFolder(folderKey, auth);
+                    await createFolder(folderKey, effectiveAuth);
                     onUpload();
                   } catch (e) {
                     setError(e)
@@ -192,13 +195,13 @@ export default function UploadDrawer({
                 }}
               />
             </Grid>
-            <Grid item xs={3}>
+            {!!auth && <Grid item xs={3}>
               <IconCaptionButton
                 icon={<CloudDownloadIcon fontSize="large" />}
                 caption="Cloud Download"
                 onClick={onUploadFromUrl}
               />
-            </Grid>
+            </Grid>}
             <Grid item xs={3}>
               <IconCaptionButton
                 icon={<CreateIcon fontSize="large" />}

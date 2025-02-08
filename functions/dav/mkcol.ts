@@ -2,7 +2,7 @@ import { MIME_DIR } from "../../lib/commons";
 import { responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
-export async function handleRequestMkcol({ bucket, path, request }: RequestHandlerParams) {
+export async function handleRequestMkcol({ bucket, path }: RequestHandlerParams) {
   // Check if the resource already exists
   const resource = await bucket.head(path);
   if (resource !== null) {

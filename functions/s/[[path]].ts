@@ -11,6 +11,7 @@ import {
   corsHeaders,
   META_VARIABLE,
   str2int,
+  HEADER_REFERER,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -35,7 +36,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -53,7 +54,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -85,7 +86,7 @@ export const onRequestDelete: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
-  const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
   }
@@ -110,7 +111,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const requestMeta = !!str2int(searchParams.get(META_VARIABLE));
 
   if (requestMeta) {
-    const failResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+    const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
     if (failResponse) {
       return failResponse;
     }
@@ -130,14 +131,14 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
   if (data.auth) {
     const [user, pass] = cut(data.auth, ":");
-    const failRespose = await checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
+    const [failRespose] = await checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
     if (failRespose) {
       return failRespose;
     }
   }
   if (data.refererMode) {
     let referList = data.refererList || [];
-    const referer = request.headers.get("Referer") || "";
+    const referer = request.headers.get(HEADER_REFERER) || "";
     const i = referList.indexOf("");
     if (i != -1) {
       referList = referList.splice(i, 1);
@@ -156,7 +157,6 @@ export const onRequestGet: FdCfFunc = async function (context) {
         block = true;
         break;
     }
-    console.log("match", data.refererList, request.headers.get("Referer"), referMatch, data.refererMode, block);
     if (block) {
       return responseForbidden();
     }

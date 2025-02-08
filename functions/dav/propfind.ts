@@ -4,6 +4,7 @@ import {
   HEADER_AUTHED,
   HEADER_AUTHORIZATION,
   HEADER_CONTENT_TYPE,
+  HEADER_DEPTH,
   HEADER_INAPP,
   isHttpsOrLocalUrl,
   MIME_DIR,
@@ -78,7 +79,7 @@ export async function handleRequestPropfind({ bucket, path, request, authed }: R
   }
 
   const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === MIME_DIR;
-  const depth = request.headers.get("Depth") ?? "infinity";
+  const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
   const children = !isDirectory ? [] : await findChildren({ bucket, path, depth });
 
   const items = [rootObject, ...children].map((child) => {

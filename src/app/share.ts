@@ -1,9 +1,9 @@
-import { ShareObject, SHARE_ENDPOINT, key2Path, HEADER_AUTHORIZATION, HEADER_CONTENT_TYPE } from "../../lib/commons";
+import { SHARE_ENDPOINT, HEADER_AUTHORIZATION, HEADER_CONTENT_TYPE, ShareObject, key2Path } from "../../lib/commons";
 
 /**
  * @returns share project keys
  */
-export async function listShares(auth: string | null): Promise<string[]> {
+export async function listShares(auth: string): Promise<string[]> {
   const res = await fetch(`${SHARE_ENDPOINT}`, {
     method: "POST",
     headers: {
@@ -17,7 +17,7 @@ export async function listShares(auth: string | null): Promise<string[]> {
   return data;
 }
 
-export async function createShare(key: string, share: ShareObject, auth: string | null): Promise<void> {
+export async function createShare(key: string, share: ShareObject, auth: string): Promise<void> {
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
     method: "PUT",
     headers: {
@@ -32,7 +32,7 @@ export async function createShare(key: string, share: ShareObject, auth: string 
   return;
 }
 
-export async function deleteShare(key: string, auth: string | null): Promise<void> {
+export async function deleteShare(key: string, auth: string): Promise<void> {
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
     method: "DELETE",
     headers: {
@@ -45,7 +45,7 @@ export async function deleteShare(key: string, auth: string | null): Promise<voi
   return;
 }
 
-export async function getShare(key: string, auth: string | null): Promise<ShareObject> {
+export async function getShare(key: string, auth: string): Promise<ShareObject> {
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?meta=1`, {
     headers: {
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),

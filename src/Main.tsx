@@ -15,12 +15,12 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
-  HEADER_AUTHORIZATION, Permission, WEBDAV_ENDPOINT, basename, cleanPath,
-  compareBoolean, compareString, fileUrl, humanReadableSize, key2Path, trimPrefixSuffix,
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, str2int, dirname, extname, HEADER_CONTENT_TYPE, MIME_DIR, MIME_PDF
+  Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
+  trimPrefixSuffix, str2int, dirname, extname,
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF
 } from "../lib/commons";
 import {
-  EDIT_FILE_SIZE_LIMIT, FileItem, ViewMode, ViewProps, downloadFile,
+  EDIT_FILE_SIZE_LIMIT, FileItem, Sort, ViewMode, ViewProps, downloadFile,
   isDirectory, isImage, isTextual, useConfig
 } from "./commons";
 import FileGrid from "./FileGrid";
@@ -29,7 +29,7 @@ import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
 import { Centered } from "./components";
-import { copyPaste } from "./app/transfer";
+import { copyPaste, deleteFile } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
 import MimeIcon from "./MimeIcon";
 import EditorDialog from "./EditorDialog";
@@ -135,6 +135,7 @@ export default function Main({
   files,
   sharing,
   setSharing,
+  setShowProgressDialog,
   multiSelected,
   setMultiSelected,
   fetchFiles,
@@ -148,19 +149,20 @@ export default function Main({
   files: FileItem[];
   sharing: string;
   setSharing: React.Dispatch<React.SetStateAction<string>>;
+  setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>,
   multiSelected: string[];
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
-  const { auth, authSearchParams, viewMode, expires } = useConfig()
+  const { auth, effectiveAuth, authSearchParams, sort, viewMode, expires, fullControl } = useConfig()
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // text editing file key
   const [displayedPdf, setDisplayedPdf] = useState<string | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
 
-  const transferQueue = useTransferQueue();
+  const [transferQueue] = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
 
   useEffect(() => {
@@ -180,8 +182,12 @@ export default function Main({
     () =>
       (search ? files.filter((file) => (file.name || file.key).toLowerCase().includes(search.toLowerCase())) : files)
         .sort((a, b) => compareBoolean(!a.system, !b.system) ||
-          compareBoolean(!isDirectory(a), !isDirectory(b)) || compareString(a.key, b.key)),
-    [files, search]
+          compareBoolean(!isDirectory(a), !isDirectory(b)) || (
+            sort === Sort.ByDate ? +a.uploaded - +b.uploaded
+              : sort === Sort.BySize ? a.size - b.size
+                : compareString(a.key, b.key)
+          )),
+    [files, search, sort]
   );
 
   const handleMultiSelect = useCallback((key: string) => {
@@ -219,6 +225,7 @@ export default function Main({
           expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
           scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
           token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+          fullControl: auth ? undefined : fullControl,
         }),
         type: isImage(file) ? "image" : undefined,
         thumbnail: fileUrl({
@@ -230,6 +237,7 @@ export default function Main({
           expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
           scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
           token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+          fullControl: auth ? undefined : fullControl,
         }),
         title: name,
         description: `${name} (${size})`,
@@ -328,8 +336,9 @@ export default function Main({
           {viewElement}
         </DropZone>
       )}
-      {!!auth && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
+      {(!!auth || fullControl) && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer open={showUploadDrawer} permission={permission} setError={setError}
+        onStartUpload={() => setShowProgressDialog(true)}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
           if (created) {
@@ -348,6 +357,7 @@ export default function Main({
             expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
             scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
             token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+            fullControl: auth ? undefined : fullControl,
             isDir,
           }), isDir];
         }}
@@ -360,7 +370,7 @@ export default function Main({
             return;
           }
           try {
-            await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, auth, true);
+            await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, effectiveAuth, true);
             fetchFiles();
           } catch (e) {
             setError(e)
@@ -373,7 +383,7 @@ export default function Main({
             return
           }
           try {
-            await copyPaste(multiSelected[0], newkey, auth, false);
+            await copyPaste(multiSelected[0], newkey, effectiveAuth, false);
             fetchFiles();
           } catch (e) {
             setError(e)
@@ -397,7 +407,7 @@ export default function Main({
             const src = (cwd ? cwd + "/" : "") + name;
             const dst = trimPrefixSuffix(newdir + name, "/");
             try {
-              await copyPaste(src, dst, auth, true);
+              await copyPaste(src, dst, effectiveAuth, true);
             } catch (e) {
               setError(e)
             }
@@ -415,12 +425,7 @@ export default function Main({
           }
           for (const key of multiSelected) {
             try {
-              await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
-                method: "DELETE",
-                headers: {
-                  ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-                },
-              });
+              await deleteFile(key, effectiveAuth)
             } catch (e) {
               setError(e)
             }
@@ -480,7 +485,7 @@ function getDirObj(key: string): FileItem {
   return {
     key,
     size: 0,
-    uploaded: "",
+    uploaded: new Date(0),
     checksums: {},
     httpMetadata: { contentType: MIME_DIR },
   }

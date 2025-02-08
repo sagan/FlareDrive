@@ -1,4 +1,4 @@
-import { HEADER_FD_THUMBNAIL } from "../../lib/commons";
+import { HEADER_FD_THUMBNAIL, UPLOADS_VARIABLE, UPLOAD_ID_VARIABLE } from "../../lib/commons";
 import { responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
@@ -17,7 +17,7 @@ export async function handleRequestPostCreateMultipart({ bucket, path, request }
 
 export async function handleRequestPostCompleteMultipart({ bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
-  const uploadId = new URLSearchParams(url.search).get("uploadId");
+  const uploadId = new URLSearchParams(url.search).get(UPLOAD_ID_VARIABLE);
   if (!uploadId) {
     return responseNotFound();
   }
@@ -35,16 +35,16 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
   }
 }
 
-export const handleRequestPost = async function ({ bucket, path, request, context }: RequestHandlerParams) {
+export const handleRequestPost = async function ({ bucket, path, request, context, scope }: RequestHandlerParams) {
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
 
-  if (searchParams.has("uploads")) {
-    return handleRequestPostCreateMultipart({ bucket, path, request, context });
+  if (searchParams.has(UPLOADS_VARIABLE)) {
+    return handleRequestPostCreateMultipart({ bucket, path, request, context, scope });
   }
 
-  if (searchParams.has("uploadId")) {
-    return handleRequestPostCompleteMultipart({ bucket, path, request, context });
+  if (searchParams.has(UPLOAD_ID_VARIABLE)) {
+    return handleRequestPostCompleteMultipart({ bucket, path, request, context, scope });
   }
 
   return responseMethodNotAllowed();

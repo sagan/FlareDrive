@@ -19,12 +19,12 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {
-  EXPIRES_VARIABLE,
-  HEADER_AUTHORIZATION, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE, WEBDAV_ENDPOINT,
-  extname, fileUrl, humanReadableSize, key2Path, str2int
+  EXPIRES_VARIABLE, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE,
+  extname, fileUrl, humanReadableSize, str2int
 } from '../lib/commons';
 import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, useConfig } from './commons';
 import { CopyButton } from './components';
+import { putFile } from './app/transfer';
 
 enum State {
   Idle,
@@ -57,7 +57,8 @@ const extLanguages: Record<string, string> = {
 }
 
 export default function EditorDialog({ filekey, open, close, setError }: FileViewerProps) {
-  const { auth, authSearchParams, expires, editorPrompt, setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
+  const { auth, effectiveAuth, authSearchParams, expires, editorPrompt, fullControl,
+    setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
   const language = extLanguages[extname(filekey)] || extLanguages[""]
   const [state, setState] = useState<State>(State.Idle)
   const [contents, setContents] = useState<string | undefined>(undefined)
@@ -70,6 +71,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+    fullControl: auth ? undefined : fullControl,
     ts
   }), [filekey, auth, ts])
 
@@ -132,16 +134,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     try {
       setState(State.Saving)
       const contents = editorRef.current.getValue()
-      const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(filekey)}`, {
-        method: "PUT",
-        headers: {
-          ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-        },
-        body: contents,
-      })
-      if (!res.ok) {
-        throw new Error(`status=${res.status}`)
-      }
+      await putFile({ key: filekey, auth: effectiveAuth, body: contents })
       setContents(contents)
       setChanged(false)
       setTs(+new Date)
@@ -171,7 +164,8 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     }
   }
 
-  const roMode = !auth || !!editorReadOnly || state !== State.Editing
+  const permitWrite = !!auth || (!!effectiveAuth && fullControl)
+  const roMode = !permitWrite || !!editorReadOnly || state !== State.Editing
 
   return <Dialog open={open} onClose={onCloseNoPrompt} fullScreen>
     <DialogTitle component={Typography} className='single-line' sx={{ p: 1 }}>
@@ -188,7 +182,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     </DialogTitle>
     <DialogContent onKeyDown={handleKeyDown}>
       <Typography className="single-line">
-        {!!auth && <>
+        {permitWrite && <>
           <IconButton title={roMode ? "View Mode" : "Edit Mode"} color="secondary"
             disabled={changed || state !== State.Editing} onClick={() => setEditorReadOnly(v => +!v)}>
             {roMode ? <RemoveRedEyeIcon /> : <EditIcon />}

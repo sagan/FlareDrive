@@ -37,7 +37,7 @@ export const onRequest: FdCfFunc = async function (context) {
     return handleRequestOptions();
   }
 
-  const authFailResponse = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  const [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   const permission = checkPermission(context);
   if (
     authFailResponse &&
@@ -55,5 +55,5 @@ export const onRequest: FdCfFunc = async function (context) {
 
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
-  return handler({ context, bucket, path, request: context.request, permission, authed: !authFailResponse });
+  return handler({ context, bucket, path, request: context.request, permission, scope, authed: !authFailResponse });
 };

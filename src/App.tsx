@@ -11,11 +11,12 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
-  AUTH_VARIABLE, basicAuthorizationHeader, dirUrlPath, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, nextDayEndTimestamp, path2Key, Permission, SCOPE_VARIABLE, TOKEN_VARIABLE
+  AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE,
+  nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath
 } from "../lib/commons";
 import {
   FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
-  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext, getFilePermission, isDirectory
+  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext, getFilePermission, isDirectory, SORT_VARIABLE
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -35,7 +36,7 @@ const systemFolders: FileItem[] = [
     system: true,
     icon: ShareIcon,
     size: 0,
-    uploaded: "",
+    uploaded: new Date(0),
     httpMetadata: { contentType: MIME_DIR },
     checksums: {},
   }
@@ -64,6 +65,7 @@ export default function App() {
 
   const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
+  const [sort, setSort] = useLocalStorage<number>(SORT_VARIABLE, 0);
   const [editorPrompt, setEditorPrompt] = useLocalStorage<number>(EDITOR_PROMPT_VARIABLE, 1)
   const [editorReadOnly, setEditorReadOnly] = useLocalStorage<number>(EDITOR_READ_ONLY_VARIABLE, 0)
   const [expires, setExpires] = useState(() => nextDayEndTimestamp());
@@ -81,10 +83,12 @@ export default function App() {
 
   const config: Config = useMemo(() => {
     return {
-      auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires,
-      setAuth, setViewMode, setEditorPrompt, setEditorReadOnly
-    }
-  }, [auth, authSearchParams, viewMode, editorPrompt, editorReadOnly, expires])
+      effectiveAuth: auth || (authSearchParams ? "?" + authSearchParams.toString() : ""),
+      fullControl: !!str2int(authSearchParams?.get(FULL_CONTROL_VARIABLE)),
+      auth, authSearchParams, viewMode, sort, editorPrompt, editorReadOnly, expires,
+      setAuth, setViewMode, setSort, setEditorPrompt, setEditorReadOnly
+    } as Config
+  }, [auth, authSearchParams, viewMode, sort, editorPrompt, editorReadOnly, expires])
 
   useEffect(() => {
     const iv = setInterval(() => setExpires(nextDayEndTimestamp()), 3600000 * 8)
@@ -133,13 +137,19 @@ export default function App() {
       }).finally(() => setLoading(false))
       return
     }
-    fetchPath(cwd, auth || (authSearchParams ? "?" + authSearchParams.toString() : "")).then(({
+    fetchPath(cwd, config.effectiveAuth).then(({
       auth: sentbackAuth,
+      authed,
       items
     }) => {
       setRequireSignIn(false)
-      if (sentbackAuth && sentbackAuth !== auth) {
-        setAuth(sentbackAuth)
+      if (authed) {
+        setShowSignInDialog(false)
+        if (sentbackAuth && sentbackAuth !== auth) {
+          setAuth(sentbackAuth)
+        }
+      } else if (auth) {
+        setAuth("")
       }
       if (items) {
         if (!cwd) {
@@ -185,6 +195,7 @@ export default function App() {
               }}
               onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
               onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
+              sort={sort} setSort={setSort}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd) ? () => {
@@ -197,7 +208,7 @@ export default function App() {
                 ? <ShareManager setError={setError} fetchFiles={fetchFiles}
                   search={search} shares={shares} loading={loading} />
                 : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-                  sharing={sharing} setSharing={setSharing}
+                  sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                   permission={permission} files={files} setError={setError}
                   multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
             }

@@ -18,7 +18,7 @@ import { FileViewerProps, dataUrltoBlob, useConfig } from './commons';
 import { putFile } from './app/transfer';
 
 export default function ImageEditorDialog({ filekey, open, close, setError }: FileViewerProps) {
-  const { auth, authSearchParams, expires } = useConfig()
+  const { auth, effectiveAuth, authSearchParams, expires, fullControl } = useConfig()
 
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
@@ -26,6 +26,7 @@ export default function ImageEditorDialog({ filekey, open, close, setError }: Fi
     expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+    fullControl: auth ? undefined : fullControl,
   }), [filekey, auth])
 
   const { base } = parseFilePath(filekey)
@@ -52,7 +53,7 @@ export default function ImageEditorDialog({ filekey, open, close, setError }: Fi
             const dir = dirname(filekey)
             const key = (dir ? dir + "/" : "") + x.fullName
             try {
-              await putFile({ key, auth, body: dataUrltoBlob(x.imageBase64), contentType: x.mimeType })
+              await putFile({ key, auth: effectiveAuth, body: dataUrltoBlob(x.imageBase64), contentType: x.mimeType })
             } catch (e) {
               setError(e)
             }

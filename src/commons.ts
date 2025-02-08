@@ -4,6 +4,8 @@ import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
 
+export const SORT_VARIABLE = "sort";
+
 export const EDITOR_PROMPT_VARIABLE = "editorPrompt";
 
 export const EDITOR_READ_ONLY_VARIABLE = "editorReadOnly";
@@ -24,9 +26,11 @@ export enum ViewMode {
  */
 export interface Config {
   auth: string;
-  viewMode: number;
+  viewMode: ViewMode;
+  sort: Sort;
   editorPrompt: number;
   editorReadOnly: number;
+  fullControl: boolean;
   /**
    * private file url default expires unix timestamp (miniseconds)
    */
@@ -35,8 +39,13 @@ export interface Config {
    * auth info from search params: scope, expires, token
    */
   authSearchParams: URLSearchParams | null;
+  /**
+   * Effective auth credendials that can be used in transfer APIs
+   */
+  effectiveAuth: string;
   setAuth: React.Dispatch<React.SetStateAction<string>>;
   setViewMode: React.Dispatch<React.SetStateAction<number>>;
+  setSort: React.Dispatch<React.SetStateAction<number>>;
   setEditorPrompt: React.Dispatch<React.SetStateAction<number>>;
   setEditorReadOnly: React.Dispatch<React.SetStateAction<number>>;
 }
@@ -57,7 +66,7 @@ export interface FileItem {
 
   key: string;
   size: number;
-  uploaded: string;
+  uploaded: Date;
   httpMetadata: { contentType: string };
   customMetadata?: { thumbnail?: string };
   checksums: {
@@ -180,3 +189,14 @@ export function dataUrltoBlob(dataUrl: string): Blob {
   // Create a blob from the ArrayBuffer.
   return new Blob([arrayBuffer], { type: mimeType });
 }
+
+export enum Sort {
+  Default,
+  ByDate,
+  BySize,
+}
+
+/**
+ * Sort labels. index as value.
+ */
+export const sortLabels = ["Default sort", "Sort by date", "Sort by size"] as const;

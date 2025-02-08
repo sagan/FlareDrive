@@ -306,8 +306,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
             </NativeSelect>
           </FormControl>
           <FormControlLabel label="Full Control (allow write)" control={
-            <Checkbox disabled={targetIsDir} checked={linkFullControl}
-              onChange={e => setLinkFullControl(e.target.checked)} />}
+            <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
           />
         </Box>
         <Box>
@@ -336,7 +335,11 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
           Link will never expire (unless the admin password is changed)
         </Typography>}
         {linkFullControl && <Typography sx={{ color: "red" }}>
-          Link has write access, send a "PUT" request to update the file contents.
+          {
+            targetIsDir
+              ? `Link has write access, can manage files in folder`
+              : `Link has write access, send a "PUT" request to update the file contents.`
+          }
         </Typography>}
       </>}
     </DialogContent>}
