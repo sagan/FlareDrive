@@ -14,7 +14,7 @@ import {
   HEADER_ETAG,
   fileUrl,
   basicAuthorizationHeader,
-  METHODS_DEFAULT,
+  METHODS_READ_DIR,
   FULL_CONTROL_VARIABLE,
   EXPIRES_VARIABLE,
   HEADER_CONTENT_LENGTH,
@@ -36,7 +36,16 @@ export type FdCfFuncContext = EventContext<
     CLOUD_DOWNLOAD_UNLIMITED?: string;
     WEBDAV_USERNAME: string;
     WEBDAV_PASSWORD: string;
+    /**
+     * Comma-separated "public" path prefixes.
+     * Path with any of these prefixes is allowed to read file anonymously
+     * But dir browsing is NOT allowed.
+     */
     PUBLIC_PREFIX?: string;
+    /**
+     * Comma-separated "public dir" path prefixes.
+     * Path with any of these prefixes is allowed to read file / browser dir anonymously.
+     */
     PUBLIC_DIR_PREFIX?: string;
     /**
      * optional bucket public access url (without trailing "/"), e.g. "http://bucket-secret.example.com".
@@ -212,7 +221,7 @@ export async function checkAuthFailure(
     authed = await (async () => {
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
       const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
-      if ((expires > 0 && expires <= +new Date()) || (!fullControl && !METHODS_DEFAULT.includes(request.method))) {
+      if ((expires > 0 && expires <= +new Date()) || (!fullControl && !METHODS_READ_DIR.includes(request.method))) {
         return false;
       }
       for (const param of NOSIGN_VARIABLES) {
@@ -241,7 +250,7 @@ export async function checkAuthFailure(
   }
 
   if (!authed) {
-    if (url.pathname.startsWith(SHARE_ENDPOINT) && METHODS_DEFAULT.includes(request.method)) {
+    if (url.pathname.startsWith(SHARE_ENDPOINT) && METHODS_READ_DIR.includes(request.method)) {
       const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
       return [responseUnauthorized(basicAuthHeader), scope];
     }

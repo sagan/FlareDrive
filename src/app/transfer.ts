@@ -216,6 +216,10 @@ function xhrFetch(
   auth: string
 ) {
   return new Promise<Response>((resolve, reject) => {
+    if (requestInit.signal?.aborted) {
+      reject(requestInit.signal.reason);
+      return;
+    }
     const headers = new Headers(requestInit.headers);
     if (auth) {
       const isBasicAuth = isBasicAuthHeader(auth);
@@ -226,6 +230,9 @@ function xhrFetch(
       }
     }
     const xhr = new XMLHttpRequest();
+    if (requestInit.signal) {
+      requestInit.signal.addEventListener("abort", () => xhr.abort());
+    }
     xhr.upload.onprogress = requestInit.onUploadProgress ?? null;
     xhr.open(requestInit.method ?? "GET", url);
     headers.forEach((value, key) => xhr.setRequestHeader(key, value));
@@ -241,6 +248,9 @@ function xhrFetch(
         }, {} as Record<string, string>);
       resolve(new Response(xhr.responseText, { status: xhr.status, headers }));
     };
+    xhr.onabort = () => {
+      reject(requestInit.signal?.reason);
+    };
     xhr.onerror = reject;
     if (requestInit.body instanceof Blob || typeof requestInit.body === "string") {
       xhr.send(requestInit.body);
@@ -252,6 +262,7 @@ export async function multipartUpload(
   key: string,
   file: File,
   auth: string,
+  signal: AbortSignal,
   options?: {
     headers?: Record<string, string>;
     onUploadProgress?: (progressEvent: { loaded: number; total: number }) => void;
@@ -264,6 +275,7 @@ export async function multipartUpload(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
       headers,
       method: "POST",
+      signal,
     }),
     auth
   );
@@ -277,8 +289,8 @@ export async function multipartUpload(
   const limit = pLimit(2);
   const parts = Array.from({ length: totalChunks }, (_, i) => i + 1);
   const partsLoaded = Array.from({ length: totalChunks + 1 }, () => 0);
-  const promises = parts.map((i) =>
-    limit(async () => {
+  const promises = parts.map((i) => {
+    return limit(async () => {
       const chunk = file.slice((i - 1) * SIZE_LIMIT, i * SIZE_LIMIT);
       const searchParams = new URLSearchParams({
         [PART_NUMBER_VARIABLE]: i.toString(),
@@ -296,6 +308,7 @@ export async function multipartUpload(
             method: "PUT",
             headers,
             body: chunk,
+            signal,
             onUploadProgress: (progressEvent) => {
               partsLoaded[i] = progressEvent.loaded;
               options?.onUploadProgress?.({
@@ -312,20 +325,28 @@ export async function multipartUpload(
         return res;
       };
 
-      const retryReducer = (acc: Promise<Response>) =>
-        acc
-          .then((res) => {
-            const retryAfter = res.headers.get(HEADER_RETRY_AFTER);
-            if (!retryAfter) {
-              return res;
-            }
-            return uploadPart();
-          })
-          .catch(uploadPart);
+      const retryReducer = async (acc: Promise<Response>) => {
+        try {
+          const res = await acc;
+          if (signal.aborted) {
+            throw signal.reason;
+          }
+          const retryAfter = res.headers.get(HEADER_RETRY_AFTER);
+          if (!retryAfter) {
+            return res;
+          }
+          return uploadPart();
+        } catch (e) {
+          if (signal.aborted) {
+            throw signal.reason;
+          }
+          return uploadPart();
+        }
+      };
       const res = await [1, 2].reduce(retryReducer, uploadPart());
       return { partNumber: i, etag: res.headers.get(HEADER_ETAG)! };
-    })
-  );
+    });
+  });
   const uploadedParts = await Promise.all(promises);
   const completeParams = new URLSearchParams({ uploadId });
   const req = applyAuth(
@@ -428,14 +449,19 @@ export async function putFile({
 export async function processTransferTask({
   auth,
   task,
+  signal,
   onTaskProgress,
 }: {
   auth: string;
   task: TransferTask;
+  /**
+   * abort signal
+   */
+  signal: AbortSignal;
   onTaskProgress?: (event: { loaded: number; total: number }) => void;
 }) {
   const { remoteKey, file } = task;
-  if (task.type !== "upload" || !file) {
+  if (!file) {
     throw new Error("Invalid task");
   }
   let thumbnailDigest = "";
@@ -457,6 +483,7 @@ export async function processTransferTask({
             headers: {
               [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
             },
+            signal,
           }),
           auth
         );
@@ -470,12 +497,16 @@ export async function processTransferTask({
     }
   }
 
+  if (signal.aborted) {
+    throw new Error(signal.reason);
+  }
+
   const headers: Record<string, string> = {
     [HEADER_CONTENT_TYPE]: file.type,
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };
   if (file.size >= SIZE_LIMIT) {
-    return await multipartUpload(remoteKey, file, auth, {
+    return await multipartUpload(remoteKey, file, auth, signal, {
       headers,
       onUploadProgress: onTaskProgress,
     });
@@ -487,6 +518,7 @@ export async function processTransferTask({
         method: "PUT",
         headers,
         body: file,
+        signal,
         onUploadProgress: onTaskProgress,
       },
       auth

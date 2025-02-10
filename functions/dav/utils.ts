@@ -1,4 +1,4 @@
-import { MIME_DIR, Permission, path2Key, trimPrefixSuffix } from "../../lib/commons";
+import { METHODS_READ_DIR, METHODS_READ_FILE, MIME_DIR, path2Key, trimPrefixSuffix } from "../../lib/commons";
 import { type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
@@ -10,10 +10,6 @@ export interface RequestHandlerParams {
    * current auth valid scope
    */
   scope: string | null | undefined;
-  /**
-   * Current request target file permission
-   */
-  permission?: Permission;
   /**
    * whether current request authenticated
    */
@@ -36,7 +32,7 @@ export const ROOT_OBJECT = {
 /**
  * Test a R2 key has strict prefix.
  * "foo/bar" and "foo" has "foo" prefix, but "foobar" doesn't.
- * Note empty key is not a valid "prefix" and will be silently ignored.
+ * Note: empty key is not a valid "prefix" and will be silently ignored.
  * @param key
  * @param prefixesCsv comma-separated prefixes. If key has any of these prefix, return true.
  * @returns
@@ -52,19 +48,26 @@ function testKeyHasPrefix(key: string, prefixesCsv: string): boolean {
   return false;
 }
 
-export function checkPermission(context: FdCfFuncContext): Permission {
+/**
+ * Check whether current request requires auth.
+ * @param context
+ * @returns
+ */
+export function requireAuth(context: FdCfFuncContext): boolean {
   const { env, params } = context;
   const key = path2Key(((params.path as string[]) || []).join("/"));
-  if (!key) {
-    return Permission.RequireAuth;
+  if (key) {
+    if (env.PUBLIC_PREFIX && testKeyHasPrefix(key, env.PUBLIC_PREFIX)) {
+      if (METHODS_READ_FILE.includes(context.request.method)) {
+        return false;
+      }
+    } else if (env.PUBLIC_DIR_PREFIX && testKeyHasPrefix(key, env.PUBLIC_DIR_PREFIX)) {
+      if (METHODS_READ_DIR.includes(context.request.method)) {
+        return false;
+      }
+    }
   }
-  if (env.PUBLIC_PREFIX && testKeyHasPrefix(key, env.PUBLIC_PREFIX)) {
-    return Permission.OpenFile;
-  }
-  if (env.PUBLIC_DIR_PREFIX && testKeyHasPrefix(key, env.PUBLIC_DIR_PREFIX)) {
-    return Permission.OpenDir;
-  }
-  return Permission.RequireAuth;
+  return true;
 }
 
 export function parseBucketPath(context: FdCfFuncContext): [R2Bucket, string] {

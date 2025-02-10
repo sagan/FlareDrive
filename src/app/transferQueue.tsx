@@ -2,15 +2,25 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { v4 as uuidv4 } from 'uuid'
 import { processTransferTask } from "./transfer";
 import { useConfig } from "../commons";
 
+/**
+ * "Upload aborted" error.
+ */
+const ERR_ABORT = new Error("Upload aborted")
+
 export interface TransferTask {
-  type: "upload" | "download";
-  status: "pending" | "in-progress" | "completed" | "failed";
+  /**
+   * task uuid. generated when new task created.
+   */
+  id: string;
+  status: "pending" | "in-progress" | "completed" | "failed" | "canceled";
   remoteKey: string;
   file?: File;
   name: string;
@@ -23,9 +33,25 @@ const TransferQueueContext = createContext<TransferTask[]>([]);
 const SetTransferQueueContext = createContext<
   React.Dispatch<React.SetStateAction<TransferTask[]>>
 >(() => { });
+const TransferAbortControllerContext = createContext<AbortController>(new AbortController)
+const SetTransferAbortControllerContext = createContext<React.Dispatch<React.SetStateAction<AbortController>>>(
+  () => { })
 
-export function useTransferQueue() {
-  return [useContext(TransferQueueContext), useContext(SetTransferQueueContext)] as const;
+export function useTransferQueue(): [tasks: TransferTask[],
+  setTasks: React.Dispatch<React.SetStateAction<TransferTask[]>>, cancelTasks: (all?: boolean) => void] {
+  const abortController = useContext(TransferAbortControllerContext)
+  const setAbortController = useContext(SetTransferAbortControllerContext)
+  const tasks = useContext(TransferQueueContext)
+  const setTasks = useContext(SetTransferQueueContext)
+  const cancelTasks = useMemo(() => (all?: boolean) => {
+    if (all) {
+      setTasks(tasks => tasks.map(task => task.status == "pending" ?
+        { ...task, status: "canceled" } as TransferTask : task))
+    }
+    abortController.abort(ERR_ABORT)
+    setAbortController(new AbortController)
+  }, [abortController])
+  return [tasks, setTasks, cancelTasks];
 }
 
 export function useUploadEnqueue() {
@@ -34,7 +60,7 @@ export function useUploadEnqueue() {
     const newTasks = requests.map(
       ({ basedir, file }) =>
       ({
-        type: "upload",
+        id: uuidv4(),
         status: "pending",
         name: file.name,
         file,
@@ -55,11 +81,12 @@ export function TransferQueueProvider({
   const [transferTasks, _setTransferTasks] = useState<TransferTask[]>([]);
   const taskProcessing = useRef<TransferTask | null>(null);
   const tasks = useRef<TransferTask[]>(transferTasks);
+  const [abortController, setAbortController] = useState<AbortController>(new AbortController)
 
   const { effectiveAuth } = useConfig()
 
   // It's a ugly workaround:
-  // If using strict mode, React 18+ trigger useEffect twice in dev env:
+  // In strict mode, React 18+ trigger useEffect twice in dev env:
   // See https://react.dev/learn/synchronizing-with-effects .
   // As the setter of useState is async, it will cause infinitely uploading the same file in dev mode.
   // As a workaround, use ref (which is sync) to store latest tasks info.
@@ -92,9 +119,7 @@ export function TransferQueueProvider({
   }
 
   useEffect(() => {
-    const taskToProcess = tasks.current.find(
-      (task) => task.status === "pending"
-    );
+    const taskToProcess = tasks.current.find(task => task.status === "pending");
     if (!taskToProcess || taskProcessing.current) {
       return;
     }
@@ -103,6 +128,7 @@ export function TransferQueueProvider({
     processTransferTask({
       auth: effectiveAuth,
       task: taskToProcess,
+      signal: abortController.signal,
       onTaskProgress: ({ loaded }) => {
         setTransferTasks(currentTaskUpdater({ loaded }));
       },
@@ -112,7 +138,11 @@ export function TransferQueueProvider({
         taskProcessing.current = null;
       })
       .catch((error) => {
-        setTransferTasks(currentTaskUpdater({ status: "failed", error }));
+        if (error === ERR_ABORT) {
+          setTransferTasks(currentTaskUpdater({ status: "canceled" }));
+        } else {
+          setTransferTasks(currentTaskUpdater({ status: "failed", error }));
+        }
         taskProcessing.current = null;
       });
   }, [transferTasks]);
@@ -120,7 +150,11 @@ export function TransferQueueProvider({
   return (
     <TransferQueueContext.Provider value={transferTasks}>
       <SetTransferQueueContext.Provider value={setTransferTasks}>
-        {children}
+        <TransferAbortControllerContext.Provider value={abortController}>
+          <SetTransferAbortControllerContext.Provider value={setAbortController}>
+            {children}
+          </SetTransferAbortControllerContext.Provider>
+        </TransferAbortControllerContext.Provider>
       </SetTransferQueueContext.Provider>
     </TransferQueueContext.Provider>
   );

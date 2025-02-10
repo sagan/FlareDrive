@@ -25,9 +25,9 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
 import LinkIcon from '@mui/icons-material/Link';
 import SaveIcon from '@mui/icons-material/Save';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
@@ -186,12 +186,12 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
               {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
             </IconButton>,
             endAdornment: <>
-              {!!onEdit && <IconButton
+              {!!onEdit && !targetIsDir && <IconButton
                 onClick={onEdit}
                 title={`View / Edit`}
                 edge="end"
               >
-                <EditIcon />
+                <VisibilityIcon />
               </IconButton>}
               <IconButton
                 onClick={() => navigator.clipboard.writeText(fileKey)}

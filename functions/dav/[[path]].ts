@@ -1,4 +1,3 @@
-import { Permission } from "../../lib/commons";
 import { FdCfFunc, checkAuthFailure, responseMethodNotAllowed, responseNotFound } from "../commons";
 import { parseBucketPath } from "./utils";
 import { handleRequestCopy } from "./copy";
@@ -9,7 +8,7 @@ import { handleRequestMkcol } from "./mkcol";
 import { handleRequestMove } from "./move";
 import { handleRequestPropfind } from "./propfind";
 import { handleRequestPut } from "./put";
-import { RequestHandlerParams, checkPermission } from "./utils";
+import { RequestHandlerParams, requireAuth } from "./utils";
 import { handleRequestPost } from "./post";
 
 async function handleRequestOptions() {
@@ -38,13 +37,7 @@ export const onRequest: FdCfFunc = async function (context) {
   }
 
   const [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  const permission = checkPermission(context);
-  if (
-    authFailResponse &&
-    (permission == Permission.RequireAuth ||
-      (permission == Permission.OpenDir && !["GET", "HEAD", "PROPFIND"].includes(request.method)) ||
-      (permission == Permission.OpenFile && !["GET", "HEAD"].includes(request.method)))
-  ) {
+  if (requireAuth(context) && authFailResponse) {
     return authFailResponse;
   }
 
@@ -55,5 +48,5 @@ export const onRequest: FdCfFunc = async function (context) {
 
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
-  return handler({ context, bucket, path, request: context.request, permission, scope, authed: !authFailResponse });
+  return handler({ context, bucket, path, request: context.request, scope, authed: !authFailResponse });
 };

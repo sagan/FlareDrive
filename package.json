@@ -28,6 +28,7 @@
     "react-pdf": "^9.2.1",
     "react-router-dom": "^6.28.0",
     "typescript": "^5.5.3",
+    "uuid": "^11.0.5",
     "web-vitals": "^2.1.4",
     "yet-another-react-lightbox": "^3.21.7"
   },

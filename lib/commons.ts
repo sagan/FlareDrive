@@ -75,9 +75,15 @@ export const UPLOAD_ID_VARIABLE = "uploadId";
 export const PART_NUMBER_VARIABLE = "partNumber";
 
 /**
- * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND]
+ * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND].
+ * It includes PROPFIND method which is used to list dir.
  */
-export const METHODS_DEFAULT = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+export const METHODS_READ_DIR = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+
+/**
+ * simple file "read" http methods: [GET, HEAD, OPTIONS].
+ */
+export const METHODS_READ_FILE = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
@@ -208,7 +214,7 @@ export const HEADER_AUTH = "X-Auth";
 export const HEADER_SOURCE_ASYNC = "X-Source-Async";
 
 /**
- * Dir access permission. All values (except Unknown) > 0; Unknown is 0.
+ * Dir access permission.
  */
 export enum Permission {
   /**
