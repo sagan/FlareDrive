@@ -57,6 +57,11 @@ export const META_VARIABLE = "meta";
 export const FULL_CONTROL_VARIABLE = "fullControl";
 
 /**
+ * Convert .md or other type input file to and output in html format
+ */
+export const HTML_VARIABLE = "html";
+
+/**
  * request timestamp to make each url unique. Do not participate in url signinng
  */
 export const TS_VARIABLE = "_ts";
@@ -90,6 +95,7 @@ export const METHODS_READ_FILE = ["GET", "HEAD", "OPTIONS"];
  * [token, ts, thumbnail*... (except thumbnailDigest)]
  */
 export const NOSIGN_VARIABLES: string[] = [
+  HTML_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
   THUMBNAIL_VARIABLE,
@@ -131,6 +137,10 @@ export const MIME_DEFAULT = "application/octet-stream";
 export const MIME_DIR = "application/x-directory";
 
 export const MIME_XML = "application/xml";
+
+export const MIME_HTML = "text/html";
+
+export const MIME_MARKDOWN = "text/markdown";
 
 export const MIME_PDF = "application/pdf";
 
@@ -286,10 +296,7 @@ export interface ThumbnailObject {
   digest: string;
 }
 
-/**
- * "Access-Control-Allow-Origin": "*"
- */
-export const corsHeaders: Record<string, string> = {
+export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
 };
 
@@ -705,4 +712,19 @@ export function nextDayEndTimestamp(): number {
   now.setUTCMinutes(0);
   now.setUTCSeconds(0, 0);
   return +now;
+}
+
+export function appendQueryStringToUrl(url: string, qs: string): string {
+  if (qs.startsWith("?") || qs.startsWith("&")) {
+    qs = qs.slice(1);
+  }
+  if (url.includes("?")) {
+    if (!url.endsWith("&")) {
+      url += "&";
+    }
+  } else {
+    url += "?";
+  }
+  url += qs;
+  return url;
 }

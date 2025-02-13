@@ -17,7 +17,7 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   trimPrefixSuffix, str2int, dirname, extname,
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, appendQueryStringToUrl
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, Sort, ViewMode, ViewProps, downloadFile,
@@ -91,6 +91,11 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   const thumbSize = 128
   const file: FileItem = (slide as any)._file
 
+  let viewSrc = src
+  if (src && file.httpMetadata.contentType == MIME_MARKDOWN) {
+    viewSrc = appendQueryStringToUrl(viewSrc, HTML_VARIABLE)
+  }
+
   return <Box onClick={onClick} sx={{
     width: rect.width, height: rect.height, maxWidth: "50%", maxHeight: "50%", textAlign: "center",
     color: "white", overflow: "auto",
@@ -114,7 +119,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       }
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
-      <Link href={src} onClick={e => {
+      <Link href={viewSrc} onClick={e => {
         e.stopPropagation()
       }}>{slide.description}</Link>
     </Typography>

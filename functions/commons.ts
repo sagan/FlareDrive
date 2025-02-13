@@ -1,10 +1,8 @@
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
-  sha256,
-  hmacSha256Verify,
-  key2Path,
-  str2int,
   TOKEN_VARIABLE,
   AUTH_VARIABLE,
   HEADER_AUTHORIZATION,
@@ -12,8 +10,6 @@ import {
   HEADER_CONTENT_TYPE,
   HEADER_LAST_MODIFIED,
   HEADER_ETAG,
-  fileUrl,
-  basicAuthorizationHeader,
   METHODS_READ_DIR,
   FULL_CONTROL_VARIABLE,
   EXPIRES_VARIABLE,
@@ -21,11 +17,20 @@ import {
   HEADER_IF_UNMODIFIED_SINCE,
   SHARE_ENDPOINT,
   SCOPE_VARIABLE,
-  trimPrefix,
   WEBDAV_ENDPOINT,
+  HEADER_CF_RESIZED,
+  MIME_HTML,
+  MIME_MARKDOWN,
+  sha256,
+  hmacSha256Verify,
+  key2Path,
+  str2int,
+  fileUrl,
+  basicAuthorizationHeader,
+  trimPrefix,
   path2Key,
   trimPrefixSuffix,
-  HEADER_CF_RESIZED,
+  corsHeaders,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -386,6 +391,45 @@ export function writeR2ObjectHeaders(obj: R2Object, headers: Headers) {
   if (obj.httpEtag) {
     headers.set(HEADER_ETAG, obj.httpEtag);
   }
+}
+
+/**
+ * Get http response from R2Object
+ * @param html bool If true, convert output to html if possible (when obj is certain some type like markdown)
+ * @param download bool If true, send "Content-Disposition: attachment" header.
+ * @param cors bool If true, send CORS Allow All headers
+ */
+export async function outputR2Object({
+  obj,
+  download,
+  html,
+  cors,
+}: {
+  obj: R2ObjectBody;
+  download?: boolean;
+  html?: boolean;
+  cors?: boolean;
+}): Promise<Response> {
+  const headers = new Headers();
+  writeR2ObjectHeaders(obj, headers);
+  if (download) {
+    headers.set("Content-Disposition", "attachment");
+  }
+  if (cors) {
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      headers.set(key, value);
+    }
+  }
+  if (html && obj.httpMetadata?.contentType == MIME_MARKDOWN) {
+    const body = await obj.text();
+    const htmlOutput = await marked.parse(body);
+    const sanitizedHtml = sanitizeHtml(htmlOutput);
+    headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
+    headers.delete(HEADER_CONTENT_LENGTH);
+    return new Response(sanitizedHtml, { headers });
+  }
+  // headers.set("Cache-Control", "max-age=31536000");
+  return new Response(obj.body, { headers });
 }
 
 /**

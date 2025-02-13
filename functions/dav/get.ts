@@ -1,5 +1,6 @@
 import {
   DOWNLOAD_VARIABLE,
+  HTML_VARIABLE,
   KEY_PREFIX_THUMBNAIL,
   META_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
@@ -9,7 +10,7 @@ import {
   THUMBNAIL_VARIABLE,
   str2int,
 } from "@/lib/commons";
-import { jsonResponse, responseNotFound, responseNotModified, writeR2ObjectHeaders } from "../commons";
+import { jsonResponse, outputR2Object, responseNotFound, responseNotModified, writeR2ObjectHeaders } from "../commons";
 import { RequestHandlerParams } from "./utils";
 import { fallbackIconResponse } from "../icons";
 
@@ -51,10 +52,7 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
     if (!("body" in thumbObj)) {
       return responseNotModified();
     }
-    const headers = new Headers();
-    writeR2ObjectHeaders(thumbObj, headers);
-    // headers.set("Cache-Control", "max-age=31536000");
-    return new Response(thumbObj.body, { headers });
+    return outputR2Object({ obj: thumbObj });
   }
 
   let obj: R2ObjectBody | R2Object | null;
@@ -76,10 +74,5 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
   if (!("body" in obj)) {
     return responseNotModified();
   }
-  const headers = new Headers();
-  writeR2ObjectHeaders(obj, headers);
-  if (str2int(searchParams.get(DOWNLOAD_VARIABLE))) {
-    headers.set("Content-Disposition", "attachment");
-  }
-  return new Response(obj.body, { headers });
+  return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), download: searchParams.has(DOWNLOAD_VARIABLE) });
 }

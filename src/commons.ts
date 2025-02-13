@@ -128,12 +128,13 @@ export const SHARES_FOLDER_KEY = ".shares";
 
 /**
  * Generate a cryptographically strong password of format /[a-zA-Z0-9]{length}/
+ * @param digitOnly bool. If true, output will be comprised of digit chars ([0-9]) only.
  */
-export function generatePassword(length: number) {
+export function generatePassword(length: number, digitOnly?: boolean) {
   if (length <= 0) {
     return "";
   }
-  let chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let chars = digitOnly ? "0123456789" : "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let password = "";
   let max = Math.floor(65535 / chars.length) * chars.length;
   const array = new Uint16Array(length * 2);

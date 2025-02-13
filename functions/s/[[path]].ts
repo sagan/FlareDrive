@@ -1,17 +1,17 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
 import {
+  MIME_DIR,
+  META_VARIABLE,
+  HEADER_REFERER,
   type ShareObject,
   path2Key,
   trimPrefix,
-  MIME_DIR,
   ShareRefererMode,
   trimSuffix,
   cut,
-  corsHeaders,
-  META_VARIABLE,
   str2int,
-  HEADER_REFERER,
+  HTML_VARIABLE,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -25,7 +25,7 @@ import {
   responseForbidden,
   responseRedirect,
   responseNotModified,
-  writeR2ObjectHeaders,
+  outputR2Object,
 } from "../commons";
 
 const SHARE_KEY_PREFIX = "s_";
@@ -201,14 +201,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (!("body" in obj)) {
     return responseNotModified();
   }
-  const headers = new Headers();
-  writeR2ObjectHeaders(obj, headers);
-  if (data.cors) {
-    for (const [key, value] of Object.entries(corsHeaders)) {
-      headers.set(key, value);
-    }
-  }
-  return new Response(obj.body, { headers });
+  return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), cors: !!data.cors });
 };
 
 export const onRequestHead: FdCfFunc = async function (context) {

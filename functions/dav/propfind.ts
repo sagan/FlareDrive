@@ -1,15 +1,15 @@
 import {
-  encodeHex,
   HEADER_AUTH,
   HEADER_AUTHED,
   HEADER_AUTHORIZATION,
   HEADER_CONTENT_TYPE,
   HEADER_DEPTH,
   HEADER_INAPP,
-  isHttpsOrLocalUrl,
   MIME_DIR,
   MIME_XML,
   WEBDAV_ENDPOINT,
+  encodeHex,
+  isHttpsOrLocalUrl,
 } from "../../lib/commons";
 import { findChildren, responseNotFound } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";

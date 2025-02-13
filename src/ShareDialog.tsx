@@ -20,6 +20,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import CasinoIcon from '@mui/icons-material/Casino';
 import PasswordIcon from '@mui/icons-material/Password';
+import NumbersIcon from '@mui/icons-material/Numbers';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
@@ -221,6 +222,19 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
       </Box>
       {
         "file" in otherProps && !isDirectory(otherProps.file) && <>
+          {!!otherProps.file.httpMetadata.contentType && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`MIME`} fullWidth value={otherProps.file.httpMetadata.contentType} InputProps={{
+              endAdornment:
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(otherProps.file.httpMetadata.contentType)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+            }} />
+          </Box>}
           {!!otherProps.file.checksums.md5 && <Box sx={{ mt: 1 }}>
             <TextField disabled label={`MD5`} fullWidth value={otherProps.file.checksums.md5} InputProps={{
               endAdornment:
@@ -359,19 +373,19 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
               <>
                 <IconButton
                   disabled={status !== Status.Creating}
-                  onClick={() => setSharekey(generatePassword(6))}
-                  title="Random short link"
+                  onClick={() => setSharekey(generatePassword(6, true))}
+                  title="Random digit-only short link"
                   edge="end"
                 >
-                  <CasinoIcon />
+                  <NumbersIcon />
                 </IconButton>
                 <IconButton
                   disabled={status !== Status.Creating}
                   onClick={() => setSharekey(generatePassword(STRONG_PASSWORD_LENGTH))}
-                  title="Random secure (long) link"
+                  title="Random secure link"
                   edge="end"
                 >
-                  <PasswordIcon />
+                  <CasinoIcon />
                 </IconButton>
                 <IconButton
                   onClick={() => setSharekey(name)}

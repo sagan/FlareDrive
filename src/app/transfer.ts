@@ -2,9 +2,6 @@ import pLimit from "p-limit";
 import mime from "mime";
 import { pdfjs } from "react-pdf";
 import {
-  key2Path,
-  escapeRegExp,
-  str2int,
   WEBDAV_ENDPOINT,
   HEADER_AUTHED,
   HEADER_INAPP,
@@ -13,24 +10,28 @@ import {
   KEY_PREFIX_THUMBNAIL,
   MIME_XML,
   THUMBNAIL_SIZE,
-  sha256,
   THUMBNAIL_API,
   HEADER_AUTHORIZATION,
   HEADER_CONTENT_TYPE,
   THUMBNAIL_VARIABLE,
-  ThumbnailObject,
   HEADER_SOURCE_URL,
   HEADER_SOURCE_ASYNC,
   MIME_DEFAULT,
   HEADER_IF_UNMODIFIED_SINCE,
-  isBasicAuthHeader,
-  cut,
   HEADER_CONTENT_LENGTH,
   PART_NUMBER_VARIABLE,
   UPLOAD_ID_VARIABLE,
   HEADER_ETAG,
   HEADER_RETRY_AFTER,
   HEADER_DESTINATION,
+  appendQueryStringToUrl,
+  isBasicAuthHeader,
+  ThumbnailObject,
+  sha256,
+  key2Path,
+  escapeRegExp,
+  str2int,
+  cut,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -39,21 +40,6 @@ import { TransferTask } from "./transferQueue";
  * Client side canvas generated thumbnail blob content type.
  */
 const CLIENT_THUMBNAIL_TYPE = "image/png";
-
-function appendQueryStringToUrl(url: string, qs: string): string {
-  if (qs.startsWith("?") || qs.startsWith("&")) {
-    qs = qs.slice(1);
-  }
-  if (url.includes("?")) {
-    if (!url.endsWith("&")) {
-      url += "&";
-    }
-  } else {
-    url += "?";
-  }
-  url += qs;
-  return url;
-}
 
 function applyAuth(req: Request, auth: string): Request {
   if (auth) {
