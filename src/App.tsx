@@ -15,8 +15,8 @@ import {
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath
 } from "../lib/commons";
 import {
-  FileItem, isThumbnailPossible, ViewMode, SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, Config,
-  EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, ConfigContext, getFilePermission, isDirectory, SORT_VARIABLE
+  SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE,
+  FileItem, isThumbnailPossible, ViewMode, Config, ConfigContext, getFilePermission,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";

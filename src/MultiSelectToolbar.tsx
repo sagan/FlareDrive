@@ -19,6 +19,7 @@ export default function MultiSelectToolbar({
   onDuplicate,
   onMove,
   onDelete,
+  onSelectAll,
   onShare,
 }: {
   multiSelected: string[];
@@ -32,6 +33,7 @@ export default function MultiSelectToolbar({
   onDuplicate: () => void;
   onMove: () => void;
   onDelete: () => void;
+  onSelectAll: () => void;
   onShare: (key: string) => void;
 }) {
   const { auth, effectiveAuth, fullControl } = useConfig();
@@ -54,9 +56,12 @@ export default function MultiSelectToolbar({
           justifyContent: "space-evenly",
         }}
       >
-        <IconButton color="primary" onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
+        <span>
+          <IconButton color="primary" onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+          <span title={`${multiSelected.length} selected`}>{multiSelected.length}</span>
+        </span>
         {auth
           ? <IconButton color="primary" disabled={multiSelected.length !== 1} title="Share & Publish" onClick={() => {
             onShare(multiSelected[0])
@@ -103,6 +108,10 @@ export default function MultiSelectToolbar({
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>
+            <MenuItem onClick={() => {
+              setAnchorEl(null)
+              onSelectAll()
+            }}>Select all</MenuItem>
           </Menu>
         )}
       </Toolbar>

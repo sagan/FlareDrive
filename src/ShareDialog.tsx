@@ -31,8 +31,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
-  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, ShareObject, ShareRefererMode,
-  basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, THIRTEEN_MONTHS_DAYS, Permission
+  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS,
+  ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, Permission,
+  humanReadableSize,
 } from '../lib/commons';
 import { FileItem, generatePassword, getFilePermission, isDirectory, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
@@ -235,6 +236,20 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
                 </IconButton>
             }} />
           </Box>}
+          <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`Size`} fullWidth
+              value={`${otherProps.file.size} (${humanReadableSize(otherProps.file.size)})`} InputProps={{
+                endAdornment:
+                  <IconButton
+                    disabled={false}
+                    onClick={() => navigator.clipboard.writeText(`${otherProps.file.size}`)}
+                    title={`Copy`}
+                    edge="end"
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
+              }} />
+          </Box>
           {!!otherProps.file.checksums.md5 && <Box sx={{ mt: 1 }}>
             <TextField disabled label={`MD5`} fullWidth value={otherProps.file.checksums.md5} InputProps={{
               endAdornment:
@@ -310,7 +325,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
               setLinkTs(+new Date)
               setLinkTtl(parseInt(e.target.value))
             }}>
-              <option value={0}>Never expire</option>
+              <option value={0}>Never</option>
               {window.__DEV__ && <option value={60}>60 seconds</option>}
               <option value={300}>5 minutes</option>
               <option value={3600}>1 hour</option>
@@ -319,7 +334,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
               <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
             </NativeSelect>
           </FormControl>
-          <FormControlLabel label="Full Control (allow write)" control={
+          <FormControlLabel label="Full Control" title="Full control (allow writing)" control={
             <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
           />
         </Box>

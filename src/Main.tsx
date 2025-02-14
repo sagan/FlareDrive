@@ -366,6 +366,16 @@ export default function Main({
             isDir,
           }), isDir];
         }}
+        onSelectAll={() => {
+          const selects = [] as string[]
+          files.forEach(file => {
+            if (file.system) {
+              return
+            }
+            selects.push(file.key)
+          })
+          setMultiSelected(selects)
+        }}
         onShare={setSharing}
         onClose={() => setMultiSelected([])}
         onRename={async () => {
@@ -424,8 +434,8 @@ export default function Main({
             return;
           }
           const filenames = multiSelected.map((key) => key.replace(/\/$/, "").split("/").pop()).join("\n");
-          const confirmMessage = "Delete the following file(s) permanently?";
-          if (!window.confirm(`${confirmMessage}\n${filenames}`)) {
+          const confirmMessage = `Delete the following ${multiSelected.length} file(s) permanently?\n${filenames}`;
+          if (!window.confirm(confirmMessage)) {
             return;
           }
           for (const key of multiSelected) {

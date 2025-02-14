@@ -19,10 +19,11 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {
-  EXPIRES_VARIABLE, HEADER_CONTENT_LENGTH, SCOPE_VARIABLE, TOKEN_VARIABLE,
+  EXPIRES_VARIABLE, HEADER_CONTENT_LENGTH, HTML_VARIABLE, Permission, SCOPE_VARIABLE, TOKEN_VARIABLE,
+  appendQueryStringToUrl,
   extname, fileUrl, humanReadableSize, str2int
 } from '../lib/commons';
-import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, useConfig } from './commons';
+import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, getFilePermission, useConfig } from './commons';
 import { CopyButton } from './components';
 import { putFile } from './app/transfer';
 
@@ -65,9 +66,10 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   const [changed, setChanged] = useState(false)
   const [ts, setTs] = useState(+new Date);
   const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
+  const permission = useMemo(() => getFilePermission(filekey), [filekey]);
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
-    auth,
+    auth: auth && permission == Permission.RequireAuth ? auth : "",
     expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
@@ -116,6 +118,14 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     }
     close()
   }, [close, changed])
+
+  const viewLink = useMemo(() => {
+    let link = fileLink
+    if (filekey.endsWith(".md")) {
+      link = appendQueryStringToUrl(link, HTML_VARIABLE)
+    }
+    return link
+  }, [fileLink])
 
   const onClose = useCallback(() => {
     if (changed && !confirm("Exit? Your edit will be lost.")) {
@@ -178,7 +188,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
         [State.Saving]: "Saving...",
       })[state]}
       <PriorityHighIcon fontSize='small' titleAccess="Unsaved" sx={{ visibility: changed ? "visible" : "hidden" }} />
-      <Link href={fileLink}><span title={filekey}>{filekey}</span></Link>
+      <Link href={viewLink}><span title={filekey}>{filekey}</span></Link>
     </DialogTitle>
     <DialogContent onKeyDown={handleKeyDown}>
       <Typography className="single-line">

@@ -138,7 +138,7 @@ export default function UploadDrawer({
     } catch (e) {
       setError(e)
     }
-  }, [effectiveAuth])
+  }, [effectiveAuth, cwd])
 
   return (
     <>
