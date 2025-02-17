@@ -37,7 +37,8 @@ export const onRequest: FdCfFunc = async function (context) {
   }
 
   const [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  if (requireAuth(context) && authFailResponse) {
+  const needAuth = await requireAuth(context);
+  if (needAuth && authFailResponse) {
     return authFailResponse;
   }
 

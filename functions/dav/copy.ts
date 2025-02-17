@@ -35,7 +35,7 @@ export async function handleRequestCopy({ bucket, path, request, scope }: Reques
   if (destination === path || (src.httpMetadata?.contentType === MIME_DIR && destination.startsWith(path + "/"))) {
     return responseBadRequest();
   }
-  if (scope && scope !== destination && !destination.startsWith(scope + "/")) {
+  if (scope && !destination.startsWith(scope + "/")) {
     return responseForbidden();
   }
 

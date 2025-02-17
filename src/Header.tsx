@@ -6,9 +6,11 @@ import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
-import { Sort, ViewMode, sortLabels, useConfig } from "./commons";
+import { Permission } from "../lib/commons";
+import { Sort, ViewMode, getFilePermission, sortLabels, useConfig } from "./commons";
 
 export default function Header({
+  cwd,
   sort,
   search,
   onSignOut,
@@ -21,6 +23,7 @@ export default function Header({
   fetchFiles,
   onShare,
 }: {
+  cwd: string;
   sort: Sort;
   setSort: React.Dispatch<React.SetStateAction<Sort>>;
   setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
@@ -37,7 +40,7 @@ export default function Header({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
 
-  const permitWrite = !!auth || (!!effectiveAuth && fullControl);
+  const permitWrite = !!auth || (!!effectiveAuth && fullControl) || getFilePermission(cwd) == Permission.OpenRwDir;
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>

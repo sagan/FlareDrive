@@ -10,6 +10,7 @@
         window.__DEV__ = `%DEV%` === "true";
         window.__PUBLIC_PREFIX__ = processPrefix(`%PUBLIC_PREFIX%`);
         window.__PUBLIC_DIR_PREFIX__ = processPrefix(`%PUBLIC_DIR_PREFIX%`);
+        window.__PUBLIC_RWDIR_PREFIX__ = processPrefix(`%PUBLIC_RWDIR_PREFIX%`);
         document.title = window.__SITENAME__;
 
         function processPrefix(prefix) {

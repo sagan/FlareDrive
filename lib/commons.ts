@@ -81,7 +81,7 @@ export const PART_NUMBER_VARIABLE = "partNumber";
 
 /**
  * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND].
- * It includes PROPFIND method which is used to list dir.
+ * It includes PROPFIND method which is used by WebDAV protocol to list dir.
  */
 export const METHODS_READ_DIR = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
 
@@ -230,16 +230,21 @@ export enum Permission {
   /**
    * Request target file requires authentication for reading
    */
-  RequireAuth = 0,
+  RequireAuth,
   /**
    * Request target file is open (can be anonymously read)
    */
-  OpenFile = 1,
+  OpenFile,
   /**
    * Request target file belongs to an open dir,
    * the whole dir with all inside files can be anonymously read / listed)
    */
-  OpenDir = 2,
+  OpenDir,
+  /**
+   * Request target file belongs to an open dir,
+   * the whole dir with all inside files can be anonymously read / listed / writed / updated)
+   */
+  OpenRwDir,
 }
 
 export enum ShareRefererMode {

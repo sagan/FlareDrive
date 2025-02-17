@@ -11,8 +11,9 @@ import { PreventDefaultEventCb, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
   [Permission.RequireAuth]: "Private dir: this dir can only be accessed by authorized user",
-  [Permission.OpenDir]: "Public Dir Permalink: this dir can be publicly accessed (read)",
-  [Permission.OpenFile]: "Files inside this dir can be publicly accessed (read), but dir browsing is not available",
+  [Permission.OpenDir]: "Public Dir Permalink: this dir can be publicly accessed (readonly)",
+  [Permission.OpenRwDir]: "Public Dir Permalink: this dir can be publicly accessed with full control (read + write)",
+  [Permission.OpenFile]: "Files inside this dir can be publicly accessed (readonly), but dir browsing is not available",
 }
 
 export const Link: FC<LinkProps> = props => {
@@ -77,14 +78,15 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
           }}>{part}</Link>
         )
       })}
-      {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile) &&
-        <Button sx={{ minWidth: 0, padding: 0 }}
+      {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile ||
+        permission == Permission.OpenRwDir) && <Button sx={{ minWidth: 0, padding: 0 }}
           title={permissionDescriptions[permission]}
-          {...(permission === Permission.OpenDir ? {
+          {...((permission == Permission.OpenDir || permission == Permission.OpenRwDir) ? {
             href: cwdHref,
             onClick: PreventDefaultEventCb,
           } : {})}>
-          <PublicIcon color={permission == Permission.OpenDir ? "inherit" : "disabled"} />
+          <PublicIcon color={permission == Permission.OpenRwDir ? "error" :
+            permission == Permission.OpenDir ? "inherit" : "disabled"} />
         </Button>
       }
       {!auth && !!authSearchParams?.get(EXPIRES_VARIABLE) && <span>

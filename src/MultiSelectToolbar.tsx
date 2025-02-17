@@ -13,6 +13,7 @@ import { useConfig } from "./commons";
 
 export default function MultiSelectToolbar({
   multiSelected,
+  writable,
   onClose,
   getLink,
   onRename,
@@ -22,6 +23,7 @@ export default function MultiSelectToolbar({
   onSelectAll,
   onShare,
 }: {
+  writable: boolean;
   multiSelected: string[];
   onClose: () => void;
   /**
@@ -36,11 +38,10 @@ export default function MultiSelectToolbar({
   onSelectAll: () => void;
   onShare: (key: string) => void;
 }) {
-  const { auth, effectiveAuth, fullControl } = useConfig();
+  const { auth } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false]
-  const permitWrite = !!auth || (!!effectiveAuth && fullControl)
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -80,7 +81,7 @@ export default function MultiSelectToolbar({
         >
           <DownloadIcon />
         </IconButton>
-        <IconButton disabled={!permitWrite} color="primary" onClick={onDelete}>
+        <IconButton disabled={!writable} color="primary" onClick={onDelete}>
           <DeleteIcon />
         </IconButton>
         <IconButton
@@ -96,15 +97,15 @@ export default function MultiSelectToolbar({
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
           >
-            {multiSelected.length === 1 && <MenuItem disabled={!permitWrite} onClick={() => {
+            {multiSelected.length === 1 && <MenuItem disabled={!writable} onClick={() => {
               setAnchorEl(null)
               onRename()
             }}>Rename</MenuItem>}
-            {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!permitWrite} onClick={() => {
+            {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!writable} onClick={() => {
               setAnchorEl(null)
               onDuplicate()
             }}>Create Copy</MenuItem>}
-            <MenuItem disabled={!permitWrite} onClick={() => {
+            <MenuItem disabled={!writable} onClick={() => {
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>

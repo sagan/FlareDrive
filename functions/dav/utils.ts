@@ -35,14 +35,16 @@ export const ROOT_OBJECT = {
  * Note: empty key is not a valid "prefix" and will be silently ignored.
  * @param key
  * @param prefixesCsv comma-separated prefixes. If key has any of these prefix, return true.
+ * @param includeSelf bool. If set to true, "foo" path will be treated with has "foo" prefix.
+ * Otherwise only "foo/..." path will match with "foo" prefix.
  * @returns
  */
-function testKeyHasPrefix(key: string, prefixesCsv: string): boolean {
+function testKeyHasPrefix(key: string, prefixesCsv: string, includeSelf?: boolean): boolean {
   const prefixes = prefixesCsv
     .split(/\s*,\s*/)
     .map((prefix) => trimPrefixSuffix(prefix, "/"))
     .filter((prefix) => prefix);
-  if (prefixes.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
+  if (prefixes.some((prefix) => (includeSelf && key === prefix) || key.startsWith(prefix + "/"))) {
     return true;
   }
   return false;
@@ -53,16 +55,30 @@ function testKeyHasPrefix(key: string, prefixesCsv: string): boolean {
  * @param context
  * @returns
  */
-export function requireAuth(context: FdCfFuncContext): boolean {
+export async function requireAuth(context: FdCfFuncContext): Promise<boolean> {
   const { env, params } = context;
   const key = path2Key(((params.path as string[]) || []).join("/"));
   if (key) {
-    if (env.PUBLIC_PREFIX && testKeyHasPrefix(key, env.PUBLIC_PREFIX)) {
+    if (env.PUBLIC_PREFIX && testKeyHasPrefix(key, env.PUBLIC_PREFIX, true)) {
       if (METHODS_READ_FILE.includes(context.request.method)) {
-        return false;
+        const flagFile = await context.env.BUCKET.head(key + ".noaccess");
+        if (!flagFile) {
+          return false;
+        }
       }
-    } else if (env.PUBLIC_DIR_PREFIX && testKeyHasPrefix(key, env.PUBLIC_DIR_PREFIX)) {
+    } else if (env.PUBLIC_DIR_PREFIX && testKeyHasPrefix(key, env.PUBLIC_DIR_PREFIX, true)) {
       if (METHODS_READ_DIR.includes(context.request.method)) {
+        const flagFile = await context.env.BUCKET.head(key + ".noaccess");
+        if (!flagFile) {
+          return false;
+        }
+      }
+    } else if (
+      env.PUBLIC_RWDIR_PREFIX &&
+      testKeyHasPrefix(key, env.PUBLIC_RWDIR_PREFIX, METHODS_READ_DIR.includes(context.request.method))
+    ) {
+      const flagFile = await context.env.BUCKET.head(key + ".noaccess");
+      if (!flagFile) {
         return false;
       }
     }

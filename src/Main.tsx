@@ -21,6 +21,7 @@ import {
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT, FileItem, Sort, ViewMode, ViewProps, downloadFile,
+  getFilePermission,
   isDirectory, isImage, isTextual, useConfig
 } from "./commons";
 import FileGrid from "./FileGrid";
@@ -326,6 +327,8 @@ export default function Main({
     },
   }
 
+  const permitWrite = !!auth || fullControl || getFilePermission(cwd) == Permission.OpenRwDir
+
   return (
     <>
       {loading ? (
@@ -341,7 +344,7 @@ export default function Main({
           {viewElement}
         </DropZone>
       )}
-      {(!!auth || fullControl) && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
+      {permitWrite && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
       <UploadDrawer open={showUploadDrawer} permission={permission} setError={setError}
         onStartUpload={() => setShowProgressDialog(true)}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
@@ -350,8 +353,7 @@ export default function Main({
             setEditing(created)
           }
         }} />
-      <MultiSelectToolbar
-        multiSelected={multiSelected}
+      <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);
           const isDir = !!file && isDirectory(file)

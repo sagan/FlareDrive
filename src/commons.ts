@@ -171,6 +171,9 @@ export function getFilePermission(key: string): Permission {
   if (window.__PUBLIC_DIR_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
     return Permission.OpenDir;
   }
+  if (window.__PUBLIC_RWDIR_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
+    return Permission.OpenRwDir;
+  }
   return Permission.RequireAuth;
 }
 

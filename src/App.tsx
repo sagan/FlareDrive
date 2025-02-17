@@ -188,7 +188,7 @@ export default function App() {
         {globalStyles}
         <TransferQueueProvider>
           <Stack sx={{ height: "100%" }}>
-            <Header
+            <Header cwd={cwd}
               onSignOut={() => {
                 setAuth("");
                 fetchFiles();

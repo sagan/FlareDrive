@@ -53,6 +53,11 @@ export type FdCfFuncContext = EventContext<
      */
     PUBLIC_DIR_PREFIX?: string;
     /**
+     * Comma-separated "public writable dir" path prefixes.
+     * Path with any of these prefixes is allowed to read file / browser dir and write / update dir anonymously.
+     */
+    PUBLIC_RWDIR_PREFIX?: string;
+    /**
      * optional bucket public access url (without trailing "/"), e.g. "http://bucket-secret.example.com".
      * It is suggested to keep this url secret (choose a private & complex custom sub domain).
      * It's only used by functions/* and will not be leaked to front end.
@@ -243,7 +248,7 @@ export async function checkAuthFailure(
         key = trimPrefix(url.pathname, SHARE_ENDPOINT);
         key = trimPrefix(url.pathname, WEBDAV_ENDPOINT);
         key = path2Key(key);
-        if (key !== scope && !key.startsWith(scope + "/")) {
+        if (!key.startsWith(scope + "/")) {
           return false;
         }
       }

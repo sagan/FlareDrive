@@ -476,9 +476,9 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
             inputProps={{ id: 'share-ttl' }}
           >
             {status !== Status.Creating && <option value={-1}>Do not change</option>}
-            <option value={0}>Never expire</option>
+            <option value={0}>Never</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
-            {window.__DEV__ && <option value={60}>60 seconds</option>}
+            {window.__DEV__ && <option value={62}>60 seconds</option>}
             <option value={300}>5 minutes</option>
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
