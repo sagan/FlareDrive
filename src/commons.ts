@@ -162,19 +162,25 @@ export const ConfigContext = React.createContext<Config | null>(null);
 export const useConfig = () => React.useContext<Config | null>(ConfigContext)!;
 
 /**
- * Get permission of a dir / file key.
+ * Get permission of a dir / file key, along with matched prefix if any.
  */
-export function getFilePermission(key: string): Permission {
-  if (window.__PUBLIC_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
-    return Permission.OpenFile;
+export function getFilePermission(key: string): [permission: Permission, prefix: string] {
+  for (const prefix of window.__PUBLIC_PREFIX__) {
+    if (key === prefix || key.startsWith(prefix + "/")) {
+      return [Permission.OpenFile, prefix];
+    }
   }
-  if (window.__PUBLIC_DIR_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
-    return Permission.OpenDir;
+  for (const prefix of window.__PUBLIC_DIR_PREFIX__) {
+    if (key === prefix || key.startsWith(prefix + "/")) {
+      return [Permission.OpenDir, prefix];
+    }
   }
-  if (window.__PUBLIC_RWDIR_PREFIX__.some((prefix) => key === prefix || key.startsWith(prefix + "/"))) {
-    return Permission.OpenRwDir;
+  for (const prefix of window.__PUBLIC_RWDIR_PREFIX__) {
+    if (key === prefix || key.startsWith(prefix + "/")) {
+      return [Permission.OpenRwDir, prefix];
+    }
   }
-  return Permission.RequireAuth;
+  return [Permission.RequireAuth, ""];
 }
 
 export function dataUrltoBlob(dataUrl: string): Blob {

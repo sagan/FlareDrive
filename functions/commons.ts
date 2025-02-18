@@ -202,8 +202,7 @@ export function htmlResponse(html: string) {
 
 /**
  * If authentication fails, return a failure response.
- * Otherwise return null.
- * Besides, return auth's valid scope
+ * Otherwise return null, besides auth's valid scope, if any.
  * @param request
  * @param user
  * @param pass
@@ -227,7 +226,9 @@ export async function checkAuthFailure(
   let authed = false;
   let scope: string | undefined | null = undefined;
 
-  if (token) {
+  if (auth) {
+    authed = auth === expectedAuth;
+  } else if (token) {
     authed = await (async () => {
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
       const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
@@ -248,15 +249,13 @@ export async function checkAuthFailure(
         key = trimPrefix(url.pathname, SHARE_ENDPOINT);
         key = trimPrefix(url.pathname, WEBDAV_ENDPOINT);
         key = path2Key(key);
-        if (!key.startsWith(scope + "/")) {
+        if (!(METHODS_READ_DIR.includes(request.method) && key == scope) && !key.startsWith(scope + "/")) {
           return false;
         }
       }
       payload += searchParams.size ? "?" + searchParams.toString() : "";
       return await hmacSha256Verify(expectedAuth, token, payload);
     })();
-  } else {
-    authed = auth === expectedAuth;
   }
 
   if (!authed) {
@@ -410,11 +409,14 @@ export async function outputR2Object({
   html,
   cors,
 }: {
-  obj: R2ObjectBody;
+  obj: R2Object | R2ObjectBody;
   download?: boolean;
   html?: boolean;
   cors?: boolean;
 }): Promise<Response> {
+  if (!("body" in obj)) {
+    return responseNotModified();
+  }
   const headers = new Headers();
   writeR2ObjectHeaders(obj, headers);
   if (download) {

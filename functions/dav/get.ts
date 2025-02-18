@@ -1,8 +1,10 @@
 import {
   DOWNLOAD_VARIABLE,
   HTML_VARIABLE,
+  INDEX_FILE,
   KEY_PREFIX_THUMBNAIL,
   META_VARIABLE,
+  MIME_DIR,
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,
   THUMBNAIL_NO404_VARIABLE,
@@ -49,9 +51,6 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
       const contentType = searchParams.get(THUMBNAIL_CONTENT_TYPE);
       return fallbackIconResponse(path, contentType || obj?.httpMetadata?.contentType, color, no404);
     }
-    if (!("body" in thumbObj)) {
-      return responseNotModified();
-    }
     return outputR2Object({ obj: thumbObj });
   }
 
@@ -71,8 +70,14 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
   if (requestMeta) {
     return jsonResponse(obj);
   }
-  if (!("body" in obj)) {
-    return responseNotModified();
+  if (obj.httpMetadata?.contentType == MIME_DIR) {
+    const indexHtmlObj = await bucket.get(path + "/" + INDEX_FILE, {
+      onlyIf: request.headers,
+      range: request.headers,
+    });
+    if (indexHtmlObj) {
+      obj = indexHtmlObj;
+    }
   }
   return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), download: searchParams.has(DOWNLOAD_VARIABLE) });
 }

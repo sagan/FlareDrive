@@ -66,7 +66,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   const [changed, setChanged] = useState(false)
   const [ts, setTs] = useState(+new Date);
   const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
-  const permission = useMemo(() => getFilePermission(filekey), [filekey]);
+  const [permission] = useMemo(() => getFilePermission(filekey), [filekey]);
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
     auth: auth && permission == Permission.RequireAuth ? auth : "",
@@ -174,7 +174,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     }
   }
 
-  const permitWrite = !!auth || (!!effectiveAuth && fullControl) || getFilePermission(filekey) == Permission.OpenRwDir
+  const permitWrite = !!auth || (!!effectiveAuth && fullControl) || permission == Permission.OpenRwDir
   const roMode = !permitWrite || !!editorReadOnly || state !== State.Editing
 
   return <Dialog open={open} onClose={onCloseNoPrompt} fullScreen>

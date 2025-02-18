@@ -15,14 +15,13 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE,
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
-  trimPrefixSuffix, str2int, dirname, extname,
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, appendQueryStringToUrl
+  trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl,
 } from "../lib/commons";
 import {
-  EDIT_FILE_SIZE_LIMIT, FileItem, Sort, ViewMode, ViewProps, downloadFile,
-  getFilePermission,
-  isDirectory, isImage, isTextual, useConfig
+  EDIT_FILE_SIZE_LIMIT,
+  FileItem, Sort, ViewMode, ViewProps, downloadFile, isDirectory, isImage, isTextual, useConfig,
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
@@ -148,15 +147,16 @@ export default function Main({
   setError,
 }: {
   cwd: string;
-  setCwd: (cwd: string) => void;
   loading: boolean;
   search: string;
   permission: Permission;
   files: FileItem[];
   sharing: string;
+  multiSelected: string[];
+  setCwd: (cwd: string) => void;
   setSharing: React.Dispatch<React.SetStateAction<string>>;
   setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>,
-  multiSelected: string[];
+
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
@@ -327,7 +327,7 @@ export default function Main({
     },
   }
 
-  const permitWrite = !!auth || fullControl || getFilePermission(cwd) == Permission.OpenRwDir
+  const permitWrite = !!auth || fullControl || permission == Permission.OpenRwDir
 
   return (
     <>

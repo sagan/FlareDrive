@@ -1,6 +1,15 @@
 import pLimit from "p-limit";
 
-import { HEADER_DEPTH, HEADER_DESTINATION, HEADER_OVERWRITE, MIME_DIR, WEBDAV_ENDPOINT } from "../../lib/commons";
+import {
+  HEADER_DEPTH,
+  HEADER_DESTINATION,
+  HEADER_OVERWRITE,
+  MIME_DIR,
+  SYSFILES,
+  WEBDAV_ENDPOINT,
+  basename,
+  dirname,
+} from "../../lib/commons";
 import {
   listAll,
   responseBadRequest,
@@ -13,7 +22,7 @@ import {
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
-export async function handleRequestCopy({ bucket, path, request, scope }: RequestHandlerParams) {
+export async function handleRequestCopy({ bucket, path, request, scope, authed }: RequestHandlerParams) {
   const dontOverwrite = request.headers.get(HEADER_OVERWRITE) === "F";
   const destinationHeader = request.headers.get(HEADER_DESTINATION);
   if (destinationHeader === null) {
@@ -35,7 +44,7 @@ export async function handleRequestCopy({ bucket, path, request, scope }: Reques
   if (destination === path || (src.httpMetadata?.contentType === MIME_DIR && destination.startsWith(path + "/"))) {
     return responseBadRequest();
   }
-  if (scope && !destination.startsWith(scope + "/")) {
+  if ((scope && !destination.startsWith(scope + "/")) || (!authed && SYSFILES.includes(basename(destination)))) {
     return responseForbidden();
   }
 
@@ -45,8 +54,8 @@ export async function handleRequestCopy({ bucket, path, request, scope }: Reques
     return responsePreconditionsFailed();
   }
   // Make sure destination parent dir exists.
-  const destinationParent = destination.replace(/(\/|^)[^/]*$/, "");
-  const destinationParentDir = destinationParent === "" ? ROOT_OBJECT : await bucket.head(destinationParent);
+  const destinationParent = dirname(destination);
+  const destinationParentDir = destinationParent == "" ? ROOT_OBJECT : await bucket.head(destinationParent);
   if (destinationParentDir === null) {
     return responseConflict();
   }

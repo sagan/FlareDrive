@@ -12,6 +12,7 @@ import {
   cut,
   str2int,
   HTML_VARIABLE,
+  INDEX_FILE,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -168,7 +169,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
 
   const filekey = trimSuffix(data.key, "/") + (relpath ? "/" + relpath : "");
-  const obj = await env.BUCKET.get(filekey, {
+  let obj = await env.BUCKET.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
   });
@@ -176,15 +177,23 @@ export const onRequestGet: FdCfFunc = async function (context) {
     return responseNotFound();
   }
   if (obj.httpMetadata?.contentType === MIME_DIR) {
-    if (data.noindex && relpath) {
-      return responseNotFound();
-    }
     if (!url.pathname.endsWith("/")) {
       url.pathname += "/";
       return responseRedirect(url.href);
     }
+    const indexHtmlObj = await env.BUCKET.get(filekey + "/" + INDEX_FILE, {
+      onlyIf: request.headers,
+      range: request.headers,
+    });
+    if (indexHtmlObj) {
+      return outputR2Object({ obj: indexHtmlObj, cors: !!data.cors });
+    }
     if (data.noindex) {
-      return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
+      if (relpath) {
+        return responseNotFound();
+      } else {
+        return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
+      }
     }
     const files = await findChildren({
       bucket: context.env.BUCKET,
@@ -197,9 +206,6 @@ export const onRequestGet: FdCfFunc = async function (context) {
   } else if (url.pathname.endsWith("/")) {
     // target is file, but the request path ends with "/"
     return responseNotFound();
-  }
-  if (!("body" in obj)) {
-    return responseNotModified();
   }
   return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), cors: !!data.cors });
 };

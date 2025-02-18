@@ -8,7 +8,7 @@ import { handleRequestMkcol } from "./mkcol";
 import { handleRequestMove } from "./move";
 import { handleRequestPropfind } from "./propfind";
 import { handleRequestPut } from "./put";
-import { RequestHandlerParams, requireAuth } from "./utils";
+import { RequestHandlerParams, isOpenRequest } from "./utils";
 import { handleRequestPost } from "./post";
 
 async function handleRequestOptions() {
@@ -36,10 +36,13 @@ export const onRequest: FdCfFunc = async function (context) {
     return handleRequestOptions();
   }
 
-  const [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  const needAuth = await requireAuth(context);
-  if (needAuth && authFailResponse) {
-    return authFailResponse;
+  let [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+  if (authFailResponse) {
+    const [open, _scope] = await isOpenRequest(context);
+    if (!open) {
+      return authFailResponse;
+    }
+    scope = _scope;
   }
 
   const [bucket, path] = parseBucketPath(context);

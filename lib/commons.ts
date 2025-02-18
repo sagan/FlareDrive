@@ -79,22 +79,24 @@ export const UPLOAD_ID_VARIABLE = "uploadId";
  */
 export const PART_NUMBER_VARIABLE = "partNumber";
 
+// Note: don't use "as const" style declaration due to
+// https://stackoverflow.com/questions/56565528/typescript-const-assertions-how-to-use-array-prototype-includes .
 /**
  * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND].
  * It includes PROPFIND method which is used by WebDAV protocol to list dir.
  */
-export const METHODS_READ_DIR = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+export const METHODS_READ_DIR: readonly string[] = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
 
 /**
  * simple file "read" http methods: [GET, HEAD, OPTIONS].
  */
-export const METHODS_READ_FILE = ["GET", "HEAD", "OPTIONS"];
+export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
  * [token, ts, thumbnail*... (except thumbnailDigest)]
  */
-export const NOSIGN_VARIABLES: string[] = [
+export const NOSIGN_VARIABLES: readonly string[] = [
   HTML_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
@@ -160,7 +162,7 @@ export const MIME_TOML = "application/toml";
  * Textual mimes besides "txt/*": ["application/xml", "application/json", "application/x-sh",
  * "application/yaml", "application/toml"]
  */
-export const TXT_MIMES = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
+export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
 
 export const HEADER_AUTHED = "X-Authed";
 
@@ -222,6 +224,19 @@ export const HEADER_AUTH = "X-Auth";
  * async upload mode
  */
 export const HEADER_SOURCE_ASYNC = "X-Source-Async";
+
+export const INDEX_FILE = "index.html";
+
+/**
+ * Flag file that disables anonymous (unauthenticated) access of current public folder
+ */
+export const SYSFILE_NOACCESS = ".noaccess";
+
+/**
+ * System files which only admin can manage / write / update:
+ * [".noaccess"].
+ */
+export const SYSFILES: readonly string[] = [SYSFILE_NOACCESS];
 
 /**
  * Dir access permission.

@@ -9,6 +9,7 @@ import {
 } from "@mui/icons-material";
 import CreateIcon from '@mui/icons-material/Create';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import AddIcon from '@mui/icons-material/Add';
 import { Permission } from "../lib/commons";
 import { putFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
@@ -74,6 +75,11 @@ export default function UploadDrawer({
   setOpen: (open: boolean) => void;
   cwd: string;
   onStartUpload: () => void,
+  /**
+   * Hook after file(s) uploaded.
+   * @param created If provided, caller should open this new created file
+   * @returns
+   */
   onUpload: (created?: string) => void;
   setError: React.Dispatch<React.SetStateAction<any>>;
 }) {
@@ -122,7 +128,7 @@ export default function UploadDrawer({
     setUploadFromUrlOpen(true);
   }, [])
 
-  const onCreate = useCallback(async () => {
+  const onCreate = useCallback(async (edit?: boolean) => {
     setOpen(false)
     const filename = prompt("Enter new text file name: ")
     if (!filename) {
@@ -134,11 +140,11 @@ export default function UploadDrawer({
     const key = (cwd ? cwd + "/" : "") + filename
     try {
       await putFile({ key, auth: effectiveAuth, create: true })
-      onUpload(key)
+      onUpload(edit ? key : undefined)
     } catch (e) {
       setError(e)
     }
-  }, [effectiveAuth, cwd])
+  }, [effectiveAuth, cwd, onUpload])
 
   return (
     <>
@@ -204,9 +210,16 @@ export default function UploadDrawer({
             </Grid>}
             <Grid item xs={3}>
               <IconCaptionButton
+                icon={<AddIcon fontSize="large" />}
+                caption="New file"
+                onClick={() => onCreate()}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
                 icon={<CreateIcon fontSize="large" />}
                 caption="Create text"
-                onClick={onCreate}
+                onClick={() => onCreate(true)}
               />
             </Grid>
           </Grid>

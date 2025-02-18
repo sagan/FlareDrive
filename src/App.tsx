@@ -111,7 +111,7 @@ export default function App() {
     navigate(pathname);
   }
 
-  const permission = useMemo(() => getFilePermission(cwd), [cwd])
+  const permission = useMemo(() => getFilePermission(cwd)[0], [cwd])
 
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
@@ -188,7 +188,7 @@ export default function App() {
         {globalStyles}
         <TransferQueueProvider>
           <Stack sx={{ height: "100%" }}>
-            <Header cwd={cwd}
+            <Header permission={permission}
               onSignOut={() => {
                 setAuth("");
                 fetchFiles();
@@ -198,13 +198,12 @@ export default function App() {
               sort={sort} setSort={setSort}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
-              onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd) ? () => {
-                setSharing(multiSelected[0] || cwd)
-              } : undefined}
+              onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
+                ? () => setSharing(multiSelected[0] || cwd) : undefined}
             />
             <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />
             {
-              cwd === SHARES_FOLDER_KEY
+              cwd == SHARES_FOLDER_KEY
                 ? <ShareManager setError={setError} fetchFiles={fetchFiles}
                   search={search} shares={shares} loading={loading} />
                 : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
