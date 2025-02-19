@@ -196,9 +196,9 @@ export default function Main({
     [files, search, sort]
   );
 
-  const handleMultiSelect = useCallback((key: string) => {
+  const handleMultiSelect = useCallback((key: string, fromContextMenu = false) => {
     setMultiSelected((multiSelected) => {
-      if (multiSelected.length == 0) {
+      if (multiSelected.length == 0 || multiSelected.length == 1 && fromContextMenu) {
         return [key];
       } else if (multiSelected.includes(key)) {
         const newSelected = multiSelected.filter((k) => k !== key);
@@ -227,7 +227,7 @@ export default function Main({
       slides.push({
         src: fileUrl({
           key: file.key,
-          auth: auth && permission == Permission.RequireAuth ? auth : "",
+          auth,
           expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
           scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
           token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
@@ -268,7 +268,7 @@ export default function Main({
     } else {
       downloadFile(fileUrl({
         key: file.key,
-        auth: auth && permission == Permission.RequireAuth ? auth : "",
+        auth,
         expires,
       }));
     }
@@ -278,7 +278,7 @@ export default function Main({
     if (file.system) {
       return
     }
-    handleMultiSelect(file.key);
+    handleMultiSelect(file.key, true);
   }, [])
 
   //  Record<string, SlideCallback>
@@ -339,6 +339,7 @@ export default function Main({
         <DropZone
           onDrop={async (files) => {
             uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
+            setShowProgressDialog(true)
           }}
         >
           {viewElement}
@@ -359,7 +360,7 @@ export default function Main({
           const isDir = !!file && isDirectory(file)
           return [fileUrl({
             key,
-            auth: auth && permission == Permission.RequireAuth ? auth : "",
+            auth,
             origin: location.origin,
             expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
             scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),

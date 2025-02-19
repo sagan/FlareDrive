@@ -45,7 +45,7 @@ export default function FileGrid({
             {(file.customMetadata?.thumbnail ? (
               <img src={fileUrl({
                 key: file.key,
-                auth: auth,
+                auth,
                 thumbnail: auth && file.customMetadata?.thumbnail ? file.customMetadata.thumbnail : true,
                 thumbnailContentType: file.httpMetadata.contentType,
                 expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),

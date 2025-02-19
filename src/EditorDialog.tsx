@@ -69,7 +69,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   const [permission] = useMemo(() => getFilePermission(filekey), [filekey]);
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
-    auth: auth && permission == Permission.RequireAuth ? auth : "",
+    auth,
     expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),

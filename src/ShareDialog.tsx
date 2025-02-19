@@ -82,7 +82,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
   const targetIsDir = shareObject.key.endsWith("/")
   const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({
     key: shareObject.key,
-    auth: permission === Permission.RequireAuth ? auth : undefined,
+    auth,
     expires
   })
   const targetParentLink = dirUrlPath(dirname(shareObject.key))
@@ -333,6 +333,9 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
             <option value={86400 * 7}>7 days</option>
+            <option value={86400 * 31}>31 days</option>
+            <option value={86400 * 90}>90 days</option>
+            <option value={86400 * 180}>180 days</option>
             <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
           </NativeSelect>
         </FormControl>
@@ -476,7 +479,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
             onChange={e => setTtl(parseInt(e.target.value))}
             inputProps={{ id: 'share-ttl' }}
           >
-            {status !== Status.Creating && <option value={-1}>Do not change</option>}
+            {status !== Status.Creating && <option value={-1}>No change</option>}
             <option value={0}>Never</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
             {window.__DEV__ && <option value={62}>60 seconds</option>}
@@ -484,6 +487,9 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
             <option value={86400 * 7}>7 days</option>
+            <option value={86400 * 31}>31 days</option>
+            <option value={86400 * 90}>90 days</option>
+            <option value={86400 * 180}>180 days</option>
             <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
           </NativeSelect>
         </FormControl>

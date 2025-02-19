@@ -130,7 +130,7 @@ export default function UploadDrawer({
 
   const onCreate = useCallback(async (edit?: boolean) => {
     setOpen(false)
-    const filename = prompt("Enter new text file name: ")
+    const filename = prompt("Enter new file name: ")
     if (!filename) {
       return
     }

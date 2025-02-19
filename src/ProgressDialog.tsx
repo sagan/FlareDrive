@@ -36,16 +36,22 @@ export default function ProgressDialog({
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", p: 2 }}>
-        <span>Uploads progress</span>
         <span>
-          <IconButton disabled={!hasDoneTask} color="secondary" title="Delete done uploads" onClick={() => {
+          <span>Uploads progress</span>
+          {hasDoneTask && !hasFailedTask && !hasIncomingTask && <IconButton title="All uploads tasks done">
+            <CheckCircleOutlineIcon color="success" />
+          </IconButton>}
+        </span>
+        <span>
+          <IconButton disabled={!hasDoneTask} color="secondary" title="Delete done or canceled uploads" onClick={() => {
             setTasks(tasks => tasks.filter(t => t.status != "completed" && t.status != "canceled"))
           }}><DeleteIcon /></IconButton>
-          <IconButton disabled={!hasFailedTask} color="secondary" title="Re-try failed uploads" onClick={() => {
-            setTasks(tasks => tasks.map(task => task.status == "failed" || task.status == "canceled" ?
-              { ...task, status: "pending" } as TransferTask : task))
-          }}><ReplayIcon /></IconButton>
-          <IconButton disabled={!hasIncomingTask} color="secondary" title="Cancel all uploads"
+          <IconButton disabled={!hasFailedTask} color="secondary" title="Re-try canceled or failed uploads"
+            onClick={() => {
+              setTasks(tasks => tasks.map(task => task.status == "failed" || task.status == "canceled" ?
+                { ...task, status: "pending" } as TransferTask : task))
+            }}><ReplayIcon /></IconButton>
+          <IconButton disabled={!hasIncomingTask} color="secondary" title="Cancel all incoming or pending uploads"
             onClick={() => cancelTasks(true)}>
             <CancelIcon />
           </IconButton>
