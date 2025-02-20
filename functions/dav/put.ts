@@ -18,6 +18,7 @@ import {
   mimeType,
   sha256,
   str2int,
+  dirname,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -100,7 +101,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
 
   // Check if the parent directory exists
   if (!path.startsWith(KEY_PREFIX_PRIVATE)) {
-    const parentPath = path.replace(/(\/|^)[^/]*$/, "");
+    const parentPath = dirname(path);
     const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
     if (parentDir === null) {
       return responseConflict();

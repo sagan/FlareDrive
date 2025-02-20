@@ -327,7 +327,7 @@ export default function Main({
     },
   }
 
-  const permitWrite = !!auth || fullControl || permission == Permission.OpenRwDir
+  const permitWrite = !!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir)
 
   return (
     <>

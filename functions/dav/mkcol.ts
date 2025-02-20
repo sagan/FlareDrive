@@ -1,4 +1,4 @@
-import { MIME_DIR } from "../../lib/commons";
+import { MIME_DIR, dirname } from "../../lib/commons";
 import { responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
@@ -10,7 +10,7 @@ export async function handleRequestMkcol({ bucket, path }: RequestHandlerParams)
   }
 
   // Check if the parent directory exists
-  const parentPath = path.replace(/(\/|^)[^/]*$/, "");
+  const parentPath = dirname(path);
   const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
   if (parentDir === null) {
     return responseConflict();

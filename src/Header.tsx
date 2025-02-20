@@ -40,7 +40,7 @@ export default function Header({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
 
-  const permitWrite = !!auth || (!!effectiveAuth && fullControl) || permission == Permission.OpenRwDir;
+  const permitWrite = !!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir)
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>

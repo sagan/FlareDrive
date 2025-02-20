@@ -37,7 +37,8 @@ export function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PathBreadcrumb({ permission, path, setCwd }: {
+export function PathBreadcrumb({ prefix, permission, path, setCwd }: {
+  prefix: string;
   permission: Permission;
   path: string;
   setCwd: (newCwd: string) => void
@@ -50,7 +51,7 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
   const scope = authSearchParams?.get(SCOPE_VARIABLE) || ""
 
   return (
-    <Breadcrumbs separator="›" sx={{ padding: 1 }}>
+    <Breadcrumbs className="breadcrumbs" separator="›" sx={{ padding: 1 }}>
       <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
         e.preventDefault();
         setCwd("");
@@ -59,7 +60,7 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
       </Button>
       {parts.map((part, index) => {
         const key = parts.slice(0, index + 1).join("/")
-        const sx = (scope === key || scope === key + "/") ? { color: "red", fontWeight: "bold" } : undefined
+        const className = (scope === key || scope === key + "/") ? "shared" : key == prefix ? "public" : ""
         const url = fileUrl({
           key,
           isDir: true,
@@ -70,9 +71,9 @@ export function PathBreadcrumb({ permission, path, setCwd }: {
           fullControl: auth ? undefined : fullControl,
         })
         return index === parts.length - 1 ? (
-          <Typography key={index} color="text.primary" sx={sx}>{part}</Typography>
+          <Typography className={className} key={index} color="text.primary" >{part}</Typography>
         ) : (
-          <Link key={index} href={url} sx={sx} onClick={e => {
+          <Link className={className} key={index} href={url} onClick={e => {
             e.preventDefault()
             setCwd(key)
           }}>{part}</Link>

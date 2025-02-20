@@ -174,7 +174,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     }
   }
 
-  const permitWrite = !!auth || (!!effectiveAuth && fullControl) || permission == Permission.OpenRwDir
+  const permitWrite = !!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir)
   const roMode = !permitWrite || !!editorReadOnly || state !== State.Editing
 
   return <Dialog open={open} onClose={onCloseNoPrompt} fullScreen>

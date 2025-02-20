@@ -586,6 +586,7 @@ export async function uploadFromUrl({
       [HEADER_SOURCE_URL]: sourceUrl,
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
       ...(contentType ? { [HEADER_CONTENT_TYPE]: contentType } : {}),
+      ...(asyncMode ? { [HEADER_SOURCE_ASYNC]: "1" } : {}),
     },
     signal,
   });
@@ -603,7 +604,6 @@ export async function uploadFromUrl({
     uploaded: new Date((obj as any).uploaded),
     httpMetadata: {
       contentType: obj.httpMetadata?.contentType || "",
-      ...(asyncMode ? { [HEADER_SOURCE_ASYNC]: "1" } : {}),
     },
     customMetadata: obj.customMetadata,
     checksums: {},

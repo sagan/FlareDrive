@@ -111,7 +111,7 @@ export default function App() {
     navigate(pathname);
   }
 
-  const permission = useMemo(() => getFilePermission(cwd)[0], [cwd])
+  const [permission, prefix] = useMemo(() => getFilePermission(cwd), [cwd])
 
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
@@ -201,7 +201,7 @@ export default function App() {
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
                 ? () => setSharing(multiSelected[0] || cwd) : undefined}
             />
-            <PathBreadcrumb permission={permission} path={cwd} setCwd={setCwd} />
+            <PathBreadcrumb prefix={prefix} permission={permission} path={cwd} setCwd={setCwd} />
             {
               cwd == SHARES_FOLDER_KEY
                 ? <ShareManager setError={setError} fetchFiles={fetchFiles}

@@ -11,8 +11,8 @@ import {
   THUMBNAIL_NOFALLBACK,
   THUMBNAIL_VARIABLE,
   str2int,
-} from "@/lib/commons";
-import { jsonResponse, outputR2Object, responseNotFound, responseNotModified, writeR2ObjectHeaders } from "../commons";
+} from "../../lib/commons";
+import { jsonResponse, outputR2Object, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 import { fallbackIconResponse } from "../icons";
 

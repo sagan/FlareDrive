@@ -54,3 +54,15 @@
   overflow: hidden;
   text-overflow: clip;
 }
+
+.breadcrumbs .shared {
+  text-decoration-color: red;
+  color: red;
+  font-weight: bold;
+}
+
+.breadcrumbs .public {
+  text-decoration-color: navy;
+  color: navy;
+  font-weight: bold;
+}
