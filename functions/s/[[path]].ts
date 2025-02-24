@@ -13,6 +13,7 @@ import {
   str2int,
   HTML_VARIABLE,
   INDEX_FILE,
+  encodeHex,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -226,6 +227,7 @@ function noindexPage(sitename: string | undefined, desc: string, dir: string): s
   <head>
     <meta charset="utf-8">
     <title>${encodeHtml(title)}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="google" value="notranslate">
     <link rel="icon" href="/favicon.png" />
   </head>
@@ -254,13 +256,14 @@ function indexPage(
 <head>
 <meta charset="utf-8">
 <title>${encodeHtml(title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark">
 <meta name="google" value="notranslate">
 <link rel="icon" href="/favicon.png" />
 
 <script>
 function addRow(name, url, isdir,
-    size, size_string, date_modified, date_modified_string) {
+    size, size_string, date_modified, date_modified_string, md5) {
   if (name == "." || name == "..")
     return;
 
@@ -293,6 +296,7 @@ function addRow(name, url, isdir,
   row.appendChild(file_cell);
   row.appendChild(createCell(size, size_string));
   row.appendChild(createCell(date_modified, date_modified_string));
+  row.appendChild(createCell(md5, md5));
 
   tbody.appendChild(row);
 }
@@ -442,6 +446,12 @@ window.addEventListener('DOMContentLoaded', onLoad);
     margin-bottom: 10px;
     padding-bottom: 10px;
   }
+
+  @media (scripting: none) {
+    body > *:not(noscript) {
+      display: none !important;
+    }
+  }
 </style>
 
 <title id="title"></title>
@@ -449,7 +459,7 @@ window.addEventListener('DOMContentLoaded', onLoad);
 </head>
 
 <body>
-
+<noscript>You need to enable JavaScript to display this page.</noscript>
 <h1 id="header">Index of LOCATION</h1>
 ${desc ? `<div>${desc}</div>` : ""}
 <div id="parentDirLinkBox" style="display:none">
@@ -467,6 +477,9 @@ ${desc ? `<div>${desc}</div>` : ""}
       </th>
       <th id="dateColumnHeader" class="detailsColumn" tabindex=0 role="button">
         Date Modified
+      </th>
+      <th id="md5ColumnHeader" class="detailsColumn" tabindex=0 role="button">
+        MD5
       </th>
     </tr>
   </thead>
@@ -501,7 +514,9 @@ ${items
     const isDir = item.httpMetadata?.contentType == MIME_DIR;
     return `addRow(${str(name)}, ${str(name)}, ${isDir}, ${item.size}, humanFileSize(${
       item.size
-    }), ${+item.uploaded}, ${str(item.uploaded.toISOString())});`;
+    }), ${+item.uploaded}, ${str(item.uploaded.toISOString())}, ${str(
+      item.httpMetadata?.contentType != MIME_DIR ? encodeHex(item.checksums?.md5) : ""
+    )});`;
   })
   .join("\n")}
 </script>

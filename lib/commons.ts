@@ -473,7 +473,10 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
   }
 }
 
-export function encodeHex(input: Uint8Array | ArrayBuffer): string {
+export function encodeHex(input?: Uint8Array | ArrayBuffer): string {
+  if (!input) {
+    return "";
+  }
   let result = "";
   const array = "buffer" in input ? input : new Uint8Array(input);
   for (const value of array) {

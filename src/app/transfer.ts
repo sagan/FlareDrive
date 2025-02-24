@@ -255,7 +255,7 @@ export async function multipartUpload(
   }
 ) {
   const headers = options?.headers || {};
-  headers[HEADER_CONTENT_TYPE] = file.type;
+  headers[HEADER_CONTENT_TYPE] = file.type || mime.getType(file.name) || MIME_DEFAULT;
 
   const uploadRequest = applyAuth(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
@@ -488,7 +488,8 @@ export async function processTransferTask({
   }
 
   const headers: Record<string, string> = {
-    [HEADER_CONTENT_TYPE]: file.type,
+    // file.type is provided by browser, which doesn't recognize some files, like .md (markdown).
+    [HEADER_CONTENT_TYPE]: file.type || mime.getType(file.name) || MIME_DEFAULT,
     ...(thumbnailDigest ? { [HEADER_FD_THUMBNAIL]: thumbnailDigest } : {}),
   };
   if (file.size >= SIZE_LIMIT) {
