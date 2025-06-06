@@ -19,6 +19,7 @@ import {
   sha256,
   str2int,
   dirname,
+  HEADER_ETAG,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -48,8 +49,12 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   const partNumber = parseInt(partNumberStr);
   const uploadedPart = await multipartUpload.uploadPart(partNumber, request.body);
 
-  return new Response(null, {
-    headers: { [HEADER_CONTENT_TYPE]: "application/json", etag: uploadedPart.etag },
+  // 2025-06 test: CF ignore application-set ETag header, so put result in response body
+  return new Response(JSON.stringify(uploadedPart), {
+    headers: {
+      [HEADER_CONTENT_TYPE]: "application/json",
+      // [HEADER_ETAG]: uploadedPart.etag,
+    },
   });
 }
 

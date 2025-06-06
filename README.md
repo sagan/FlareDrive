@@ -11,6 +11,7 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - [Usage](#usage)
   - [Installation](#installation)
   - [WebDAV endpoint](#webdav-endpoint)
+- [Development](#development)
 - [Acknowledgments](#acknowledgments)
 
 # Features
@@ -80,6 +81,21 @@ user = root # WEBDAV_USERNAME
 pass = obscured_password # rclone obscure <WEBDAV_PASSWORD>
 encoding = None
 ```
+
+# Development
+
+Prepare development environment:
+
+1. Run `npm i`.
+2. Copy `.env.sample` to `.env.local` and modify it to set environment variables.
+3. Copy `wrangler.sample.toml` to `wrangler.toml`.
+
+Run this project locally:
+
+1. Run `npm run cfdev` in terminal to start the wrangler CLI backend at http://127.0.0.1:8788.
+2. Run `npm start` in another terminal to start [Vite](https://github.com/vitejs/vite) dev server at `http://localhost:5173/`. It will proxy API requests and forward them to wrangler backend automatically.
+
+Open `http://localhost:5173/` in browser and it's done.
 
 # Acknowledgments
 

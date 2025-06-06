@@ -192,7 +192,7 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
   return thumbnailBlob;
 }
 
-export const SIZE_LIMIT = 100 * 1000 * 1000; // 100MB
+export const SIZE_LIMIT = 100 * 1024 * 1024; // 100MiB
 
 function xhrFetch(
   url: string,
@@ -330,7 +330,8 @@ export async function multipartUpload(
         }
       };
       const res = await [1, 2].reduce(retryReducer, uploadPart());
-      return { partNumber: i, etag: res.headers.get(HEADER_ETAG)! };
+      const data: R2UploadedPart = await res.json();
+      return { partNumber: i, etag: data.etag };
     });
   });
   const uploadedParts = await Promise.all(promises);
