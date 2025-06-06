@@ -36,8 +36,11 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
-    "cfdev": "wrangler pages dev"
+    "build:frontend": "vite build",
+    "build:worker": "wrangler pages functions build --outdir=./dist_worker",
+    "build": "npm run build:frontend && npm run build:worker",
+    "cfdev": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "eslintConfig": {
     "extends": [
@@ -68,6 +71,6 @@
     "@types/sanitize-html": "^2.13.0",
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^6.0.2",
-    "wrangler": "^3.92.0"
+    "wrangler": "^4.19.1"
   }
 }

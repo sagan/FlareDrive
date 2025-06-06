@@ -1,0 +1,33 @@
+compatibility_date = "2025-04-01"
+name = "flaredrive"
+
+# wrangler pages functions build --outdir=./dist_worker
+main = "./dist_worker/index.js"
+
+# Default (production) environment
+# binding resources ids should be set via CloudFlare Web UI
+r2_buckets = [{ binding = "BUCKET", bucket_name = "" }]
+kv_namespaces = [{ binding = "KV", id = "" }]
+d1_databases = [
+  { binding = "DB", database_name = "flaredrive", database_id = "" },
+]
+
+[assets]
+
+# vite build
+directory = "./dist/"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+
+# wrangler dev -e=dev
+[env.dev]
+
+# .dev.vars.dev
+vars = {}
+
+r2_buckets = [{ binding = "BUCKET", bucket_name = "bucket" }]
+kv_namespaces = [{ binding = "KV", id = "kv" }]
+d1_databases = [
+  { binding = "DB", database_name = "flaredrive", database_id = "db" },
+]

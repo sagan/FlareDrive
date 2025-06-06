@@ -22,9 +22,11 @@ yarn-error.log*
 .wrangler
 /.vscode
 /.local
-/wrangler.toml
 /.dev.vars
+/.dev.vars.*
 
 # theses assets are dynamically created during build
 /public/manifest.json
 /public/favicon*
+
+/dist_worker
