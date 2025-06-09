@@ -36,11 +36,13 @@
   },
   "scripts": {
     "start": "vite",
-    "build:frontend": "vite build",
+    "build": "vite build",
     "build:worker": "wrangler pages functions build --outdir=./dist_worker",
-    "build": "npm run build:frontend && npm run build:worker",
+    "build:all": "npm run build && npm run build:worker",
     "cfdev": "wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "cfpagesdev": "wrangler pages dev",
+    "cfversion": "wrangler versions upload",
+    "deploy": "wrangler deploy"
   },
   "eslintConfig": {
     "extends": [

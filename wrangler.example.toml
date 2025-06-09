@@ -1,0 +1,29 @@
+compatibility_date = "2025-04-01"
+name = "flaredrive"
+# Run "npm run build:worker" to generate Worker dist file
+main = "./dist_worker/index.js"
+keep_vars = true
+
+# This file "wrangler.example.toml" is intended to be used in local development env.
+# 1. Copy this file to wrangler.toml.
+# 2. Run "npm run build:worker" to build worker.
+# 3. Run "npm run cfdev" to start wrangler dev (backend) server.
+# Each time the backend source files (functions/*, lib/*) changed, run "npm run build:worker" again.
+
+# In production env, it dynamically generate wrangler.json from wrangler.example.json at build time
+# Fill the bindings info from (build time) "Variables and secrets".
+#r2_buckets = [{ binding = "BUCKET", bucket_name = "" }]
+#kv_namespaces = [{ binding = "KV", id = "" }]
+#d1_databases = [{ binding = "DB", database_name = "flaredrive", database_id = "" }]
+
+r2_buckets = [{ binding = "BUCKET", bucket_name = "bucket" }]
+kv_namespaces = [{ binding = "KV", id = "kv" }]
+d1_databases = [
+  { binding = "DB", database_name = "flaredrive", database_id = "db" },
+]
+
+[assets]
+# vite build
+directory = "./dist/"
+not_found_handling = "single-page-application"
+binding = "ASSETS"

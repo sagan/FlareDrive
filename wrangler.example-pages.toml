@@ -1,0 +1,35 @@
+# To use this file:
+# Rename this file to wrangler.toml.
+# If using wrangler.toml, you must treat your wrangler.toml as the source of truth for
+# CloudFlare Pages project configuration when deploying to CloudFlare.
+# Any misconfiguration (e.g. a R2 / KV binding resource doesn't exist in CloudFlare account)
+# will make CloudFlare pages throw a building error:
+#   "Error: Failed to publish your Function. Got error: Unknown internal error occurred."
+# Start local dev environment:
+#   npm i
+#   npm run build
+#   npm run cfpagesdev # Start back end (wrangle) dev server
+#   npm start # Start front end (vite) dev server.
+# It's using Wrangler: https://developers.cloudflare.com/workers/wrangler/
+# wrangler.toml: https://developers.cloudflare.com/workers/wrangler/configuration/
+compatibility_date = "2024-12-03"
+name = "flaredrive-pages"
+pages_build_output_dir = "dist"
+
+
+# Use ".env.local" file to setup env variables.
+# It will copy ".env.local" to ".dev.vars" file when vite starts, as wrangler only recognize the latter.
+# See https://github.com/cloudflare/workers-sdk/issues/3106 .
+[vars]
+#SITENAME = "MyDrive"
+
+# Change bucket_name to the real one
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "bucket"
+
+# Bind cloudflare KV
+# https://developers.cloudflare.com/kv/api/read-key-value-pairs/
+[[kv_namespaces]]
+binding = "KV"
+id = "kv_id"

@@ -23,11 +23,32 @@ const backend = {
   secure: false,
 };
 
+// Generate wrangler.json config file (deployed as Workers)
+async function generateWranglerConfig(env) {
+  const templateFile = path.join(__dirname, "wrangler.example.json");
+  const file = path.join(__dirname, "wrangler.json");
+
+  const config = JSON.parse(await fs.readFile(templateFile, { encoding: "utf8" }));
+  if (!env.R2_BUCKET_NAME) {
+    throw new Error("R2_BUCKET_NAME build env must be configured");
+  }
+  config.r2_buckets = [{ binding: "BUCKET", bucket_name: env.R2_BUCKET_NAME }];
+  if (env.KV_ID) {
+    config.kv_namespaces = [{ binding: "KV", id: env.KV_ID }];
+  }
+  if (env.DATABASE_ID) {
+    config.d1_databases = [{ binding: "DB", database_name: "flaredrive", database_id: env.DATABASE_ID }];
+  }
+  const contents = JSON.stringify(config, null, 2);
+  console.log("generate wrangler.json", contents);
+  await fs.writeFile(file, contents);
+}
+
 /**
  * Generate favicon.ico, manifest.json and other files dynamically.
  */
 async function generateAssets(variables) {
-  const manifest = JSON.parse(await fs.readFile(__dirname + "/assets/manifest.json", { encoding: "utf8" }));
+  const manifest = JSON.parse(await fs.readFile(path.join(__dirname, "assets/manifest.json"), { encoding: "utf8" }));
 
   let source = "";
   if (!process.env.FAVICON_URL) {
@@ -55,11 +76,29 @@ async function generateAssets(variables) {
   }
   manifest.name = variables.SITENAME;
   manifest.short_name = variables.SHORT_SITENAME || variables.SITENAME;
-  fs.writeFile(path.join(__dirname, "public/manifest.json"), JSON.stringify(manifest, null, 2));
+  await fs.writeFile(path.join(__dirname, "public/manifest.json"), JSON.stringify(manifest, null, 2));
 }
 
 export default defineConfig(async ({ command, mode }) => {
-  const env = loadEnv(mode, __dirname, "");
+  const env = { ...process.env, ...loadEnv(mode, __dirname, "") };
+
+  // CloudFlare Pages runtime has CF_PAGES=1 set.
+  // Dynamic wrangler config file generation is only used in CloudFlare Workers mode.
+  if (!env.CF_PAGES) {
+    let wranglerConfigExists = false;
+    try {
+      await Promise.any([
+        await fs.access(path.join(__dirname, "wrangler.json")),
+        await fs.access(path.join(__dirname, "wrangler.jsonc")),
+        await fs.access(path.join(__dirname, "wrangler.toml")),
+      ]);
+      wranglerConfigExists = true;
+    } catch (e) {}
+    if (!wranglerConfigExists) {
+      await generateWranglerConfig(env);
+    }
+  }
+
   const publicVariables = Object.keys(DefaultPublicVariables).reduce((v, key) => {
     if (env[key] !== undefined) {
       v[key] = env[key];

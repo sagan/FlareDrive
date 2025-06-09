@@ -24,6 +24,9 @@ yarn-error.log*
 /.local
 /.dev.vars
 /.dev.vars.*
+/wrangler.toml
+/wrangler.json
+/wrangler.jsonc
 
 # theses assets are dynamically created during build
 /public/manifest.json
