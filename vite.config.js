@@ -18,7 +18,9 @@ const DefaultPublicVariables = {
 
 // `npm run cfdev`
 const backend = {
-  target: "http://127.0.0.1:8788",
+  // Wrangler 3.38.0+ changed default port from 8788 to 8787.
+  // https://github.com/cloudflare/workers-sdk/issues/5534
+  target: "http://127.0.0.1:8787",
   changeOrigin: true,
   secure: false,
 };
@@ -88,9 +90,9 @@ export default defineConfig(async ({ command, mode }) => {
     let wranglerConfigExists = false;
     try {
       await Promise.any([
-        await fs.access(path.join(__dirname, "wrangler.json")),
-        await fs.access(path.join(__dirname, "wrangler.jsonc")),
-        await fs.access(path.join(__dirname, "wrangler.toml")),
+        fs.access(path.join(__dirname, "wrangler.json")),
+        fs.access(path.join(__dirname, "wrangler.jsonc")),
+        fs.access(path.join(__dirname, "wrangler.toml")),
       ]);
       wranglerConfigExists = true;
     } catch (e) {}

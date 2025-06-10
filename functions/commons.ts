@@ -74,6 +74,7 @@ export type FdCfFuncContext = EventContext<
     SITENAME?: string;
     BUCKET: R2Bucket;
     KV?: KVNamespace;
+    IMAGES?: ImagesBinding;
     [key: string]: any;
   },
   string, // params key type
@@ -305,6 +306,7 @@ export async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; 
 }
 
 export async function generateFileThumbnail({
+  images,
   auth,
   bucket,
   key,
@@ -316,6 +318,7 @@ export async function generateFileThumbnail({
   workerUrl,
   workerToken,
 }: {
+  images?: ImagesBinding;
   auth: string | null;
   bucket: R2Bucket;
   key: string;
@@ -324,8 +327,8 @@ export async function generateFileThumbnail({
   originIsBucket: boolean;
   thumbSize: number;
   expires: number;
-  workerUrl: string;
-  workerToken: string;
+  workerUrl?: string;
+  workerToken?: string;
 }): Promise<number> {
   if (!key) {
     return 1;
@@ -342,33 +345,56 @@ export async function generateFileThumbnail({
       return 3;
     }
   }
+  let thumbResponse: Response;
+  let thumbResponseHeaders: Headers;
+  const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
 
-  // Note: must put auth info in target url, cann't put it in options.headers,
-  // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
-  const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
-  const thumbResponse = await fetch(workerUrl, {
-    method: "POST",
-    headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
-    },
-    body: JSON.stringify({
-      token: workerToken,
-      url: targetFileUrl,
-      options: {
-        cf: { image: { width: thumbSize, height: thumbSize, fit: "scale-down" } },
+  if (images) {
+    const fileBody = await bucket.get(key);
+    if (!fileBody) {
+      return 7;
+    }
+    const format = "image/avif";
+    const result = await images.input(fileBody.body).transform(transform).output({ format });
+    thumbResponse = result.response();
+    // Does the response have headers?
+    thumbResponseHeaders = new Headers({
+      [HEADER_CONTENT_TYPE]: format,
+    });
+  } else if (workerUrl && workerToken) {
+    // CF image resizing does NOT work in Pages (functions), Use standalone worker instead.
+    // Note: must put auth info in target url, cann't put it in options.headers,
+    // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
+    const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
+    thumbResponse = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        [HEADER_CONTENT_TYPE]: "application/json",
       },
-    }),
-  });
-  if (!thumbResponse.ok) {
-    throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
+      body: JSON.stringify({
+        token: workerToken,
+        url: targetFileUrl,
+        options: {
+          cf: { image: transform },
+        },
+      }),
+    });
+    if (!thumbResponse.ok) {
+      throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
+    }
+    // headers (such as Cf-Resized, Content-Length) only exists in "Transform via URL" response
+    if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
+      return 4;
+    }
+    let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
+    if (!thumbResponseSize || thumbResponseSize >= file.size) {
+      return 5;
+    }
+    thumbResponseHeaders = thumbResponse.headers;
+  } else {
+    return 8;
   }
-  if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
-    return 4;
-  }
-  let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
-  if (!thumbResponseSize || thumbResponseSize >= file.size) {
-    return 5;
-  }
+
   const thumbContents = await thumbResponse.blob();
   const thumbContentsDigest = await sha256(thumbContents);
   if (thumbFile && file.customMetadata?.thumbnail === thumbContentsDigest) {
@@ -376,7 +402,7 @@ export async function generateFileThumbnail({
     return 6;
   }
   // The only way to modify object metadata is to re-upload the object and set the metadata.
-  await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponse.headers });
+  await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponseHeaders });
   await bucket.put(key, file.body, {
     httpMetadata: file.httpMetadata,
     customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),

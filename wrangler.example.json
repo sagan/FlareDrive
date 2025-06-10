@@ -8,28 +8,7 @@
     "not_found_handling": "single-page-application",
     "binding": "ASSETS"
   },
-  "env": {
-    "dev": {
-      "vars": {},
-      "r2_buckets": [
-        {
-          "binding": "BUCKET",
-          "bucket_name": "bucket"
-        }
-      ],
-      "kv_namespaces": [
-        {
-          "binding": "KV",
-          "id": "kv"
-        }
-      ],
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "flaredrive",
-          "database_id": "db"
-        }
-      ]
-    }
+  "images": {
+    "binding": "IMAGES"
   }
 }

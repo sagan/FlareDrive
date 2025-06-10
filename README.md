@@ -53,7 +53,6 @@ Fork this project and connect your fork with Cloudflare Workers. CloudFlare dash
 - Variables and Secrets: Set the following variables.
   - `WEBDAV_USERNAME`: username.
   - `WEBDAV_PASSWORD` password.
-  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature requires to (manually) deploy `thumbnail_worker/forwarder.js` file to CloudFlare Worker (set the `TOKEN` variable), set them to worker url & token.
 - Build - Variables and secrets. (Any changes require re-build to take effect)
   - `R2_BUCKET_NAME` : The [CloudFlare R2](https://developers.cloudflare.com/r2/) bucket name.
   - (optional) `KV_ID` : The [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) instance id.
@@ -71,6 +70,7 @@ Fork this project and connect your fork with Cloudflare Pages. Select `Vite` fra
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
   - (optional) `SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
+  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [CloudFlare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `thumbnail_worker/forwarder.js` file to CloudFlare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.
   - (optional) Bind Workers KV to `KV` name.
@@ -109,14 +109,14 @@ Prepare development environment:
 ## Run this project locally as Workers
 
 1. Run `npm run build:worker` to build worker dist file. Each time you modify the source files of `functions/*` or `lib/*`, you must re-run this build command. No watcher is available at this time.
-2. Run `npm run cfdev` in terminal to start the wrangler Workers backend at `http://127.0.0.1:8788`.
+2. Run `npm run cfdev` in terminal to start the wrangler Workers backend at `http://127.0.0.1:8787`.
 3. Run `npm start` in another terminal to start [Vite](https://github.com/vitejs/vite) dev server at `http://localhost:5173/`. It will proxy API requests and forward them to wrangler backend automatically.
 
 Open `http://localhost:5173/` in browser and it's done.
 
 ## Run this project locally as Pages
 
-1. Run `npm run cfpagesdev` in terminal to start the wrangler Pages "functions" backend at `http://127.0.0.1:8788`. Wrangler should watch source file changes and restart itself automatically.
+1. Run `npm run cfpagesdev` in terminal to start the wrangler Pages "functions" backend at `http://127.0.0.1:8787`. Wrangler should watch source file changes and restart itself automatically.
 2. Run `npm start` in another terminal to start [Vite](https://github.com/vitejs/vite) dev server at `http://localhost:5173/`.
 
 Same as above, open `http://localhost:5173/` in browser and it's done.

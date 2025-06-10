@@ -99,8 +99,8 @@ export const onRequestPost: FdCfFunc = async function (context) {
     return failResponse;
   }
 
-  if (!env.WORKER_URL || !env.WORKER_TOKEN) {
-    return responseInternalServerError("WORKER_URL & WORKER_TOKEN must be configured to use this feature");
+  if (!env.IMAGES && (!env.WORKER_URL || !env.WORKER_TOKEN)) {
+    return responseInternalServerError("IMAGES or WORKER_URL & WORKER_TOKEN must be configured to use this feature");
   }
 
   const force = !!str2int(searchParams.get("force"));
@@ -113,6 +113,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   const results: Record<string, number> = {};
   for (const key of keys) {
     const result = await generateFileThumbnail({
+      images: env.IMAGES,
       auth: env.BUCKET_URL ? "" : request.headers.get(HEADER_AUTHORIZATION),
       bucket,
       key,

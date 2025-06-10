@@ -22,6 +22,9 @@ d1_databases = [
   { binding = "DB", database_name = "flaredrive", database_id = "db" },
 ]
 
+[images]
+binding = "IMAGES"
+
 [assets]
 # vite build
 directory = "./dist/"
