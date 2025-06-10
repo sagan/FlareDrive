@@ -74,6 +74,7 @@ export type FdCfFuncContext = EventContext<
     SITENAME?: string;
     BUCKET: R2Bucket;
     KV?: KVNamespace;
+    DB?: D1Database;
     IMAGES?: ImagesBinding;
     [key: string]: any;
   },
