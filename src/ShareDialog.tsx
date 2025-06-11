@@ -31,12 +31,11 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
-  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS,
-  ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath, Permission,
-  humanReadableSize,
-  SYSFILE_NOACCESS,
+  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, SYSFILE_NOACCESS,
+  ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix,
+  dirUrlPath, Permission, humanReadableSize, isDirectory,
 } from '../lib/commons';
-import { FileItem, generatePassword, getFilePermission, isDirectory, useConfig } from './commons';
+import { FileItem, generatePassword, getFilePermission, useConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton } from './components';
 

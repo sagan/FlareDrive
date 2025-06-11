@@ -4,11 +4,11 @@ import {
   HEADER_DEPTH,
   HEADER_DESTINATION,
   HEADER_OVERWRITE,
-  MIME_DIR,
   SYSFILES,
   WEBDAV_ENDPOINT,
   basename,
   dirname,
+  isDirectory,
 } from "../../lib/commons";
 import {
   listAll,
@@ -41,7 +41,7 @@ export async function handleRequestCopy({ bucket, path, request, scope, authed }
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
 
-  if (destination === path || (src.httpMetadata?.contentType === MIME_DIR && destination.startsWith(path + "/"))) {
+  if (destination === path || (isDirectory(src) && destination.startsWith(path + "/"))) {
     return responseBadRequest();
   }
   if ((scope && !destination.startsWith(scope + "/")) || (!authed && SYSFILES.includes(basename(destination)))) {
@@ -65,8 +65,7 @@ export async function handleRequestCopy({ bucket, path, request, scope, authed }
     customMetadata: src.customMetadata,
   });
 
-  const isDirectory = src.httpMetadata?.contentType === MIME_DIR;
-  if (isDirectory) {
+  if (isDirectory(src)) {
     const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
     switch (depth) {
       case "0":

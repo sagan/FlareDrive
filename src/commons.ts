@@ -1,5 +1,5 @@
 import { SyntheticEvent } from "react";
-import { MIME_DEFAULT, MIME_DIR, Permission, TXT_MIMES, mimeType, trimPrefixSuffix } from "../lib/commons";
+import { MIME_DEFAULT, MIME_DIR, Permission, TXT_MIMES, mimeType } from "../lib/commons";
 import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
@@ -92,17 +92,9 @@ export interface FileViewerProps {
   setError: React.Dispatch<React.SetStateAction<any>>;
 }
 
-export function isDirectory(file: FileItem) {
-  return file.httpMetadata?.contentType === MIME_DIR;
-}
-
 export function isThumbnailPossible(file: FileItem) {
   const ct = file.httpMetadata?.contentType;
   return ct && (ct.startsWith("image/") || ct === "video/mp4" || ct === "application/pdf");
-}
-
-export function isImage(file: FileItem): boolean {
-  return file.httpMetadata.contentType.startsWith("image/");
 }
 
 export function isTextual(file: FileItem): boolean {

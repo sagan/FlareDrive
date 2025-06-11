@@ -7,9 +7,10 @@ import {
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
 import {
-  fileUrl, humanReadableSize, basename, str2int, EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE
+  EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE,
+  fileUrl, humanReadableSize, basename, str2int, isDirectory,
 } from "../lib/commons";
-import { ViewProps, isDirectory, useConfig } from "./commons";
+import { ViewProps, useConfig } from "./commons";
 
 
 export default function FileGrid({

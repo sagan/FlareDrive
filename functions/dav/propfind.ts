@@ -5,11 +5,11 @@ import {
   HEADER_CONTENT_TYPE,
   HEADER_DEPTH,
   HEADER_INAPP,
-  MIME_DIR,
   MIME_XML,
   WEBDAV_ENDPOINT,
   encodeHex,
   isHttpsOrLocalUrl,
+  isDirectory,
 } from "../../lib/commons";
 import { findChildren, responseNotFound } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -48,7 +48,7 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     getcontenttype: object.httpMetadata?.contentType,
     getetag: object.etag,
     getlastmodified: object.uploaded.toUTCString(),
-    resourcetype: object.httpMetadata?.contentType === MIME_DIR ? "<collection />" : "",
+    resourcetype: isDirectory(object) ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
     "oc:checksums": checksums,
   };
@@ -78,9 +78,9 @@ export async function handleRequestPropfind({ bucket, path, request, authed }: R
     return responseNotFound(fixedHeaders);
   }
 
-  const isDirectory = rootObject === ROOT_OBJECT || rootObject.httpMetadata?.contentType === MIME_DIR;
+  const isDir = rootObject === ROOT_OBJECT || isDirectory(rootObject);
   const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
-  const children = !isDirectory ? [] : await findChildren({ bucket, path, depth });
+  const children = !isDir ? [] : await findChildren({ bucket, path, depth });
 
   const items = [rootObject, ...children].map((child) => {
     const properties = fromR2Object(child);

@@ -21,6 +21,7 @@ import {
   HEADER_CF_RESIZED,
   MIME_HTML,
   MIME_MARKDOWN,
+  THUMBNAIL_SIZE,
   sha256,
   hmacSha256Verify,
   key2Path,
@@ -31,6 +32,7 @@ import {
   path2Key,
   trimPrefixSuffix,
   corsHeaders,
+  isImage,
 } from "../lib/commons";
 
 export type FdCfFuncContext = EventContext<
@@ -308,34 +310,92 @@ export async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; 
 
 export async function generateFileThumbnail({
   images,
-  auth,
   bucket,
   key,
-  force,
-  origin,
-  originIsBucket,
-  expires,
-  thumbSize,
-  workerUrl,
-  workerToken,
+  force = false,
+  thumbSize = THUMBNAIL_SIZE,
 }: {
-  images?: ImagesBinding;
-  auth: string | null;
+  images: ImagesBinding;
   bucket: R2Bucket;
   key: string;
-  force: boolean;
-  origin: string;
-  originIsBucket: boolean;
-  thumbSize: number;
-  expires: number;
-  workerUrl?: string;
-  workerToken?: string;
+  force?: boolean;
+  thumbSize?: number;
 }): Promise<number> {
   if (!key) {
     return 1;
   }
   const file = await bucket.get(key);
-  if (!file || !file.httpMetadata?.contentType?.startsWith("image/")) {
+  if (!file || !isImage(file)) {
+    return 2;
+  }
+  let thumbFile: R2Object | null = null;
+  if (file.customMetadata?.thumbnail) {
+    const thumbKey = KEY_PREFIX_THUMBNAIL + file.customMetadata?.thumbnail;
+    thumbFile = await bucket.head(thumbKey);
+    if (thumbFile && !force) {
+      return 3;
+    }
+  }
+
+  let thumbResponse: Response;
+  let thumbResponseHeaders: Headers;
+  const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
+  const format = "image/avif";
+  const result = await images.input(file.body).transform(transform).output({ format });
+  thumbResponse = result.response();
+  // Does the response have headers?
+  thumbResponseHeaders = new Headers({
+    [HEADER_CONTENT_TYPE]: format,
+  });
+
+  const thumbContents = await thumbResponse.blob();
+  const thumbContentsDigest = await sha256(thumbContents);
+  if (thumbFile && file.customMetadata?.thumbnail === thumbContentsDigest) {
+    // new thumbnail file is same as old
+    return 6;
+  }
+  // The only way to modify object metadata is to re-upload the object and set the metadata.
+  await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponseHeaders });
+  await bucket.put(key, file.body, {
+    httpMetadata: file.httpMetadata,
+    customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),
+  });
+  if (thumbFile) {
+    // delete old thumbnail file
+    await bucket.delete(thumbFile.key);
+  }
+  return 0;
+}
+
+// CF Image Resizing feature is not supported in Pages env. Use standalone worker instead.
+export async function generateFileThumbnailWithWorker({
+  auth,
+  bucket,
+  key,
+  origin,
+  originIsBucket,
+  expires,
+  workerUrl,
+  workerToken,
+  force = false,
+  thumbSize = THUMBNAIL_SIZE,
+}: {
+  auth: string | null;
+  bucket: R2Bucket;
+  key: string;
+  origin: string;
+  originIsBucket: boolean;
+  expires: number;
+  workerUrl: string;
+  workerToken: string;
+  force?: boolean;
+  thumbSize?: number;
+}): Promise<number> {
+  if (!key) {
+    return 1;
+  }
+  const file = await bucket.get(key);
+  if (!file || !isImage(file)) {
     return 2;
   }
   let thumbFile: R2Object | null = null;
@@ -350,51 +410,35 @@ export async function generateFileThumbnail({
   let thumbResponseHeaders: Headers;
   const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
 
-  if (images) {
-    const fileBody = await bucket.get(key);
-    if (!fileBody) {
-      return 7;
-    }
-    const format = "image/avif";
-    const result = await images.input(fileBody.body).transform(transform).output({ format });
-    thumbResponse = result.response();
-    // Does the response have headers?
-    thumbResponseHeaders = new Headers({
-      [HEADER_CONTENT_TYPE]: format,
-    });
-  } else if (workerUrl && workerToken) {
-    // CF image resizing does NOT work in Pages (functions), Use standalone worker instead.
-    // Note: must put auth info in target url, cann't put it in options.headers,
-    // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
-    const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
-    thumbResponse = await fetch(workerUrl, {
-      method: "POST",
-      headers: {
-        [HEADER_CONTENT_TYPE]: "application/json",
+  // CF image resizing does NOT work in Pages (functions), Use standalone worker instead.
+  // Note: must put auth info in target url, cann't put it in options.headers,
+  // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
+  const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
+  thumbResponse = await fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      [HEADER_CONTENT_TYPE]: "application/json",
+    },
+    body: JSON.stringify({
+      token: workerToken,
+      url: targetFileUrl,
+      options: {
+        cf: { image: transform },
       },
-      body: JSON.stringify({
-        token: workerToken,
-        url: targetFileUrl,
-        options: {
-          cf: { image: transform },
-        },
-      }),
-    });
-    if (!thumbResponse.ok) {
-      throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
-    }
-    // headers (such as Cf-Resized, Content-Length) only exists in "Transform via URL" response
-    if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
-      return 4;
-    }
-    let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
-    if (!thumbResponseSize || thumbResponseSize >= file.size) {
-      return 5;
-    }
-    thumbResponseHeaders = thumbResponse.headers;
-  } else {
-    return 8;
+    }),
+  });
+  if (!thumbResponse.ok) {
+    throw new Error(`status=${thumbResponse.status}, targetFileUrl=${targetFileUrl}`);
   }
+  // headers (such as Cf-Resized, Content-Length) only exists in "Transform via URL" response
+  if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
+    return 4;
+  }
+  let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
+  if (!thumbResponseSize || thumbResponseSize >= file.size) {
+    return 5;
+  }
+  thumbResponseHeaders = thumbResponse.headers;
 
   const thumbContents = await thumbResponse.blob();
   const thumbContentsDigest = await sha256(thumbContents);

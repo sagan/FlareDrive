@@ -164,6 +164,15 @@ export const MIME_TOML = "application/toml";
  */
 export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
 
+/**
+ * Header used to indicate to server that do NOT generate thumbnail for uploaded file.
+ */
+export const HEADER_NO_THUMBNAIL = "X-No-Thumbnail";
+
+/**
+ * Header used to indicate that the request is authenticated.
+ * For example, if the request has "Authorization" header with valid credentials.
+ */
 export const HEADER_AUTHED = "X-Authed";
 
 export const HEADER_INAPP = "X-In-App";
@@ -175,6 +184,9 @@ export const HEADER_SOURCE_URL = "X-Source-Url";
 
 export const HEADER_SOURCE_URL_OPTIONS = "X-Source-Url-Options";
 
+/**
+ * Header to tell server the thumbnail id (sha256) of the uploaded file
+ */
 export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
 
 export const HEADER_AUTHORIZATION = "Authorization";
@@ -750,4 +762,27 @@ export function appendQueryStringToUrl(url: string, qs: string): string {
   }
   url += qs;
   return url;
+}
+
+/**
+ * httpMetadata?.contentType?: string
+ */
+interface R2ObjectAlike {
+  httpMetadata?: {
+    contentType?: string;
+  };
+}
+
+/**
+ * Return whether the R2Object is a image file
+ */
+export function isImage(object: R2ObjectAlike): boolean {
+  return object.httpMetadata?.contentType?.startsWith("image/") || false;
+}
+
+/**
+ * Return whether an R2Object or alike is a dir
+ */
+export function isDirectory(object: R2ObjectAlike): boolean {
+  return object.httpMetadata?.contentType === MIME_DIR;
 }

@@ -1,5 +1,11 @@
-import { HEADER_FD_THUMBNAIL, UPLOADS_VARIABLE, UPLOAD_ID_VARIABLE } from "../../lib/commons";
-import { responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
+import {
+  HEADER_FD_THUMBNAIL,
+  HEADER_NO_THUMBNAIL,
+  UPLOADS_VARIABLE,
+  UPLOAD_ID_VARIABLE,
+  isImage,
+} from "../../lib/commons";
+import { generateFileThumbnail, responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
@@ -15,7 +21,7 @@ export async function handleRequestPostCreateMultipart({ bucket, path, request }
   return new Response(JSON.stringify({ key, uploadId }));
 }
 
-export async function handleRequestPostCompleteMultipart({ bucket, path, request }: RequestHandlerParams) {
+export async function handleRequestPostCompleteMultipart({ context, bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
   const uploadId = new URLSearchParams(url.search).get(UPLOAD_ID_VARIABLE);
   if (!uploadId) {
@@ -27,6 +33,12 @@ export async function handleRequestPostCompleteMultipart({ bucket, path, request
 
   try {
     const object = await multipartUpload.complete(completeBody.parts);
+    // generate thumbnail for uploaded file. Best effort
+    if (context.env.IMAGES && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(object)) {
+      try {
+        await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: object.key });
+      } catch (e) {}
+    }
     return new Response(null, {
       headers: { etag: object.httpEtag },
     });

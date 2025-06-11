@@ -1,9 +1,10 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
 import {
-  MIME_DIR,
   META_VARIABLE,
   HEADER_REFERER,
+  HTML_VARIABLE,
+  INDEX_FILE,
   type ShareObject,
   path2Key,
   trimPrefix,
@@ -11,9 +12,8 @@ import {
   trimSuffix,
   cut,
   str2int,
-  HTML_VARIABLE,
-  INDEX_FILE,
   encodeHex,
+  isDirectory,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -26,7 +26,6 @@ import {
   htmlResponse,
   responseForbidden,
   responseRedirect,
-  responseNotModified,
   outputR2Object,
 } from "../commons";
 
@@ -164,8 +163,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
     }
   }
 
-  const isDir = data.key.endsWith("/");
-  if (!isDir && relpath) {
+  if (!data.key.endsWith("/") && relpath) {
     return responseNotFound();
   }
 
@@ -177,7 +175,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (!obj) {
     return responseNotFound();
   }
-  if (obj.httpMetadata?.contentType === MIME_DIR) {
+  if (isDirectory(obj)) {
     if (!url.pathname.endsWith("/")) {
       url.pathname += "/";
       return responseRedirect(url.href);
@@ -511,11 +509,10 @@ function humanFileSize(size) {
 ${items
   .map((item) => {
     const name = item.key.split("/").pop()!;
-    const isDir = item.httpMetadata?.contentType == MIME_DIR;
-    return `addRow(${str(name)}, ${str(name)}, ${isDir}, ${item.size}, humanFileSize(${
+    return `addRow(${str(name)}, ${str(name)}, ${isDirectory(item)}, ${item.size}, humanFileSize(${
       item.size
     }), ${+item.uploaded}, ${str(item.uploaded.toISOString())}, ${str(
-      item.httpMetadata?.contentType != MIME_DIR ? encodeHex(item.checksums?.md5) : ""
+      !isDirectory(item) ? encodeHex(item.checksums?.md5) : ""
     )});`;
   })
   .join("\n")}

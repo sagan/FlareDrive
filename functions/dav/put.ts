@@ -13,16 +13,18 @@ import {
   PART_NUMBER_VARIABLE,
   THUMBNAIL_VARIABLE,
   UPLOAD_ID_VARIABLE,
+  HEADER_NO_THUMBNAIL,
   ThumbnailObject,
   humanReadableSize,
   mimeType,
   sha256,
   str2int,
   dirname,
-  HEADER_ETAG,
+  isImage,
 } from "../../lib/commons";
 import {
   checkConflict,
+  generateFileThumbnail,
   jsonResponse,
   responseBadRequest,
   responseConflict,
@@ -173,7 +175,6 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
         }, 0);
       });
     }
-
     if (str2int(request.headers.get(HEADER_SOURCE_ASYNC))) {
       context.waitUntil(r2req);
       return responseNoContent();
@@ -190,6 +191,11 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
 
   if (!result) {
     return responsePreconditionsFailed();
+  }
+  if (context.env.IMAGES && !thumbnail && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(result)) {
+    try {
+      await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: result.key });
+    } catch (e) {}
   }
   return responseCreated();
 }

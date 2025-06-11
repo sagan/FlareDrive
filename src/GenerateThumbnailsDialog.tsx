@@ -12,8 +12,8 @@ import {
   FormControlLabel,
   Checkbox
 } from "@mui/material";
-import { fileUrl } from '../lib/commons';
-import { FileItem, isImage, useConfig } from './commons';
+import { fileUrl, isImage } from '../lib/commons';
+import { FileItem, useConfig } from './commons';
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
 
 

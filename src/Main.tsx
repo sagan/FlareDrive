@@ -17,11 +17,11 @@ import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE,
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
-  trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl,
+  trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
-  FileItem, Sort, ViewMode, ViewProps, downloadFile, isDirectory, isImage, isTextual, useConfig,
+  FileItem, Sort, ViewMode, ViewProps, downloadFile, isTextual, useConfig,
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";

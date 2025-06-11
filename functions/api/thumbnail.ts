@@ -7,7 +7,6 @@ import {
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,
   THUMBNAIL_NO404_VARIABLE,
-  THUMBNAIL_SIZE,
   str2int,
   THUMBNAIL_DIGEST_VARIABLE,
   THUMBNAIL_NOFALLBACK,
@@ -16,6 +15,7 @@ import {
   FdCfFunc,
   checkAuthFailure,
   generateFileThumbnail,
+  generateFileThumbnailWithWorker,
   jsonResponse,
   responseInternalServerError,
   responseNotFound,
@@ -112,19 +112,29 @@ export const onRequestPost: FdCfFunc = async function (context) {
 
   const results: Record<string, number> = {};
   for (const key of keys) {
-    const result = await generateFileThumbnail({
-      images: env.IMAGES,
-      auth: env.BUCKET_URL ? "" : request.headers.get(HEADER_AUTHORIZATION),
-      bucket,
-      key,
-      force,
-      expires: +new Date() + PRIVATE_URL_TTL,
-      thumbSize: THUMBNAIL_SIZE,
-      origin: env.BUCKET_URL || url.origin,
-      originIsBucket: !!env.BUCKET_URL,
-      workerUrl: env.WORKER_URL,
-      workerToken: env.WORKER_TOKEN,
-    });
+    let result: number;
+    if (env.IMAGES) {
+      result = await generateFileThumbnail({
+        images: env.IMAGES,
+        bucket,
+        key,
+        force,
+      });
+    } else if (env.WORKER_URL && env.WORKER_TOKEN) {
+      result = await generateFileThumbnailWithWorker({
+        auth: env.BUCKET_URL ? "" : request.headers.get(HEADER_AUTHORIZATION),
+        bucket,
+        key,
+        force,
+        expires: +new Date() + PRIVATE_URL_TTL,
+        origin: env.BUCKET_URL || url.origin,
+        originIsBucket: !!env.BUCKET_URL,
+        workerUrl: env.WORKER_URL,
+        workerToken: env.WORKER_TOKEN,
+      });
+    } else {
+      result = -1;
+    }
     results[key] = result;
   }
 

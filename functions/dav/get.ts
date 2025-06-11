@@ -4,13 +4,13 @@ import {
   INDEX_FILE,
   KEY_PREFIX_THUMBNAIL,
   META_VARIABLE,
-  MIME_DIR,
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,
   THUMBNAIL_NO404_VARIABLE,
   THUMBNAIL_NOFALLBACK,
   THUMBNAIL_VARIABLE,
   str2int,
+  isDirectory,
 } from "../../lib/commons";
 import { jsonResponse, outputR2Object, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
@@ -70,7 +70,7 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
   if (requestMeta) {
     return jsonResponse(obj);
   }
-  if (obj.httpMetadata?.contentType == MIME_DIR) {
+  if (isDirectory(obj)) {
     const indexHtmlObj = await bucket.get(path + "/" + INDEX_FILE, {
       onlyIf: request.headers,
       range: request.headers,

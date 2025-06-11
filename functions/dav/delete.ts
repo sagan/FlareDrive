@@ -1,4 +1,4 @@
-import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, MIME_DIR, extname } from "../../lib/commons";
+import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, isDirectory } from "../../lib/commons";
 import { listAll, responseNoContent, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 
@@ -30,7 +30,7 @@ export async function handleRequestDelete({ bucket, path }: RequestHandlerParams
     if (deletedObj === null) {
       return responseNotFound();
     }
-    if (deletedObj.httpMetadata?.contentType !== MIME_DIR) {
+    if (!isDirectory(deletedObj)) {
       return responseNoContent();
     }
   }
