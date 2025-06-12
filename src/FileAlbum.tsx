@@ -12,6 +12,7 @@ import { ViewProps, useConfig } from "./commons";
 
 
 export default function FileAlbum({
+  isSearch,
   auth,
   files,
   onClick,
@@ -38,7 +39,10 @@ export default function FileAlbum({
         fullControl: auth ? undefined : fullControl,
       }) : "";
       const name = f.name || basename(f.key)
-      const title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
+      let title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
+      if (isSearch) {
+        title += `\nKey: ${f.key}`;
+      }
       return <Grid item xs="auto" key={f.key}
         onContextMenu={(e) => {
           e.preventDefault()

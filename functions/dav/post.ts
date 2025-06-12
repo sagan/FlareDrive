@@ -1,11 +1,13 @@
 import {
   HEADER_FD_THUMBNAIL,
   HEADER_NO_THUMBNAIL,
+  KEY_PREFIX_PRIVATE,
   UPLOADS_VARIABLE,
   UPLOAD_ID_VARIABLE,
   isImage,
 } from "../../lib/commons";
 import { generateFileThumbnail, responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
+import { upsertDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
@@ -37,6 +39,11 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
     if (context.env.IMAGES && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(object)) {
       try {
         await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: object.key });
+      } catch (e) {}
+    }
+    if (context.env.DB && !object.key.startsWith(KEY_PREFIX_PRIVATE)) {
+      try {
+        await upsertDbFile(context.env.DB, object);
       } catch (e) {}
     }
     return new Response(null, {

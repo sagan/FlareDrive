@@ -37,6 +37,7 @@ import {
   responsePreconditionsFailed,
 } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { upsertDbFile } from "../db";
 
 async function handleRequestPutMultipart({ bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
@@ -124,7 +125,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     return responseConflict();
   }
 
-  if (oldObject?.customMetadata?.thumbnail) {
+  if (oldObject?.customMetadata?.thumbnail && (!thumbnail || oldObject.customMetadata.thumbnail !== thumbnail)) {
     await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${oldObject.customMetadata.thumbnail}`);
   }
 
@@ -175,6 +176,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
         }, 0);
       });
     }
+    r2req = r2req.then((obj) => postUploadTasks(obj));
     if (str2int(request.headers.get(HEADER_SOURCE_ASYNC))) {
       context.waitUntil(r2req);
       return responseNoContent();
@@ -192,10 +194,28 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   if (!result) {
     return responsePreconditionsFailed();
   }
-  if (context.env.IMAGES && !thumbnail && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(result)) {
-    try {
-      await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: result.key });
-    } catch (e) {}
-  }
+  await postUploadTasks(result);
   return responseCreated();
+
+  /**
+   * Handle post-upload tasks in best-effort way.
+   * Return the same obj and never rejects.
+   */
+  async function postUploadTasks(obj: R2Object) {
+    if (context.env.DB && !obj.key.startsWith(KEY_PREFIX_PRIVATE)) {
+      try {
+        await upsertDbFile(context.env.DB!, obj);
+      } catch (e) {
+        console.log("failed to upsert file meta to db", e);
+      }
+    }
+    if (context.env.IMAGES && !thumbnail && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(obj)) {
+      try {
+        await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: obj.key });
+      } catch (e) {
+        console.log("failed to generate file thumbnail", e);
+      }
+    }
+    return obj;
+  }
 }

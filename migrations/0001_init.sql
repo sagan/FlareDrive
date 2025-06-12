@@ -11,12 +11,20 @@
 CREATE TABLE files (
   key TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
+  -- 0: files exist in <root> folder.
+  depth INTEGER NOT NULL,
   size INTEGER NOT NULL,
   mime TEXT NOT NULL,
-  -- row create time. unix timestamp (seconds) 
+  -- thumbnail file id (sha256)
+  thumbnail TEXT NOT NULL,
+  -- file uploaded time. unix timestamp (miliseconds)
+  uploaded INTEGER NOT NULL,
+  -- record creation time.
   ctime INTEGER NOT NULL,
-  -- row modified time.
+  -- record modified time.
   mtime INTEGER NOT NULL
 );
 
 CREATE INDEX idx_files_name ON files(name);
+
+CREATE INDEX idx_files_depth_name ON files(depth, name);

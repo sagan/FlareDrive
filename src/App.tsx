@@ -12,7 +12,8 @@ import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE,
-  nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath
+  nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
+  KEY_PART_SEARCH
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE,
@@ -24,10 +25,12 @@ import ProgressDialog from "./ProgressDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
 import { fetchPath } from "./app/transfer";
 import ShareManager from "./ShareManager";
+import SearchForm from "./SearchForm";
 import { listShares } from "./app/share";
 import { PathBreadcrumb } from "./components";
 import GenerateThumbnailsDialog from "./GenerateThumbnailsDialog";
 import SignInDialog from "./SignInDialog";
+import { searchFiles } from "./app/search";
 
 const systemFolders: FileItem[] = [
   {
@@ -53,7 +56,6 @@ const theme = createTheme({
 export default function App() {
   const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = React.useState(false);
@@ -112,6 +114,17 @@ export default function App() {
   }
 
   const [permission, prefix] = useMemo(() => getFilePermission(cwd), [cwd])
+  const [isSearch, searchBaseDir, searchKeyword] = useMemo(() => {
+    const parts = cwd.split("/")
+    const index = parts.indexOf(KEY_PART_SEARCH)
+    if (index == -1) {
+      return [false, "", ""]
+    }
+    const searchBaseDir = parts.slice(0, index).join("/");
+    const searchKeyword = decodeURIComponent(parts[index + 1] || "")
+    return [true, searchBaseDir, searchKeyword];
+  }, [cwd])
+  const [search, setSearch] = useState(searchKeyword);
 
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
@@ -129,13 +142,37 @@ export default function App() {
     setLoading(true);
     setMultiSelected([]);
     setFiles([]);
-    console.log("fetch", cwd)
+    console.log("fetch", cwd, isSearch)
     if (cwd == SHARES_FOLDER_KEY) {
       listShares(auth).then(setShares).catch(e => {
         setShares([])
         setError(e)
       }).finally(() => setLoading(false))
       return
+    }
+    if (isSearch) {
+      if (!searchKeyword) {
+        setLoading(false)
+        return;
+      }
+      searchFiles(auth, searchKeyword, searchBaseDir).then(result => {
+        const files: FileItem[] = result.map(searchFile => {
+          return {
+            key: searchFile.key,
+            size: searchFile.size,
+            uploaded: searchFile.uploaded,
+            httpMetadata: {
+              contentType: searchFile.mime
+            },
+            customMetadata: {
+              thumbnail: searchFile.thumbnail
+            },
+            checksums: {}
+          }
+        })
+        setFiles(files)
+      }).catch(e => setError(e)).finally(() => setLoading(false))
+      return;
     }
     fetchPath(cwd, config.effectiveAuth).then(({
       auth: sentbackAuth,
@@ -193,23 +230,27 @@ export default function App() {
                 setAuth("");
                 fetchFiles();
               }}
+              cwd={cwd}
+              setCwd={setCwd}
               onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
-              onSearchChange={(newSearch: string) => setSearch(newSearch)} setViewMode={setViewMode}
+              setSearch={setSearch} setViewMode={setViewMode}
               sort={sort} setSort={setSort}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
                 ? () => setSharing(multiSelected[0] || cwd) : undefined}
             />
-            <PathBreadcrumb prefix={prefix} permission={permission} path={cwd} setCwd={setCwd} />
+            <PathBreadcrumb prefix={prefix} permission={permission} path={cwd} setCwd={setCwd} setSearch={setSearch} />
             {
               cwd == SHARES_FOLDER_KEY
                 ? <ShareManager setError={setError} fetchFiles={fetchFiles}
                   search={search} shares={shares} loading={loading} />
-                : <Main cwd={cwd} setCwd={setCwd} loading={loading} search={search}
-                  sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
-                  permission={permission} files={files} setError={setError}
-                  multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+                : (isSearch && !searchKeyword)
+                  ? <SearchForm searchBaseDir={searchBaseDir} />
+                  : <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
+                    sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
+                    permission={permission} files={files} setError={setError} isSearch={isSearch}
+                    multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
             }
           </Stack>
           <Snackbar

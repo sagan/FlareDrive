@@ -4,6 +4,7 @@ export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
+export const SEARCH_API = "/api/search";
 
 /**
  * Cloud Download default file size limit (bytes): 10MiB.
@@ -125,6 +126,8 @@ export const PRIVATE_URL_TTL = 86400 * 1000;
 export const STRONG_PASSWORD_LENGTH = 22;
 
 export const KEY_PREFIX_PRIVATE = ".flaredrive/";
+
+export const KEY_PART_SEARCH = ".search";
 
 /**
  * ".flaredrive/thumbnails/"
@@ -785,4 +788,26 @@ export function isImage(object: R2ObjectAlike): boolean {
  */
 export function isDirectory(object: R2ObjectAlike): boolean {
   return object.httpMetadata?.contentType === MIME_DIR;
+}
+
+/**
+ * Return depth of R2 file key.
+ * E.g. "foo" => 0; "foo/bar" => 1.
+ */
+export function fileDepth(key: string): number {
+  if (!key) {
+    return 0;
+  }
+  key = trimPrefixSuffix(key, "/");
+  return key.split(/[\\/]/).length - 1; // Count the number of slashes
+}
+
+/**
+ * Join pathes by "/". Ignore empty path.
+ */
+export function joinPathes(...pathes: string[]): string {
+  return pathes
+    .map((p) => trimPrefixSuffix(p, "/"))
+    .filter((p) => p.length > 0)
+    .join("/");
 }

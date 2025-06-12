@@ -1,5 +1,6 @@
 import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, isDirectory } from "../../lib/commons";
 import { listAll, responseNoContent, responseNotFound } from "../commons";
+import { deleteDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";
 
 /**
@@ -24,9 +25,14 @@ export async function deleteFile(bucket: R2Bucket, key: string, keepThumbnail = 
   return file;
 }
 
-export async function handleRequestDelete({ bucket, path }: RequestHandlerParams, keepThumbnail = false) {
+export async function handleRequestDelete({ bucket, path, context }: RequestHandlerParams, keepThumbnail = false) {
   if (path !== "") {
     const deletedObj = await deleteFile(bucket, path, keepThumbnail);
+    if (context.env.DB) {
+      try {
+        await deleteDbFile(context.env.DB, path);
+      } catch (e) {}
+    }
     if (deletedObj === null) {
       return responseNotFound();
     }
@@ -38,6 +44,11 @@ export async function handleRequestDelete({ bucket, path }: RequestHandlerParams
   const children = listAll(bucket, path === "" ? undefined : `${path}/`);
   for await (const child of children) {
     await deleteFile(bucket, child.key, keepThumbnail);
+    if (context.env.DB) {
+      try {
+        await deleteDbFile(context.env.DB, child.key);
+      } catch (e) {}
+    }
   }
 
   return responseNoContent();

@@ -37,7 +37,8 @@ import PdfDialog from "./PdfDialog";
 import ImageEditorDialog from "./ImageEditorDialog";
 
 
-function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (files: FileList) => void }) {
+function DropZone({ disabled, children, onDrop }:
+  { disabled: boolean, children: React.ReactNode; onDrop: (files: FileList) => void }) {
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -51,15 +52,21 @@ function DropZone({ children, onDrop }: { children: React.ReactNode; onDrop: (fi
       }}
       onDragEnter={(event) => {
         event.preventDefault();
+        if (disabled) {
+          return
+        }
         setDragging(true);
       }}
       onDragOver={(event) => {
         event.preventDefault();
-        event.dataTransfer.dropEffect = "copy";
+        event.dataTransfer.dropEffect = disabled ? "none" : "copy";
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={(event) => {
         event.preventDefault();
+        if (disabled) {
+          return
+        }
         onDrop(event.dataTransfer.files);
         setDragging(false);
       }}
@@ -132,10 +139,11 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
 }
 
 export default function Main({
+  isSearch,
   cwd,
   setCwd,
   loading,
-  search,
+  filter,
   permission,
   files,
   sharing,
@@ -146,9 +154,10 @@ export default function Main({
   fetchFiles,
   setError,
 }: {
+  isSearch: boolean;
   cwd: string;
   loading: boolean;
-  search: string;
+  filter: string;
   permission: Permission;
   files: FileItem[];
   sharing: string;
@@ -186,14 +195,14 @@ export default function Main({
 
   const filteredFiles = useMemo(
     () =>
-      (search ? files.filter((file) => (file.name || file.key).toLowerCase().includes(search.toLowerCase())) : files)
+      (filter ? files.filter((file) => (file.name || file.key).toLowerCase().includes(filter.toLowerCase())) : files)
         .sort((a, b) => compareBoolean(!a.system, !b.system) ||
           compareBoolean(!isDirectory(a), !isDirectory(b)) || (
             sort === Sort.ByDate ? +a.uploaded - +b.uploaded
               : sort === Sort.BySize ? a.size - b.size
                 : compareString(a.key, b.key)
           )),
-    [files, search, sort]
+    [files, filter, sort]
   );
 
   const handleMultiSelect = useCallback((key: string, fromContextMenu = false) => {
@@ -302,6 +311,7 @@ export default function Main({
   }
 
   const viewProps: ViewProps = {
+    isSearch,
     auth,
     files: filteredFiles,
     onClick,
@@ -327,7 +337,7 @@ export default function Main({
     },
   }
 
-  const permitWrite = !!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir)
+  const permitWrite = !isSearch && (!!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir))
 
   return (
     <>
@@ -336,7 +346,7 @@ export default function Main({
           <CircularProgress />
         </Centered>
       ) : (
-        <DropZone
+        <DropZone disabled={!permitWrite}
           onDrop={async (files) => {
             uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
             setShowProgressDialog(true)
@@ -451,8 +461,8 @@ export default function Main({
           fetchFiles();
         }}
       />
-      {!!sharingFile && <ShareDialog setError={setError} file={sharingFile} open={true} onClose={() => setSharing("")}
-        onEdit={() => lightboxCallbacks.edit(sharingFile)} />}
+      {!!sharingFile && <ShareDialog setSlideIndex={setSlideIndex} setError={setError} file={sharingFile} open={true}
+        onClose={() => setSharing("")} onEdit={() => lightboxCallbacks.edit(sharingFile)} />}
       {editing !== null && <EditorDialog filekey={editing} {...fileViewerProps} />}
       {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
       {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}

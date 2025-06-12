@@ -14,6 +14,7 @@ import { ViewProps, useConfig } from "./commons";
 
 
 export default function FileGrid({
+  isSearch,
   auth,
   files,
   onClick,
@@ -59,7 +60,7 @@ export default function FileGrid({
               IconComponent ? <IconComponent /> : <MimeIcon contentType={file.httpMetadata.contentType} />))}
           </ListItemIcon>
           <ListItemText
-            primary={file.name || basename(file.key)}
+            primary={`${file.name || basename(file.key)}${isSearch ? ` (${file.key})` : ""}`}
             primaryTypographyProps={{
               whiteSpace: "nowrap",
               overflow: "hidden",

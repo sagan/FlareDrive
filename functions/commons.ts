@@ -341,7 +341,8 @@ export async function generateFileThumbnail({
   let thumbResponseHeaders: Headers;
   const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
   const format = "image/avif";
-  const result = await images.input(file.body).transform(transform).output({ format });
+  const fileContents = await file.blob();
+  const result = await images.input(fileContents.stream()).transform(transform).output({ format });
   thumbResponse = result.response();
   // Does the response have headers?
   thumbResponseHeaders = new Headers({
@@ -356,7 +357,7 @@ export async function generateFileThumbnail({
   }
   // The only way to modify object metadata is to re-upload the object and set the metadata.
   await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponseHeaders });
-  await bucket.put(key, file.body, {
+  await bucket.put(key, fileContents.stream(), {
     httpMetadata: file.httpMetadata,
     customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),
   });

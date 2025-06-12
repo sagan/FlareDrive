@@ -32,7 +32,8 @@
     "typescript": "^5.5.3",
     "uuid": "^11.0.5",
     "web-vitals": "^2.1.4",
-    "yet-another-react-lightbox": "^3.21.7"
+    "yet-another-react-lightbox": "^3.21.7",
+    "zod": "^3.25.61"
   },
   "scripts": {
     "start": "vite",

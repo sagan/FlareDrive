@@ -37,11 +37,12 @@ export function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PathBreadcrumb({ prefix, permission, path, setCwd }: {
+export function PathBreadcrumb({ prefix, permission, path, setCwd, setSearch }: {
   prefix: string;
   permission: Permission;
   path: string;
-  setCwd: (newCwd: string) => void
+  setCwd: (newCwd: string) => void;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
 }) {
   const { auth, authSearchParams, expires, fullControl } = useConfig()
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
@@ -54,6 +55,7 @@ export function PathBreadcrumb({ prefix, permission, path, setCwd }: {
     <Breadcrumbs className="breadcrumbs" separator="›" sx={{ padding: 1 }}>
       <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
         e.preventDefault();
+        setSearch("");
         setCwd("");
       }}>
         <HomeIcon />
@@ -74,8 +76,9 @@ export function PathBreadcrumb({ prefix, permission, path, setCwd }: {
           <Typography className={className} key={index} color="text.primary" >{part}</Typography>
         ) : (
           <Link className={className} key={index} href={url} onClick={e => {
-            e.preventDefault()
-            setCwd(key)
+            e.preventDefault();
+            setSearch("");
+            setCwd(key);
           }}>{part}</Link>
         )
       })}

@@ -50,10 +50,11 @@ enum Status {
  * If shareKey & shareObject is present, editing it. Otherwise creaing a new share with file.
  * @returns
  */
-export default function ShareDialog({ open, onClose, setError, postDelete, onEdit, ...otherProps }: {
+export default function ShareDialog({ open, onClose, setError, setSlideIndex, postDelete, onEdit, ...otherProps }: {
   open: boolean;
   onClose: () => void;
   setError: React.Dispatch<any>;
+  setSlideIndex?: (value: React.SetStateAction<number>) => void;
   postDelete?: (sharekey: string) => void;
   onEdit?: () => void;
 } & ({ file: FileItem } | {
@@ -159,6 +160,7 @@ export default function ShareDialog({ open, onClose, setError, postDelete, onEdi
       <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
         e.preventDefault();
         onClose();
+        setSlideIndex && setSlideIndex(-1);
         navigate(targetParentLink);
       }}><FolderOpenIcon /></IconButton>
       <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {

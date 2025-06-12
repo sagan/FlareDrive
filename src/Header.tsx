@@ -6,10 +6,11 @@ import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
-import { Permission } from "../lib/commons";
+import { joinPathes, KEY_PART_SEARCH, Permission } from "../lib/commons";
 import { Sort, ViewMode, sortLabels, useConfig } from "./commons";
 
 export default function Header({
+  cwd,
   permission,
   sort,
   search,
@@ -17,20 +18,23 @@ export default function Header({
   onSignnIn,
   setSort,
   setViewMode,
-  onSearchChange,
+  setCwd,
+  setSearch,
   onGenerateThumbnails,
   setShowProgressDialog,
   fetchFiles,
   onShare,
 }: {
+  cwd: string;
   permission: Permission;
   sort: Sort;
   setSort: React.Dispatch<React.SetStateAction<Sort>>;
   setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
+  setCwd: (newCwd: string) => void;
   search: string;
   onSignOut: () => void;
   onSignnIn: () => void;
-  onSearchChange: (newSearch: string) => void;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
   onGenerateThumbnails: () => void;
   setShowProgressDialog: (show: boolean) => void;
   fetchFiles: () => void;
@@ -44,24 +48,50 @@ export default function Header({
 
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>
-      <Link to="/">
+      <Link to="/" onClick={(e) => {
+        e.preventDefault();
+        setSearch("");
+        setCwd("");
+      }}>
         <IconButton title={window.__SITENAME__} sx={{ width: 24, height: 24 }}>
           <img src="/favicon.png" style={{ objectFit: "contain" }} />
         </IconButton>
       </Link>
-      <InputBase
-        size="small"
-        fullWidth
-        type="search"
-        placeholder="Search…"
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        sx={{
-          backgroundColor: "whitesmoke",
-          borderRadius: "999px",
-          padding: "5px 16px",
+      <form
+        onSubmit={e => {
+          e.preventDefault()
+          if (!search || !auth) {
+            return
+          }
+          let cwdParts = cwd.split("/")
+          let index = cwdParts.indexOf(KEY_PART_SEARCH)
+          if (index >= 0) {
+            cwdParts = cwdParts.slice(0, index)
+          }
+          cwdParts.push(KEY_PART_SEARCH, encodeURIComponent(search))
+          let newCwd = joinPathes(...cwdParts)
+          if (newCwd === cwd) {
+            return
+          }
+          console.log("search", search)
+          setCwd(newCwd)
         }}
-      />
+        style={{ display: 'flex', flexGrow: 1 }}
+      >
+        <InputBase
+          size="small"
+          fullWidth
+          type="search"
+          placeholder="Search…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{
+            backgroundColor: "whitesmoke",
+            borderRadius: "999px",
+            padding: "5px 16px",
+          }}
+        />
+      </form>
       <IconButton
         color="inherit"
         title="Refresh"

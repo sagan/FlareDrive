@@ -77,6 +77,7 @@ export interface FileItem {
 }
 
 export interface ViewProps {
+  isSearch: boolean;
   auth: string | null;
   files: FileItem[];
   onClick: (file: FileItem) => void;
@@ -126,21 +127,30 @@ export function generatePassword(length: number, digitOnly?: boolean) {
   if (length <= 0) {
     return "";
   }
-  let chars = digitOnly ? "0123456789" : "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  const PWD_CHARS = digitOnly ? "0123456789" : "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const PWD_CHARS_LEN = PWD_CHARS.length;
+
+  // To avoid modulo bias, we only use random numbers that are less than
+  // the largest multiple of PWD_CHARS_LEN that fits in the range of a Uint16 value [0, 65535].
+  // (0xFFFF + 1) is the total number of possible Uint16 values (65536).
+  const MAX_VALID_THRESHOLD = Math.floor((0xffff + 1) / PWD_CHARS_LEN) * PWD_CHARS_LEN;
+
   let password = "";
-  let max = Math.floor(65535 / chars.length) * chars.length;
-  const array = new Uint16Array(length * 2);
-  main: while (true) {
-    crypto.getRandomValues(array);
-    for (let i = 0; i < array.length; i++) {
-      // By taking only the numbers up to a multiple of char space size and discarding others,
-      // we expect a uniform distribution of all possible chars.
-      if (array[i] < max) {
-        password += chars[array[i] % chars.length];
-      }
-      if (password.length >= length) {
-        break main;
-      }
+  // Buffer for random values to reduce calls to crypto.getRandomValues.
+  // A size of length * 2 is a heuristic, generally sufficient for typical password lengths.
+  const randomValuesBuffer = new Uint16Array(length * 2);
+  let bufferIndex = randomValuesBuffer.length; // Start as if the buffer is exhausted
+
+  while (password.length < length) {
+    if (bufferIndex >= randomValuesBuffer.length) {
+      crypto.getRandomValues(randomValuesBuffer);
+      bufferIndex = 0;
+    }
+
+    const randomValue = randomValuesBuffer[bufferIndex++];
+    if (randomValue < MAX_VALID_THRESHOLD) {
+      password += PWD_CHARS[randomValue % PWD_CHARS_LEN];
     }
   }
   return password;
