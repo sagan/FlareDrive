@@ -3,6 +3,7 @@
 -- Creating migrations will keep a record of applied migrations in the `d1_migrations` table.
 -- Running `wrangler deploy` / `wrangler dev` will automatically apply migrations
 -- Apply migrations manually: `wrangler d1 migrations apply flaredrive --local`
+-- Test: `wrangler d1 execute --local flaredrive --command "select * from files"`
 -- Delete database (reset all migrations): `wrangler d1 delete flaredrive --local`
 -- Create a migration: `wrangler d1 migrations create flaredrive init`
 --
@@ -27,4 +28,4 @@ CREATE TABLE files (
 
 CREATE INDEX idx_files_name ON files(name);
 
-CREATE INDEX idx_files_depth_name ON files(depth, name);
+CREATE INDEX idx_files_depth_name ON files(depth, key);

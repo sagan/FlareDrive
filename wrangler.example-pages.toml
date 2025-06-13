@@ -1,9 +1,9 @@
 # To use this file:
 # Rename this file to wrangler.toml.
 # If using wrangler.toml, you must treat your wrangler.toml as the source of truth for
-# CloudFlare Pages project configuration when deploying to CloudFlare.
-# Any misconfiguration (e.g. a R2 / KV binding resource doesn't exist in CloudFlare account)
-# will make CloudFlare pages throw a building error:
+# Cloudflare Pages project configuration when deploying to Cloudflare.
+# Any misconfiguration (e.g. a R2 / KV binding resource doesn't exist in Cloudflare account)
+# will make Cloudflare pages throw a building error:
 #   "Error: Failed to publish your Function. Got error: Unknown internal error occurred."
 # Start local dev environment:
 #   npm i
@@ -33,3 +33,9 @@ bucket_name = "bucket"
 [[kv_namespaces]]
 binding = "KV"
 id = "kv_id"
+
+# Bind D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "flaredrive"
+database_id = "db"

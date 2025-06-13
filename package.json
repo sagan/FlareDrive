@@ -43,7 +43,7 @@
     "cfdev": "wrangler dev",
     "cfpagesdev": "wrangler pages dev",
     "cfversion": "wrangler versions upload",
-    "deploy": "wrangler deploy"
+    "deploy": "node scripts/conditional-d1-migrate.cjs flaredrive && wrangler deploy"
   },
   "eslintConfig": {
     "extends": [

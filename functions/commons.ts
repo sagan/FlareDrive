@@ -66,7 +66,7 @@ export type FdCfFuncContext = EventContext<
      */
     BUCKET_URL?: string;
     /**
-     * associated worker url. Must enable CloudFlare images transformation in worker domain zone.
+     * associated worker url. Must enable Cloudflare images transformation in worker domain zone.
      */
     WORKER_URL?: string;
     /**

@@ -84,8 +84,8 @@ async function generateAssets(variables) {
 export default defineConfig(async ({ command, mode }) => {
   const env = { ...process.env, ...loadEnv(mode, __dirname, "") };
 
-  // CloudFlare Pages runtime has CF_PAGES=1 set.
-  // Dynamic wrangler config file generation is only used in CloudFlare Workers mode.
+  // Cloudflare Pages runtime has CF_PAGES=1 set.
+  // Dynamic wrangler config file generation is only used in Cloudflare Workers mode.
   if (!env.CF_PAGES) {
     let wranglerConfigExists = false;
     try {
@@ -141,7 +141,7 @@ export default defineConfig(async ({ command, mode }) => {
     // Use define to expose other envs.
     // See: https://vite.dev/config/shared-options.html#envprefix .
     // import.meta.env variables can be referenced in index.html via `%VITE_ENVNAME%` syntax.
-    // Note the vite projet is for CloudFlare pages project (JavaScript SPA),
+    // Note the vite projet is for Cloudflare pages project (JavaScript SPA),
     // which is fullly static and runned in build time so any changes in env must be re-build to take effect.
     // For functions (functions/), env is dynamic and can be changed at any time.
     define: Object.keys(publicVariables).reduce((dv, key) => {

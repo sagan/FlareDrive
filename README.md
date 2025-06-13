@@ -9,8 +9,8 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - [FlareDrive](#flaredrive)
 - [Features](#features)
 - [Installation](#installation)
-  - [Deployment to CloudFlare Workers (recommended)](#deployment-to-cloudflare-workers-recommended)
-  - [Deployment to CloudFlare Pages](#deployment-to-cloudflare-pages)
+  - [Deployment to Cloudflare Workers (recommended)](#deployment-to-cloudflare-workers-recommended)
+  - [Deployment to Cloudflare Pages](#deployment-to-cloudflare-pages)
 - [WebDAV endpoint](#webdav-endpoint)
 - [Development](#development)
   - [Run this project locally as Workers](#run-this-project-locally-as-workers)
@@ -38,12 +38,13 @@ Before starting, you should make sure that
 - you have created a [Cloudflare](https://dash.cloudflare.com/) account
 - your payment method is added
 - R2 service is activated and at least one bucket is created
+- (optional) KV & D1 instances are created.
 
-This project can be de deployed to [CloudFlare Workers](https://developers.cloudflare.com/workers/) or [CloudFlare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the CloudFlare resource (R2 / KV) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the CloudFlare resource bindings directly in the dashboard.
+This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard.
 
-## Deployment to CloudFlare Workers (recommended)
+## Deployment to Cloudflare Workers (recommended)
 
-Fork this project and connect your fork with Cloudflare Workers. CloudFlare dashboard Settings:
+Fork this project and connect your fork with Cloudflare Workers. Cloudflare dashboard Settings:
 
 - Build configuration:
   - Build command: `npm run build:all`
@@ -54,15 +55,17 @@ Fork this project and connect your fork with Cloudflare Workers. CloudFlare dash
   - `WEBDAV_USERNAME`: username.
   - `WEBDAV_PASSWORD` password.
 - Build - Variables and secrets. (Any changes require re-build to take effect)
-  - `R2_BUCKET_NAME` : The [CloudFlare R2](https://developers.cloudflare.com/r2/) bucket name.
+  - `R2_BUCKET_NAME` : The [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket name.
   - (optional) `KV_ID` : The [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) instance id.
+  - (optional) `DATABASE_ID` : The [Cloudflare D1](https://developers.cloudflare.com/d1/) database id.
+    - Though `KV_ID` and `DATABASE_ID` are optional, we highly recommand to set them, otherwise some features of this project won't work.
   - (optional) `SITENAME` : Site name. Default is `FlareDrive`.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.
   - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
 
-## Deployment to CloudFlare Pages
+## Deployment to Cloudflare Pages
 
-Fork this project and connect your fork with Cloudflare Pages. Select `Vite` framework preset. CloudFlare dashboard Settings:
+Fork this project and connect your fork with Cloudflare Pages. Select `Vite` framework preset. Cloudflare dashboard Settings:
 
 - Build command: `npm run build`
 - Build output: `dist`
@@ -70,10 +73,11 @@ Fork this project and connect your fork with Cloudflare Pages. Select `Vite` fra
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
   - (optional) `SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
-  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [CloudFlare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `thumbnail_worker/forwarder.js` file to CloudFlare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
+  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `thumbnail_worker/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.
   - (optional) Bind Workers KV to `KV` name.
+  - (optional) Bind D1 Database to `DB` name.
 
 You need to retry deployment for any config changes to take effect.
 
@@ -103,8 +107,9 @@ encoding = None
 Prepare development environment:
 
 1. Run `npm i`.
-2. Copy `.env.sample` to `.env.local` and modify it to set environment variables. (Note: `.env.local` is used by Vite. CloudFlare Wrangler only recognizes `.dev.vars` file, running `npm run build` will automatically copy the former to the latter)
+2. Copy `.env.sample` to `.env.local` and modify it to set environment variables. (Note: `.env.local` is used by Vite. Cloudflare Wrangler only recognizes `.dev.vars` file, running `npm run build` will automatically copy the former to the latter)
 3. Copy `wrangler.sample.toml` (Running as Workers) or `wrangler.example-pages.toml` (Running as Pages) to `wrangler.toml`.
+4. Run `wrangler d1 migrations apply flaredrive --local` to apply local D1 database [migrations](https://developers.cloudflare.com/d1/reference/migrations/), which are defined inside `migrations/` folder.
 
 ## Run this project locally as Workers
 
