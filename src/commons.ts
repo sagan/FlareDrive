@@ -18,6 +18,7 @@ export const EDIT_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 export enum ViewMode {
   Default,
   Album,
+  Details,
 }
 
 /**

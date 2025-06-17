@@ -6,16 +6,19 @@ import {
   Download as DownloadIcon,
   MoreHoriz as MoreHorizIcon,
 } from "@mui/icons-material";
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ShareIcon from '@mui/icons-material/Share';
 import LinkIcon from '@mui/icons-material/Link';
 import { CopyButton } from "./components";
 import { useConfig } from "./commons";
 
 export default function MultiSelectToolbar({
+  isSearch,
   multiSelected,
   writable,
   onClose,
   getLink,
+  onOpenDir,
   onRename,
   onDuplicate,
   onMove,
@@ -23,6 +26,7 @@ export default function MultiSelectToolbar({
   onSelectAll,
   onShare,
 }: {
+  isSearch: boolean;
   writable: boolean;
   multiSelected: string[];
   onClose: () => void;
@@ -31,6 +35,7 @@ export default function MultiSelectToolbar({
    * @returns [link, linkIsDir]
    */
   getLink: (key: string) => [string, boolean];
+  onOpenDir: (key: string) => void;
   onRename: () => void;
   onDuplicate: () => void;
   onMove: () => void;
@@ -81,9 +86,15 @@ export default function MultiSelectToolbar({
         >
           <DownloadIcon />
         </IconButton>
-        <IconButton disabled={!writable} color="primary" onClick={onDelete}>
-          <DeleteIcon />
-        </IconButton>
+        {
+          isSearch ? <IconButton color="primary" disabled={multiSelected.length !== 1}
+            title="Open file / folder location"
+            onClick={() => onOpenDir(multiSelected[0])}>
+            <FolderOpenIcon />
+          </IconButton> : <IconButton disabled={!writable} color="primary" onClick={onDelete}>
+            <DeleteIcon />
+          </IconButton>
+        }
         <IconButton
           color="primary"
           disabled={multiSelected.length == 0}

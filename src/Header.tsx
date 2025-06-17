@@ -114,7 +114,12 @@ export default function Header({
       >
         <MenuItem onClick={() => {
           setAnchorEl(null);
-          setViewMode(vm => vm ? ViewMode.Default : ViewMode.Album)
+          setViewMode(vm => {
+            if (vm === ViewMode.Default) return ViewMode.Album;
+            if (vm === ViewMode.Album) return ViewMode.Details;
+            // if (vm === ViewMode.Details)
+            return ViewMode.Default;
+          })
         }}>Toggle view</MenuItem>
         {sortLabels.map((label, index) => <MenuItem key={index} onClick={e => {
           setAnchorEl(null);
@@ -174,4 +179,3 @@ export default function Header({
     </Toolbar>
   );
 }
-

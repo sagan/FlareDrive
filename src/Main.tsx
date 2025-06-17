@@ -25,6 +25,7 @@ import {
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
+import FileDetailsList from "./FileDetailsList";
 import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
@@ -319,8 +320,10 @@ export default function Main({
     multiSelected,
     emptyMessage: <Centered>No files or folders</Centered>,
   }
-  const viewElement = viewMode === ViewMode.Default ? <FileGrid {...viewProps} />
-    : <FileAlbum {...viewProps} />;
+  const viewElement =
+    viewMode === ViewMode.Details ? <FileDetailsList {...viewProps} />
+      : viewMode === ViewMode.Album ? <FileAlbum {...viewProps} />
+        : <FileGrid {...viewProps} />; // Default
 
   const sharingFile = useMemo(() => {
     return sharing ? (sharing === cwd ? getDirObj(cwd) : files.find(f => f.key === sharing)) : undefined
@@ -364,7 +367,8 @@ export default function Main({
             setEditing(created)
           }
         }} />
-      <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected}
+      <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected} isSearch={isSearch}
+        onOpenDir={(key: string) => setCwd(dirname(key))}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);
           const isDir = !!file && isDirectory(file)

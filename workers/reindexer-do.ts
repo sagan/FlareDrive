@@ -54,13 +54,14 @@ export class ReindexerDO implements DurableObject {
         const data: ReindexerStorage = {
           status: "running",
           pathPrefix: path_prefix || "",
-          currentR2Cursor: undefined,
+          currentR2Cursor: "",
           filesProcessed: 0,
           filesFailed: 0,
-          lastError: undefined,
+          lastError: "",
           startTime: Date.now(),
-          endTime: undefined,
+          endTime: 0,
         };
+        // storage.put(obj: Record<string, any>) will ignore items which value is undefined
         await this.state.storage.put<any>(data);
 
         await this.state.storage.setAlarm(Date.now() + 100); // Start processing shortly
@@ -75,12 +76,7 @@ export class ReindexerDO implements DurableObject {
 
         const data: ReindexerStorage = {
           status: "idle",
-          pathPrefix: "",
-          currentR2Cursor: undefined,
-          filesProcessed: 0,
-          filesFailed: 0,
-          lastError: undefined,
-          startTime: undefined,
+          currentR2Cursor: "",
           endTime: Date.now(),
         };
         await this.state.storage.put<any>(data);
@@ -118,7 +114,7 @@ export class ReindexerDO implements DurableObject {
       const listOptions: R2ListOptions = {
         prefix: pathPrefix,
         limit: BATCH_SIZE,
-        cursor: data.currentR2Cursor,
+        cursor: data.currentR2Cursor || undefined,
         // @ts-ignore
         include: ["httpMetadata", "customMetadata"],
       };
@@ -149,7 +145,7 @@ export class ReindexerDO implements DurableObject {
         await this.state.storage.setAlarm(Date.now() + ALARM_DELAY_MS);
       } else {
         updateData.status = "completed";
-        updateData.currentR2Cursor = undefined;
+        updateData.currentR2Cursor = "";
         updateData.endTime = Date.now();
         await this.state.storage.put(updateData);
         console.log(
@@ -159,7 +155,7 @@ export class ReindexerDO implements DurableObject {
     } catch (e: any) {
       const updateData: ReindexerStorage = {
         status: "failed",
-        lastError: `${e?.message}`,
+        lastError: `${e}`,
         endTime: Date.now(),
       };
       console.error(`Error during re-indexing batch for prefix '${pathPrefix}': ${e}`);

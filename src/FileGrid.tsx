@@ -30,8 +30,13 @@ export default function FileGrid({
   return <Grid container sx={{ paddingBottom: "48px" }}>
     {files.map((file) => {
       const IconComponent = file.icon
+      let title: string | undefined
+      if (isSearch) {
+        title = `Key: ${file.key}`;
+      }
       return <Grid item key={file.key} xs={12} sm={6} md={4} lg={3} xl={2}>
         <ListItemButton
+          title={title}
           selected={multiSelected.includes(file.key)}
           onClick={(e) => {
             e.preventDefault();

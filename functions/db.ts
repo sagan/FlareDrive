@@ -68,8 +68,8 @@ export async function queryDbFiles(
   prefix = trimPrefixSuffix(prefix.trim(), "/");
 
   let sql = `SELECT key, name, depth, size, mime, thumbnail, uploaded, ctime, mtime
-  FROM files WHERE (key LIKE ? OR name LIKE ?)`;
-  const params: any[] = [`${query}%`, `${query}%`];
+  FROM files WHERE (name LIKE ?)`;
+  const params: any[] = [`${query}%`];
   if (prefix) {
     sql += ` AND key LIKE ?`;
     params.push(`${prefix}/%`);

@@ -92,7 +92,7 @@ export default function ReindexerAdmin({ cwd }: { cwd: string }) {
             CWD
           </Button>
         </Box>
-        <Typography><strong>Status:</strong> {isRunning ? 'Running' : 'Idle'}</Typography>
+        <Typography><strong>Status:</strong> {state.status}</Typography>
         {state.startTime && <Typography>Last Start: {new Date(state.startTime).toLocaleString()}</Typography>}
         {state.endTime && <Typography>Last End: {new Date(state.endTime).toLocaleString()}</Typography>}
         <Typography>Processed Items: {state.filesProcessed}</Typography>
