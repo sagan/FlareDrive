@@ -1,5 +1,7 @@
 compatibility_date = "2025-04-01"
 name = "flaredrive"
+# Note: "./index.js" depends on "./dist_worker/index.js",
+# the latter is compiled at build time by "npm run build:worker".
 main = "./index.js"
 keep_vars = true
 
@@ -24,6 +26,16 @@ d1_databases = [
 [[durable_objects.bindings]]
 name = "REINDEXER_DO"
 class_name = "ReindexerDO"
+
+# A migration is a mapping process from a class name to a runtime state.
+# You perform a migration when creating a new Durable Object class,
+# or when renaming, deleting or transferring an existing Durable Object class.
+# See: https://developers.cloudflare.com/durable-objects/get-started/ ,
+# https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ .
+# Migrations are not necessary in dev environment.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ReindexerDO"]
 
 
 [images]

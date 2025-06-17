@@ -16,6 +16,14 @@
       }
     ]
   },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "ReindexerDO"
+      ]
+    }
+  ],
   "images": {
     "binding": "IMAGES"
   }
