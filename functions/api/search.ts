@@ -3,8 +3,7 @@ import { checkAuthFailure, FdCfFunc, jsonResponse, responseInternalServerError }
 import { queryDbFiles } from "../db";
 
 export const onRequestGet: FdCfFunc = async function (context) {
-  const env = context.env;
-  const request = context.request;
+  const { request, env } = context;
   const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;

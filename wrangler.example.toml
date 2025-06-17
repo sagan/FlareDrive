@@ -1,7 +1,6 @@
 compatibility_date = "2025-04-01"
 name = "flaredrive"
-# Run "npm run build:worker" to generate Worker dist file
-main = "./dist_worker/index.js"
+main = "./index.js"
 keep_vars = true
 
 # This file "wrangler.example.toml" is intended to be used in local development env.
@@ -21,6 +20,11 @@ kv_namespaces = [{ binding = "KV", id = "kv" }]
 d1_databases = [
   { binding = "DB", database_name = "flaredrive", database_id = "db" },
 ]
+
+[[durable_objects.bindings]]
+name = "REINDEXER_DO"
+class_name = "ReindexerDO"
+
 
 [images]
 binding = "IMAGES"

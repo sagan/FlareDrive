@@ -7,7 +7,7 @@ import {
   Stack,
 } from "@mui/material";
 import React, { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
@@ -22,6 +22,7 @@ import {
 import Header from "./Header";
 import Main from "./Main";
 import ProgressDialog from "./ProgressDialog";
+import AdminDialog from "./AdminDialog";
 import { TransferQueueProvider } from "./app/transferQueue";
 import { fetchPath } from "./app/transfer";
 import ShareManager from "./ShareManager";
@@ -57,6 +58,7 @@ export default function App() {
   const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true);
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
+  const [showAdminDialog, setShowAdminDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = React.useState(false);
   const [error, setError] = useState<any>(null);
@@ -64,6 +66,7 @@ export default function App() {
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [sharing, setSharing] = useState(""); // sharing file key
+  const [ts, setTs] = useState(Date.now())
 
   const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
@@ -104,13 +107,15 @@ export default function App() {
   const setCwd = (cwd: string) => {
     const pathname = dirUrlPath(cwd)
     const scope = searchParams.get(SCOPE_VARIABLE)
-    if (scope) {
-      if (pathname.startsWith(dirUrlPath(scope))) {
-        navigate({ pathname, search: "?" + searchParams.toString() })
-        return
-      }
+    let search = ""
+    if (scope && pathname.startsWith(dirUrlPath(scope))) {
+      search = "?" + searchParams.toString()
     }
-    navigate(pathname);
+    if (pathname === location.pathname && search === location.search) {
+      setTs(Date.now())
+    } else {
+      navigate({ pathname, search });
+    }
   }
 
   const [permission, prefix] = useMemo(() => getFilePermission(cwd), [cwd])
@@ -216,7 +221,7 @@ export default function App() {
     setAuth(() => basicAuthorizationHeader(user, pass))
   }
 
-  useEffect(() => fetchFiles(), [cwd, auth]);
+  useEffect(() => fetchFiles(), [cwd, auth, ts]);
 
   return (
     <ConfigContext.Provider value={config}>
@@ -237,6 +242,7 @@ export default function App() {
               sort={sort} setSort={setSort}
               onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
               setShowProgressDialog={setShowProgressDialog}
+              setShowAdminDialog={setShowAdminDialog}
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
                 ? () => setSharing(multiSelected[0] || cwd) : undefined}
             />
@@ -262,6 +268,11 @@ export default function App() {
           <ProgressDialog
             open={showProgressDialog}
             onClose={() => setShowProgressDialog(false)}
+          />
+          <AdminDialog
+            cwd={cwd}
+            open={showAdminDialog}
+            onClose={() => setShowAdminDialog(false)}
           />
           {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
             onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>

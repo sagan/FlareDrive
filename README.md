@@ -73,11 +73,12 @@ Fork this project and connect your fork with Cloudflare Pages. Select `Vite` fra
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
   - (optional) `SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
-  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `thumbnail_worker/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
+  - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `workers/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.
   - (optional) Bind Workers KV to `KV` name.
   - (optional) Bind D1 Database to `DB` name.
+  - (optional) Use wrangler CLI to deploy `workers/reindexer-do.ts` to CF as [Durable Object](https://developers.cloudflare.com/durable-objects/) (bind `BUCKET` and `DB` to them too), than bind it to `REINDEXER_DO` name. It's only required in Pages mode as CF pages don't support Durable Objects directly.
 
 You need to retry deployment for any config changes to take effect.
 

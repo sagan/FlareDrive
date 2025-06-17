@@ -22,6 +22,7 @@ export default function Header({
   setSearch,
   onGenerateThumbnails,
   setShowProgressDialog,
+  setShowAdminDialog,
   fetchFiles,
   onShare,
 }: {
@@ -36,7 +37,8 @@ export default function Header({
   onSignnIn: () => void;
   setSearch: React.Dispatch<React.SetStateAction<string>>;
   onGenerateThumbnails: () => void;
-  setShowProgressDialog: (show: boolean) => void;
+  setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowAdminDialog: React.Dispatch<React.SetStateAction<boolean>>;
   fetchFiles: () => void;
   onShare?: () => void;
 }) {
@@ -70,9 +72,6 @@ export default function Header({
           }
           cwdParts.push(KEY_PART_SEARCH, encodeURIComponent(search))
           let newCwd = joinPathes(...cwdParts)
-          if (newCwd === cwd) {
-            return
-          }
           console.log("search", search)
           setCwd(newCwd)
         }}
@@ -146,6 +145,10 @@ export default function Header({
         >
           Share & Publish
         </MenuItem>}
+        {!!auth && <MenuItem onClick={() => {
+          setAnchorEl(null);
+          setShowAdminDialog(true);
+        }}>Administration</MenuItem>}
       </Menu>
       <IconButton title={auth ? "Authorized" : "Unauthorized. Click to sign in"}
         onClick={(e) => {

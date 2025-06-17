@@ -36,6 +36,21 @@ export async function deleteDbFile(db: D1Database, key: string) {
   await db.prepare(`DELETE FROM files WHERE key = ?`).bind(key).run();
 }
 
+/**
+ * Delete all file meta from D1 database "files" table which key has prefix.
+ * If prefix is empty, delete all.
+ */
+export async function deleteAllDbFiles(db: D1Database, prefix?: string) {
+  prefix = prefix || "";
+  prefix = trimPrefixSuffix(prefix.trim(), "/");
+  const sql = prefix ? `DELETE FROM files WHERE key LIKE ?` : `DELETE FROM files`;
+  const params = prefix ? [`${prefix}/%`] : [];
+  await db
+    .prepare(sql)
+    .bind(...params)
+    .run();
+}
+
 interface QueryOptions {
   prefix?: string;
   limit?: number;

@@ -21,6 +21,7 @@ import {
   HEADER_CF_RESIZED,
   MIME_HTML,
   MIME_MARKDOWN,
+  MIME_JSON,
   THUMBNAIL_SIZE,
   sha256,
   hmacSha256Verify,
@@ -35,51 +36,54 @@ import {
   isImage,
 } from "../lib/commons";
 
+export type Env = {
+  /**
+   * Flag. set it to any value (e.g. "1") to lift cloud download size limitation.
+   */
+  CLOUD_DOWNLOAD_UNLIMITED?: string;
+  WEBDAV_USERNAME: string;
+  WEBDAV_PASSWORD: string;
+  /**
+   * Comma-separated "public" path prefixes.
+   * Path with any of these prefixes is allowed to read file anonymously
+   * But dir browsing is NOT allowed.
+   */
+  PUBLIC_PREFIX?: string;
+  /**
+   * Comma-separated "public dir" path prefixes.
+   * Path with any of these prefixes is allowed to read file / browser dir anonymously.
+   */
+  PUBLIC_DIR_PREFIX?: string;
+  /**
+   * Comma-separated "public writable dir" path prefixes.
+   * Path with any of these prefixes is allowed to read file / browser dir and write / update dir anonymously.
+   */
+  PUBLIC_RWDIR_PREFIX?: string;
+  /**
+   * optional bucket public access url (without trailing "/"), e.g. "http://bucket-secret.example.com".
+   * It is suggested to keep this url secret (choose a private & complex custom sub domain).
+   * It's only used by functions/* and will not be leaked to front end.
+   */
+  BUCKET_URL?: string;
+  /**
+   * associated worker url. Must enable Cloudflare images transformation in worker domain zone.
+   */
+  WORKER_URL?: string;
+  /**
+   * associated worker token
+   */
+  WORKER_TOKEN?: string;
+  SITENAME?: string;
+  BUCKET: R2Bucket;
+  KV?: KVNamespace;
+  DB?: D1Database;
+  IMAGES?: ImagesBinding;
+  REINDEXER_DO?: DurableObjectNamespace;
+  [key: string]: any;
+};
+
 export type FdCfFuncContext = EventContext<
-  {
-    /**
-     * Flag. set it to any value (e.g. "1") to lift cloud download size limitation.
-     */
-    CLOUD_DOWNLOAD_UNLIMITED?: string;
-    WEBDAV_USERNAME: string;
-    WEBDAV_PASSWORD: string;
-    /**
-     * Comma-separated "public" path prefixes.
-     * Path with any of these prefixes is allowed to read file anonymously
-     * But dir browsing is NOT allowed.
-     */
-    PUBLIC_PREFIX?: string;
-    /**
-     * Comma-separated "public dir" path prefixes.
-     * Path with any of these prefixes is allowed to read file / browser dir anonymously.
-     */
-    PUBLIC_DIR_PREFIX?: string;
-    /**
-     * Comma-separated "public writable dir" path prefixes.
-     * Path with any of these prefixes is allowed to read file / browser dir and write / update dir anonymously.
-     */
-    PUBLIC_RWDIR_PREFIX?: string;
-    /**
-     * optional bucket public access url (without trailing "/"), e.g. "http://bucket-secret.example.com".
-     * It is suggested to keep this url secret (choose a private & complex custom sub domain).
-     * It's only used by functions/* and will not be leaked to front end.
-     */
-    BUCKET_URL?: string;
-    /**
-     * associated worker url. Must enable Cloudflare images transformation in worker domain zone.
-     */
-    WORKER_URL?: string;
-    /**
-     * associated worker token
-     */
-    WORKER_TOKEN?: string;
-    SITENAME?: string;
-    BUCKET: R2Bucket;
-    KV?: KVNamespace;
-    DB?: D1Database;
-    IMAGES?: ImagesBinding;
-    [key: string]: any;
-  },
+  Env,
   string, // params key type
   Record<string, unknown> // data type
 >;
@@ -118,8 +122,8 @@ export function responseBadRequest(msg?: string): Response {
 /**
  * Return 409 Conflict response
  */
-export function responseConflict(): Response {
-  return new Response("Conflict", { status: 409 });
+export function responseConflict(msg?: string): Response {
+  return new Response(msg || "Conflict", { status: 409 });
 }
 
 /**
@@ -527,4 +531,21 @@ export function checkConflict(request: Request, object?: R2Object | null | undef
     }
   }
   return false;
+}
+
+/**
+ * Return a "Content-Type: application/json" request to url.
+ * @param method default to POST.
+ */
+export function requestJson(url: string | URL, payload: any, method: "POST" | "PUT" | "DELETE" = "POST"): Request {
+  if (url instanceof URL) {
+    url = url.href;
+  }
+  return new Request(url, {
+    method,
+    body: JSON.stringify(payload),
+    headers: {
+      [HEADER_CONTENT_TYPE]: MIME_JSON,
+    },
+  });
 }

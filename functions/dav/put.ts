@@ -204,7 +204,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   async function postUploadTasks(obj: R2Object) {
     if (context.env.DB && !obj.key.startsWith(KEY_PREFIX_PRIVATE)) {
       try {
-        await upsertDbFile(context.env.DB!, obj);
+        await upsertDbFile(context.env.DB, obj);
       } catch (e) {
         console.log("failed to upsert file meta to db", e);
       }

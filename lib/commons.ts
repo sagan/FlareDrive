@@ -5,11 +5,14 @@ export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
 export const SEARCH_API = "/api/search";
+export const REINDEX_API = "/api/reindex";
 
 /**
  * Cloud Download default file size limit (bytes): 10MiB.
  */
 export const CLOUD_DOWNLOAD_SIZE_LIMIT = 50 * 1024 * 1024;
+
+export const ID_VARIABLE = "id";
 
 export const THUMBNAIL_SIZE = 144;
 

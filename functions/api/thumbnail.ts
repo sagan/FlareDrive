@@ -33,9 +33,8 @@ interface PostBody {
  * @returns
  */
 export const onRequestGet: FdCfFunc = async function (context) {
-  const bucket = context.env.BUCKET;
-  const env = context.env;
-  const request = context.request;
+  const { request, env } = context;
+  const bucket = env.BUCKET;
   const searchParams = new URL(request.url).searchParams;
   const digest = searchParams.get(THUMBNAIL_DIGEST_VARIABLE) || "";
   const ext = searchParams.get(THUMBNAIL_EXT_VARIABLE) || "";
