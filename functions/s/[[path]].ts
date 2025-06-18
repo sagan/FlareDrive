@@ -303,41 +303,6 @@ function indexPage(
 <link rel="icon" href="/favicon.png" />
 
 <script>
-function onDragStart(e) {
-  var el = e.srcElement;
-  var name = el.innerText.replace(":", "");
-  var download_url_data = "application/octet-stream:" + name + ":" + el.href;
-  e.dataTransfer.setData("DownloadURL", download_url_data);
-  e.dataTransfer.effectAllowed = "copy";
-}
-
-function createCell(value, text) {
-  var cell = document.createElement("td");
-  cell.setAttribute("class", "detailsColumn");
-  cell.dataset.value = value;
-  cell.innerText = text;
-  return cell;
-}
-
-function start(location) {
-  var header = document.getElementById("header");
-  header.innerText = header.innerText.replace("LOCATION", location);
-
-  document.getElementById("title").innerText = header.innerText;
-}
-
-function onHasParentDirectory() {
-  var box = document.getElementById("parentDirLinkBox");
-  box.style.display = "block";
-
-  var root = document.location.pathname;
-  if (!root.endsWith("/"))
-    root += "/";
-
-  var link = document.getElementById("parentDirLink");
-  link.href = root + "..";
-}
-
 function sortTable(column) {
   var theader = document.getElementById("theader");
   var oldOrder = theader.cells[column].dataset.order || '1';
