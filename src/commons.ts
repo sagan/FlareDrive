@@ -1,5 +1,5 @@
 import { SyntheticEvent } from "react";
-import { MIME_DEFAULT, MIME_DIR, Permission, TXT_MIMES, mimeType } from "../lib/commons";
+import { KEY_PART_SEARCH, KEY_PART_SEARCH_FULL, MIME_DEFAULT, TXT_MIMES, Permission, mimeType } from "../lib/commons";
 import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
@@ -213,3 +213,49 @@ export enum Sort {
  * Sort labels. index as value.
  */
 export const sortLabels = ["Default sort", "Sort by date", "Sort by size"] as const;
+
+export interface SearchOptions {
+  baseDir?: string;
+  /**
+   * Full search, not limited to file name prefix.
+   */
+  full?: boolean;
+}
+
+export function search2Cwd(keyword: string, options: SearchOptions = {}): string {
+  let cwd = options.baseDir || "";
+  if (cwd) {
+    cwd += "/";
+  }
+  cwd += KEY_PART_SEARCH;
+  if (options.full) {
+    cwd += "/" + KEY_PART_SEARCH_FULL;
+  }
+  if (keyword) {
+    cwd += "/" + encodeURIComponent(keyword);
+  }
+  return cwd;
+}
+
+// The reverse of "search2Cwd" function
+export function cwd2Search(cwd: string): [isSearch: boolean, keyword: string, options: SearchOptions] {
+  const parts = cwd.split("/");
+  const index = parts.indexOf(KEY_PART_SEARCH); // Consider using a constant for KEY_PART_SEARCH
+  if (index == -1) {
+    return [false, "", {}];
+  }
+  const searchBaseDir = parts.slice(0, index).join("/");
+  let searchKeyword: string;
+  let full: boolean;
+  if (parts.length > index + 2) {
+    searchKeyword = decodeURIComponent(parts[index + 2] || "");
+    full = parts[index + 1] === KEY_PART_SEARCH_FULL;
+  } else if (parts[index + 1] === KEY_PART_SEARCH_FULL) {
+    searchKeyword = "";
+    full = true;
+  } else {
+    searchKeyword = decodeURIComponent(parts[index + 1] || "");
+    full = false;
+  }
+  return [true, searchKeyword, { baseDir: searchBaseDir, full }];
+}

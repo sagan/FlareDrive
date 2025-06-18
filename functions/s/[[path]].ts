@@ -12,6 +12,7 @@ import {
   trimSuffix,
   cut,
   str2int,
+  humanReadableSize,
   encodeHex,
   isDirectory,
 } from "../../lib/commons";
@@ -194,11 +195,21 @@ export const onRequestGet: FdCfFunc = async function (context) {
         return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
       }
     }
-    const files = await findChildren({
+    let files = await findChildren({
       bucket: context.env.BUCKET,
       path: filekey,
       depth: "1",
+      db: context.env.DB,
     });
+    // Pre-sort files: directories first, then by name
+    files.sort((a, b) => {
+      const aIsDir = isDirectory(a);
+      const bIsDir = isDirectory(b);
+      if (aIsDir && !bIsDir) return -1;
+      if (!aIsDir && bIsDir) return 1;
+      return a.key.split("/").pop()!.localeCompare(b.key.split("/").pop()!);
+    });
+
     return htmlResponse(
       indexPage(context.env.SITENAME, data.desc || "", sharekey + (relpath ? "/" + relpath : ""), !relpath, files)
     );
@@ -247,6 +258,38 @@ function indexPage(
 ): string {
   const title = sitename ? `${dir} - ${sitename}` : `${dir}`;
   // from Chrome file:// url dir index page
+
+  const parentDirLinkHtml = !isRoot
+    ? `
+    <div id="parentDirLinkBox">
+      <a href=".." class="icon up">
+        <span>[parent directory]</span>
+      </a>
+    </div>`
+    : "";
+
+  const tableRowsHtml = items
+    .map((item) => {
+      const name = item.key.split("/").pop()!;
+      const isDir = isDirectory(item);
+      const href = encodeURIComponent(name) + (isDir ? "/" : ""); // Relative href
+      const displayName = encodeHtml(name) + (isDir ? "/" : "");
+      const sizeDisplay = !isDir ? humanReadableSize(item.size) : "";
+      const dateDisplay = item.uploaded.toLocaleString(); // Human-readable date
+      const md5Display = !isDir && item.checksums?.md5 ? encodeHex(item.checksums.md5) : "";
+
+      return `
+        <tr>
+          <td data-value="${encodeHtml(name)}"><a href="${href}" class="icon ${
+        isDir ? "dir" : "file"
+      }">${displayName}</a></td>
+          <td class="detailsColumn" data-value="${item.size}">${sizeDisplay}</td>
+          <td class="detailsColumn" data-value="${+item.uploaded}">${dateDisplay}</td>
+          <td class="detailsColumn" data-value="${md5Display}">${md5Display}</td>
+        </tr>`;
+    })
+    .join("\n");
+
   return `<!DOCTYPE html>
 
 <html dir="ltr" lang="en">
@@ -260,45 +303,6 @@ function indexPage(
 <link rel="icon" href="/favicon.png" />
 
 <script>
-function addRow(name, url, isdir,
-    size, size_string, date_modified, date_modified_string, md5) {
-  if (name == "." || name == "..")
-    return;
-
-  var root = document.location.pathname;
-  if (root.substr(-1) !== "/")
-    root += "/";
-
-  var tbody = document.getElementById("tbody");
-  var row = document.createElement("tr");
-  var file_cell = document.createElement("td");
-  var link = document.createElement("a");
-
-  link.className = isdir ? "icon dir" : "icon file";
-
-  if (isdir) {
-    name = name + "/";
-    url = url + "/";
-    size = 0;
-    size_string = "";
-  } else {
-    link.draggable = "true";
-    link.addEventListener("dragstart", onDragStart, false);
-  }
-  link.innerText = name;
-  link.href = root + url;
-
-  file_cell.dataset.value = name;
-  file_cell.appendChild(link);
-
-  row.appendChild(file_cell);
-  row.appendChild(createCell(size, size_string));
-  row.appendChild(createCell(date_modified, date_modified_string));
-  row.appendChild(createCell(md5, md5));
-
-  tbody.appendChild(row);
-}
-
 function onDragStart(e) {
   var el = e.srcElement;
   var name = el.innerText.replace(":", "");
@@ -349,18 +353,28 @@ function sortTable(column) {
   }
 
   list.sort(function(row1, row2) {
+    const aIsDir = row1.cells[0].querySelector('a').classList.contains('dir');
+    const bIsDir = row2.cells[0].querySelector('a').classList.contains('dir');
+
+    if (aIsDir && !bIsDir) {
+      return -1; // Directories always come first
+    }
+    if (!aIsDir && bIsDir) {
+      return 1;  // Files always come after directories
+    }
+
     var a = row1.cells[column].dataset.value;
     var b = row2.cells[column].dataset.value;
-    if (column) {
+    if (column === 1 || column === 2) { // Size or Date (timestamp)
       a = parseInt(a, 10);
       b = parseInt(b, 10);
       return a > b ? newOrder : a < b ? oldOrder : 0;
     }
 
-    // Column 0 is text.
-    if (a > b)
+   // Column 0 (Name) or 3 (MD5) is text.
+    if (a.toLowerCase() > b.toLowerCase())
       return newOrder;
-    if (a < b)
+    if (a.toLowerCase() < b.toLowerCase())
       return oldOrder;
     return 0;
   });
@@ -386,13 +400,13 @@ function onLoad() {
   addHandlers(document.getElementById('nameColumnHeader'), 0);
   addHandlers(document.getElementById('sizeColumnHeader'), 1);
   addHandlers(document.getElementById('dateColumnHeader'), 2);
+  addHandlers(document.getElementById('md5ColumnHeader'), 3);
 }
 
 window.addEventListener('DOMContentLoaded', onLoad);
 </script>
 
 <style>
-
   h1 {
     border-bottom: 1px solid #c0c0c0;
     margin-bottom: 10px;
@@ -402,16 +416,22 @@ window.addEventListener('DOMContentLoaded', onLoad);
 
   table {
     border-collapse: collapse;
+    /* width: 100%; */
   }
 
   th {
     cursor: pointer;
+    text-align: left;
   }
 
-  td.detailsColumn {
+  .detailsColumn {
     padding-inline-start: 2em;
     text-align: end;
     white-space: nowrap;
+  }
+
+  td, th {
+    padding: 5px;
   }
 
   a.icon {
@@ -444,12 +464,6 @@ window.addEventListener('DOMContentLoaded', onLoad);
     margin-bottom: 10px;
     padding-bottom: 10px;
   }
-
-  @media (scripting: none) {
-    body > *:not(noscript) {
-      display: none !important;
-    }
-  }
 </style>
 
 <title id="title"></title>
@@ -457,14 +471,9 @@ window.addEventListener('DOMContentLoaded', onLoad);
 </head>
 
 <body>
-<noscript>You need to enable JavaScript to display this page.</noscript>
-<h1 id="header">Index of LOCATION</h1>
-${desc ? `<div>${desc}</div>` : ""}
-<div id="parentDirLinkBox" style="display:none">
-  <a id="parentDirLink" class="icon up">
-    <span id="parentDirText">[parent directory]</span>
-  </a>
-</div>
+<h1>Index of ${encodeHtml(dir)}</h1>
+${desc ? `<div>${encodeHtml(desc)}</div>` : ""}
+${parentDirLinkHtml}
 
 <table>
   <thead>
@@ -482,54 +491,14 @@ ${desc ? `<div>${desc}</div>` : ""}
     </tr>
   </thead>
   <tbody id="tbody">
+    ${tableRowsHtml}
   </tbody>
 </table>
 
 </body>
 
 </html>
-<script>"use strict";
-// Copyright 2012 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-var loadTimeData;class LoadTimeData{constructor(){this.data_=null}set data(value){expect(!this.data_,"Re-setting data.");this.data_=value}valueExists(id){return id in this.data_}getValue(id){expect(this.data_,"No data. Did you remember to include strings.js?");const value=this.data_[id];expect(typeof value!=="undefined","Could not find value for "+id);return value}getString(id){const value=this.getValue(id);expectIsType(id,value,"string");return value}getStringF(id,var_args){const value=this.getString(id);if(!value){return""}const args=Array.prototype.slice.call(arguments);args[0]=value;return this.substituteString.apply(this,args)}substituteString(label,var_args){const varArgs=arguments;return label.replace(/\$(.|$|\n)/g,(function(m){expect(m.match(/\$[$1-9]/),"Unescaped $ found in localized string.");return m==="$$"?"$":varArgs[m[1]]}))}getBoolean(id){const value=this.getValue(id);expectIsType(id,value,"boolean");return value}getInteger(id){const value=this.getValue(id);expectIsType(id,value,"number");expect(value===Math.floor(value),"Number isn't integer: "+value);return value}overrideValues(replacements){expect(typeof replacements==="object","Replacements must be a dictionary object.");for(const key in replacements){this.data_[key]=replacements[key]}}}function expect(condition,message){if(!condition){throw new Error("Unexpected condition on "+document.location.href+": "+message)}}function expectIsType(id,value,type){expect(typeof value===type,"["+value+"] ("+id+") is not a "+type)}expect(!loadTimeData,"should only include this file once");loadTimeData=new LoadTimeData;window.loadTimeData=loadTimeData;console.warn("crbug/1173575, non-JS module files deprecated.");</script><script>loadTimeData.data = {"header":"Index of LOCATION","headerDateModified":"Date Modified","headerName":"Name","headerSize":"Size","language":"en","parentDirText":"[parent directory]","textdirection":"ltr"};</script>
-<script>
-function humanFileSize(size) {
-  if(size < 0) return size.toString();
-  var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
-  return +((size / Math.pow(1024, i)).toFixed(2)) * 1 + ' ' + ['B', 'KB', 'MB', 'GB', 'TB'][i];
-}
-</script>
-<script>
-  start(${str(dir)});
-  if(!${isRoot}) {
-    onHasParentDirectory();
-  }
-  // function addRow(name, url, isdir, size, size_string, date_modified, date_modified_string)
-${items
-  .map((item) => {
-    const name = item.key.split("/").pop()!;
-    return `addRow(${str(name)}, ${str(name)}, ${isDirectory(item)}, ${item.size}, humanFileSize(${
-      item.size
-    }), ${+item.uploaded}, ${str(item.uploaded.toISOString())}, ${str(
-      !isDirectory(item) ? encodeHex(item.checksums?.md5) : ""
-    )});`;
-  })
-  .join("\n")}
-</script>
 `;
-}
-
-/**
- * Escape a JavaScript string literal, return a JavaScript expression literal which evaluate to that string.
- * @param s
- * @returns
- */
-function str(s: string): string {
-  if (s.includes(`"`) || s.includes(`'`) || s.includes(`\\`)) {
-    return `decodeURI(${`"${encodeURIComponent(s)}"`})`;
-  }
-  return `"${s}"`;
 }
 
 function encodeHtml(str: string): string {

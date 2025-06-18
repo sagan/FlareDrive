@@ -8,6 +8,7 @@ export const FileSchema = z.object({
   mime: z.string(),
   thumbnail: z.string(),
   uploaded: z.coerce.date(),
+  md5: z.string(),
   ctime: z.coerce.date(),
   mtime: z.coerce.date(),
 });

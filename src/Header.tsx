@@ -6,11 +6,13 @@ import LoginIcon from '@mui/icons-material/Login';
 import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
-import { joinPathes, KEY_PART_SEARCH, Permission } from "../lib/commons";
-import { Sort, ViewMode, sortLabels, useConfig } from "./commons";
+import { Permission } from "../lib/commons";
+import { SearchOptions, Sort, ViewMode, search2Cwd, sortLabels, useConfig } from "./commons";
 
 export default function Header({
   cwd,
+  isSearch,
+  searchOptions,
   permission,
   sort,
   search,
@@ -27,6 +29,8 @@ export default function Header({
   onShare,
 }: {
   cwd: string;
+  isSearch: boolean;
+  searchOptions: SearchOptions;
   permission: Permission;
   sort: Sort;
   setSort: React.Dispatch<React.SetStateAction<Sort>>;
@@ -51,6 +55,9 @@ export default function Header({
   return (
     <Toolbar disableGutters sx={{ padding: 1 }}>
       <Link to="/" onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          return;
+        }
         e.preventDefault();
         setSearch("");
         setCwd("");
@@ -62,18 +69,10 @@ export default function Header({
       <form
         onSubmit={e => {
           e.preventDefault()
-          if (!search || !auth) {
+          if (!auth) {
             return
           }
-          let cwdParts = cwd.split("/")
-          let index = cwdParts.indexOf(KEY_PART_SEARCH)
-          if (index >= 0) {
-            cwdParts = cwdParts.slice(0, index)
-          }
-          cwdParts.push(KEY_PART_SEARCH, encodeURIComponent(search))
-          let newCwd = joinPathes(...cwdParts)
-          console.log("search", search)
-          setCwd(newCwd)
+          setCwd(search2Cwd(search, search || isSearch ? searchOptions : { baseDir: cwd }))
         }}
         style={{ display: 'flex', flexGrow: 1 }}
       >
@@ -81,7 +80,7 @@ export default function Header({
           size="small"
           fullWidth
           type="search"
-          placeholder="Search…"
+          placeholder={searchOptions.baseDir ? `Search in "${searchOptions.baseDir}"` : `Search`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{

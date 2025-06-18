@@ -21,9 +21,11 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const prefix = searchParams.get("prefix") || "";
   const limit = str2int(searchParams.get("limit"), 10);
   const offset = str2int(searchParams.get("offset"));
+  const depth = str2int(searchParams.get("depth"), -1);
+  const full = !!str2int(searchParams.get("full"));
 
   try {
-    const files = await queryDbFiles(db, query, { prefix, limit, offset });
+    const files = await queryDbFiles(db, query, { prefix, full, limit, offset, depth });
     return jsonResponse(files);
   } catch (error) {
     return responseInternalServerError();

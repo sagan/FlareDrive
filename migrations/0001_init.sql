@@ -1,7 +1,7 @@
 -- Migration number: 0001 	 2025-06-10T08:43:27.819Z
 -- By default, migrations are created in the `migrations/` folder in your Worker project directory. 
 -- Creating migrations will keep a record of applied migrations in the `d1_migrations` table.
--- Running `wrangler deploy` / `wrangler dev` will automatically apply migrations
+-- Running `wrangler deploy` / `wrangler dev` will NOT automatically apply migrations.
 -- Apply migrations manually: `wrangler d1 migrations apply flaredrive --local`
 -- Test: `wrangler d1 execute --local flaredrive --command "select * from files"`
 -- Delete database (reset all migrations): `wrangler d1 delete flaredrive --local`
@@ -28,4 +28,6 @@ CREATE TABLE files (
 
 CREATE INDEX idx_files_name ON files(name);
 
+-- it should be renamed to idx_files_depth_key .
+-- but I don't want add a migration only for it.
 CREATE INDEX idx_files_depth_name ON files(depth, key);

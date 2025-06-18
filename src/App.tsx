@@ -6,6 +6,7 @@ import {
   Snackbar,
   Stack,
 } from "@mui/material";
+import NProgress from "nprogress"
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
@@ -13,11 +14,11 @@ import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE,
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
-  KEY_PART_SEARCH
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE,
   FileItem, isThumbnailPossible, ViewMode, Config, ConfigContext, getFilePermission,
+  cwd2Search,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -119,17 +120,9 @@ export default function App() {
   }
 
   const [permission, prefix] = useMemo(() => getFilePermission(cwd), [cwd])
-  const [isSearch, searchBaseDir, searchKeyword] = useMemo(() => {
-    const parts = cwd.split("/")
-    const index = parts.indexOf(KEY_PART_SEARCH)
-    if (index == -1) {
-      return [false, "", ""]
-    }
-    const searchBaseDir = parts.slice(0, index).join("/");
-    const searchKeyword = decodeURIComponent(parts[index + 1] || "")
-    return [true, searchBaseDir, searchKeyword];
-  }, [cwd])
+  const [isSearch, searchKeyword, searchOptions] = useMemo(() => cwd2Search(cwd), [cwd])
   const [search, setSearch] = useState(searchKeyword);
+  const currentDir = isSearch ? (searchOptions.baseDir || "") : cwd
 
   useEffect(() => {
     document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
@@ -142,6 +135,14 @@ export default function App() {
     }
     return items
   }, [files, multiSelected])
+
+  useEffect(() => {
+    if (loading) {
+      NProgress.start()
+    } else {
+      NProgress.done();
+    }
+  }, [loading])
 
   const fetchFiles = () => {
     setLoading(true);
@@ -160,7 +161,7 @@ export default function App() {
         setLoading(false)
         return;
       }
-      searchFiles(auth, searchKeyword, searchBaseDir).then(result => {
+      searchFiles(auth, searchKeyword, searchOptions).then(result => {
         const files: FileItem[] = result.map(searchFile => {
           return {
             key: searchFile.key,
@@ -236,6 +237,8 @@ export default function App() {
                 fetchFiles();
               }}
               cwd={cwd}
+              isSearch={isSearch}
+              searchOptions={searchOptions}
               setCwd={setCwd}
               onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
               setSearch={setSearch} setViewMode={setViewMode}
@@ -246,13 +249,15 @@ export default function App() {
               onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
                 ? () => setSharing(multiSelected[0] || cwd) : undefined}
             />
-            <PathBreadcrumb prefix={prefix} permission={permission} path={cwd} setCwd={setCwd} setSearch={setSearch} />
+            <PathBreadcrumb prefix={prefix} permission={permission}
+              path={currentDir} searchKeyword={searchKeyword}
+              isSearch={isSearch} searchOptions={searchOptions} setCwd={setCwd} setSearch={setSearch} />
             {
               cwd == SHARES_FOLDER_KEY
                 ? <ShareManager setError={setError} fetchFiles={fetchFiles}
                   search={search} shares={shares} loading={loading} />
                 : (isSearch && !searchKeyword)
-                  ? <SearchForm searchBaseDir={searchBaseDir} />
+                  ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
                   : <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
                     sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                     permission={permission} files={files} setError={setError} isSearch={isSearch}
@@ -270,7 +275,7 @@ export default function App() {
             onClose={() => setShowProgressDialog(false)}
           />
           <AdminDialog
-            cwd={cwd}
+            currentDir={currentDir}
             open={showAdminDialog}
             onClose={() => setShowAdminDialog(false)}
           />

@@ -2,12 +2,14 @@ import React, { FC, SyntheticEvent, useState } from "react";
 import { Link as ReactRouterLink } from "react-router-dom";
 import {
   Box, Breadcrumbs, Button, LinkProps,
-  Link as MuiLink, Typography, ClickAwayListener, IconButton, Tooltip
+  Link as MuiLink, Typography, ClickAwayListener, IconButton, Tooltip,
+  FormControlLabel,
+  Checkbox
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
 import { EXPIRES_VARIABLE, SCOPE_VARIABLE, Permission, dirUrlPath, fileUrl, str2int } from "../lib/commons";
-import { PreventDefaultEventCb, useConfig } from "./commons";
+import { PreventDefaultEventCb, search2Cwd, SearchOptions, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
   [Permission.RequireAuth]: "Private dir: this dir can only be accessed by authorized user",
@@ -37,8 +39,11 @@ export function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PathBreadcrumb({ prefix, permission, path, setCwd, setSearch }: {
+export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions, permission, path, setCwd, setSearch }: {
   prefix: string;
+  isSearch: boolean;
+  searchKeyword: string;
+  searchOptions: SearchOptions;
   permission: Permission;
   path: string;
   setCwd: (newCwd: string) => void;
@@ -54,6 +59,9 @@ export function PathBreadcrumb({ prefix, permission, path, setCwd, setSearch }: 
   return (
     <Breadcrumbs className="breadcrumbs" separator="›" sx={{ padding: 1 }}>
       <Button href="/" sx={{ minWidth: 0, padding: 0 }} onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          return
+        }
         e.preventDefault();
         setSearch("");
         setCwd("");
@@ -72,16 +80,21 @@ export function PathBreadcrumb({ prefix, permission, path, setCwd, setSearch }: 
           token: auth ? "" : scope,
           fullControl: auth ? undefined : fullControl,
         })
-        return index === parts.length - 1 ? (
+        return !isSearch && index === parts.length - 1 ? (
           <Typography className={className} key={index} color="text.primary" >{part}</Typography>
         ) : (
           <Link className={className} key={index} href={url} onClick={e => {
+            if (e.ctrlKey || e.metaKey) {
+              return
+            }
             e.preventDefault();
             setSearch("");
             setCwd(key);
           }}>{part}</Link>
         )
       })}
+      {isSearch && <Typography color="text.primary">Search</Typography>}
+      {!!searchKeyword && <Typography color="text.primary">{searchKeyword}</Typography>}
       {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile ||
         permission == Permission.OpenRwDir) && <Button sx={{ minWidth: 0, padding: 0 }}
           title={permissionDescriptions[permission]}
@@ -96,6 +109,10 @@ export function PathBreadcrumb({ prefix, permission, path, setCwd, setSearch }: 
       {!auth && !!authSearchParams?.get(EXPIRES_VARIABLE) && <span>
         ! Expires at {new Date(parseInt(authSearchParams.get(EXPIRES_VARIABLE)!)).toISOString()}
       </span>}
+      {isSearch && <FormControlLabel label="Full" title="Full search"
+        control={<Checkbox sx={{ pt: 0, pb: 0, pr: 0 }} checked={searchOptions.full} onChange={e => {
+          setCwd(search2Cwd(searchKeyword, { ...searchOptions, full: !searchOptions.full }))
+        }} />} />}
     </Breadcrumbs >
   );
 }

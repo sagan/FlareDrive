@@ -4,7 +4,7 @@ import { useConfig } from '../commons';
 import type { ReindexerPayload, ReindexerStorage } from '../../lib/reindexer';
 import { Box, Button, TextField, Typography } from '@mui/material';
 
-export default function ReindexerAdmin({ cwd }: { cwd: string }) {
+export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
   const config = useConfig();
   const { auth } = config;
   const [state, setState] = useState<ReindexerStorage | null>(null);
@@ -85,9 +85,9 @@ export default function ReindexerAdmin({ cwd }: { cwd: string }) {
             Root
           </Button>
           <Button color='secondary'
-            onClick={() => setPathPrefixInput(cwd)}
+            onClick={() => setPathPrefixInput(currentDir)}
             disabled={isLoading || isRunning}
-            title={`Set to current working directory: ${cwd}`}
+            title={`Set to current working directory: ${currentDir}`}
           >
             CWD
           </Button>

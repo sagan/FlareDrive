@@ -190,6 +190,9 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
                     {item.file ? humanReadableSize(item.file.size) : "Unknown (Async task)"}
                   </TableCell>
                   <TableCell align="left"><a href={item.dir} onClick={e => {
+                    if (e.ctrlKey || e.metaKey) {
+                      return
+                    }
                     e.preventDefault();
                     navigate(e.currentTarget.getAttribute("href")!);
                     onClose();

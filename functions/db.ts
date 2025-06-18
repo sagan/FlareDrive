@@ -1,4 +1,4 @@
-import { fileDepth, trimPrefixSuffix } from "../lib/commons";
+import { ArrayBufferWithToJson, decodeHex, encodeHex, fileDepth, isDirectory, trimPrefixSuffix } from "../lib/commons";
 import { File } from "../lib/schema";
 
 /**
@@ -7,7 +7,7 @@ import { File } from "../lib/schema";
  *   key, name, size, mime, ctime, mtime
  */
 export async function upsertDbFile(db: D1Database, file: R2Object) {
-  const { key, httpMetadata, customMetadata, size, uploaded } = file;
+  const { key, httpMetadata, customMetadata, size, uploaded, checksums } = file;
   const mime = httpMetadata?.contentType || "";
   const name = key.split("/").pop() || "";
   const ctime = new Date(uploaded).getTime();
@@ -15,17 +15,32 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
 
   await db
     .prepare(
-      `INSERT INTO files (key, name, depth, size, mime, thumbnail, uploaded, ctime, mtime)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO files (key, name, depth, size, mime, thumbnail, uploaded, md5, ctime, mtime)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET
        name = excluded.name,
        depth = excluded.depth,
        size = excluded.size,
        mime = excluded.mime,
        thumbnail = excluded.thumbnail,
-       uploaded = excluded.uploaded`
+       uploaded = excluded.uploaded,
+       md5 = excluded.md5,
+       mtime = excluded.mtime`
     )
-    .bind(key, name, fileDepth(key), size, mime, customMetadata?.thumbnail || "", uploaded.getTime(), ctime, mtime)
+    .bind(
+      key,
+      name,
+      fileDepth(key),
+      size,
+      mime,
+      customMetadata?.thumbnail || "",
+      uploaded.getTime(),
+      // dir object (size = 0) have a fixed md5 d41d8cd98f00b204e9800998ecf8427e
+      // do not store it to save database space
+      !isDirectory(file) ? encodeHex(checksums.md5) : "",
+      ctime,
+      mtime
+    )
     .run();
 }
 
@@ -52,7 +67,12 @@ export async function deleteAllDbFiles(db: D1Database, prefix?: string) {
 }
 
 interface QueryOptions {
+  /**
+   * Full name match, not limited to name prefix
+   */
+  full?: boolean;
   prefix?: string;
+  depth?: number;
   limit?: number;
   offset?: number;
 }
@@ -63,20 +83,38 @@ interface QueryOptions {
 export async function queryDbFiles(
   db: D1Database,
   query: string,
-  { prefix = "", limit = 0, offset = 0 }: QueryOptions = {}
+  { prefix = "", limit = 0, offset = 0, full, depth = -1 }: QueryOptions = {}
 ): Promise<File[]> {
   prefix = trimPrefixSuffix(prefix.trim(), "/");
 
-  let sql = `SELECT key, name, depth, size, mime, thumbnail, uploaded, ctime, mtime
-  FROM files WHERE (name LIKE ?)`;
-  const params: any[] = [`${query}%`];
+  let sql = `SELECT key, name, depth, size, mime, thumbnail, uploaded, md5, ctime, mtime
+  FROM files WHERE 1 = 1`;
+  const params: any[] = [];
+
+  if (query) {
+    sql += ` AND (name LIKE ?)`;
+    if (full) {
+      params.push(`%${query}%`);
+    } else {
+      params.push(`${query}%`);
+    }
+  }
+
+  if (depth >= 0) {
+    sql += ` AND (depth = ?)`;
+    params.push(depth);
+  }
   if (prefix) {
-    sql += ` AND key LIKE ?`;
+    sql += ` AND (key LIKE ?)`;
     params.push(`${prefix}/%`);
   }
-  sql += `ORDER BY key LIMIT ? OFFSET ?`;
-  params.push(limit || 1000, offset);
+  sql += ` ORDER BY key`;
+  if (limit > 0) {
+    sql += ` LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+  }
 
+  console.log("db query", sql, params);
   const rows = await db
     .prepare(sql)
     .bind(...params)
@@ -90,7 +128,21 @@ export async function queryDbFiles(
     mime: row.mime,
     thumbnail: row.thumbnail,
     uploaded: new Date(row.uploaded),
+    md5: row.md5,
     ctime: new Date(row.ctime),
     mtime: new Date(row.mtime),
   }));
+}
+
+export function dbFile2R2Object(file: File): R2Object {
+  return {
+    key: file.key,
+    size: file.size,
+    httpMetadata: { contentType: file.mime },
+    customMetadata: { thumbnail: file.thumbnail || undefined },
+    checksums: {
+      md5: file.md5 ? new ArrayBufferWithToJson(decodeHex(file.md5).buffer) : undefined,
+    },
+    uploaded: file.uploaded,
+  } as unknown as R2Object;
 }

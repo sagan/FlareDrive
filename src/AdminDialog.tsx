@@ -11,11 +11,11 @@ import ReindexerAdmin from './components/ReindexerAdmin';
 
 
 export default function AdminDialog({
-  cwd,
+  currentDir,
   open,
   onClose,
 }: {
-  cwd: string;
+  currentDir: string;
   open: boolean;
   onClose: () => void;
 }) {
@@ -27,7 +27,7 @@ export default function AdminDialog({
         <span>Administration</span>
       </DialogTitle>
       <DialogContent sx={{ p: 1 }}>
-        <ReindexerAdmin cwd={cwd} />
+        <ReindexerAdmin currentDir={currentDir} />
       </DialogContent>
     </Dialog>
   );

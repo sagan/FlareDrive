@@ -158,13 +158,16 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     <DialogTitle component={Typography} sx={{ p: 1, pb: 0 }} className='single-line'>
       <IconButton><ShareIcon /></IconButton>
       <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          return;
+        }
         e.preventDefault();
         onClose();
         setSlideIndex && setSlideIndex(-1);
         navigate(targetParentLink);
       }}><FolderOpenIcon /></IconButton>
       <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
-        if (!targetIsDir) {
+        if (!targetIsDir || e.ctrlKey || e.metaKey) {
           return
         }
         e.preventDefault();

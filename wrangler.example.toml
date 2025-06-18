@@ -5,6 +5,9 @@ name = "flaredrive"
 main = "./index.js"
 keep_vars = true
 
+# https://developers.cloudflare.com/workers/configuration/compatibility-flags/#navigation-requests-prefer-asset-serving
+compatibility_flags = ["assets_navigation_has_no_effect"]
+
 # This file "wrangler.example.toml" is intended to be used in local development env.
 # 1. Copy this file to wrangler.toml.
 # 2. Run "npm run build:worker" to build worker.

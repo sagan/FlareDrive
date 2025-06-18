@@ -1,17 +1,24 @@
 import { z } from "zod";
 import { HEADER_AUTHORIZATION, SEARCH_API } from "../../lib/commons";
 import { FileSchema, File } from "../../lib/schema";
+import { SearchOptions } from "../commons";
 
 /**
  * @returns share project keys
  */
-export async function searchFiles(auth: string, query: string, prefix = ""): Promise<File[]> {
-  const res = await fetch(`${SEARCH_API}?query=${encodeURIComponent(query)}&prefix=${encodeURIComponent(prefix)}`, {
-    method: "GET",
-    headers: {
-      ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
-    },
-  });
+export async function searchFiles(auth: string, query: string, searchOptions: SearchOptions = {}): Promise<File[]> {
+  const prefix = searchOptions.baseDir || "";
+  const res = await fetch(
+    `${SEARCH_API}?query=${encodeURIComponent(query)}&prefix=${encodeURIComponent(prefix)}&full=${
+      searchOptions.full ? "1" : "0"
+    }`,
+    {
+      method: "GET",
+      headers: {
+        ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+      },
+    }
+  );
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }

@@ -54,7 +54,7 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
   };
 }
 
-export async function handleRequestPropfind({ bucket, path, request, authed }: RequestHandlerParams) {
+export async function handleRequestPropfind({ context, bucket, path, request, authed }: RequestHandlerParams) {
   const responseTemplate = `<?xml version="1.0" encoding="utf-8" ?>
 <multistatus xmlns="DAV:" xmlns:fd="flaredrive" xmlns:oc="http://owncloud.org/ns">
 {{items}}
@@ -80,7 +80,7 @@ export async function handleRequestPropfind({ bucket, path, request, authed }: R
 
   const isDir = rootObject === ROOT_OBJECT || isDirectory(rootObject);
   const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
-  const children = !isDir ? [] : await findChildren({ bucket, path, depth });
+  const children = !isDir ? [] : await findChildren({ bucket, path, depth, db: context.env.DB });
 
   const items = [rootObject, ...children].map((child) => {
     const properties = fromR2Object(child);

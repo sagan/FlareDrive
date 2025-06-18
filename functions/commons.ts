@@ -34,7 +34,9 @@ import {
   trimPrefixSuffix,
   corsHeaders,
   isImage,
+  fileDepth,
 } from "../lib/commons";
+import { dbFile2R2Object, queryDbFiles } from "./db";
 
 export type Env = {
   /**
@@ -298,12 +300,31 @@ export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: b
   } while (r2Objects.truncated);
 }
 
-export async function findChildren({ bucket, path, depth }: { bucket: R2Bucket; path: string; depth: string }) {
+export async function findChildren({
+  bucket,
+  db,
+  path,
+  depth,
+}: {
+  bucket: R2Bucket;
+  path: string;
+  depth: string;
+  db?: D1Database;
+}) {
   if (!["1", "infinity"].includes(depth)) {
     return [];
   }
-  const objects: Array<R2Object> = [];
+  if (db) {
+    // use queryDbFiles to list files from db, instead of using bucket API.
+    const prefix = path === "" ? path : `${path}/`;
+    const files = await queryDbFiles(db, "", {
+      prefix,
+      depth: depth === "infinity" ? -1 : path ? fileDepth(path) + 1 : 0,
+    });
+    return files.map(dbFile2R2Object);
+  }
 
+  const objects: Array<R2Object> = [];
   const prefix = path === "" ? path : `${path}/`;
   for await (const object of listAll(bucket, prefix, depth === "infinity")) {
     objects.push(object);

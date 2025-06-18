@@ -110,6 +110,9 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   }}>
     <Box sx={{ mb: 1 }}>
       <Button sx={{ m: 1 }} download variant="contained" startIcon={<DownloadIcon />} href={src} onClick={(e) => {
+        if (e.ctrlKey || e.metaKey) {
+          return;
+        }
         e.stopPropagation()
         e.preventDefault()
         downloadFile(src)
@@ -368,7 +371,7 @@ export default function Main({
           }
         }} />
       <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected} isSearch={isSearch}
-        onOpenDir={(key: string) => setCwd(dirname(key))}
+        onOpenDir={(key: string) => setCwd(key)}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);
           const isDir = !!file && isDirectory(file)

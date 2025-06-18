@@ -132,6 +132,8 @@ export const KEY_PREFIX_PRIVATE = ".flaredrive/";
 
 export const KEY_PART_SEARCH = ".search";
 
+export const KEY_PART_SEARCH_FULL = ".full";
+
 /**
  * ".flaredrive/thumbnails/"
  */
@@ -490,13 +492,12 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
     return 0;
   }
 }
-
 export function encodeHex(input?: Uint8Array | ArrayBuffer): string {
   if (!input) {
     return "";
   }
   let result = "";
-  const array = "buffer" in input ? input : new Uint8Array(input);
+  const array = "buffer" in input ? new Uint8Array(input.buffer) : new Uint8Array(input);
   for (const value of array) {
     result += value.toString(16).padStart(2, "0");
   }
@@ -813,4 +814,70 @@ export function joinPathes(...pathes: string[]): string {
     .map((p) => trimPrefixSuffix(p, "/"))
     .filter((p) => p.length > 0)
     .join("/");
+}
+
+/**
+ * An ArrayBuffer compatible custom type class,
+ * it has a custom toJSON() to outout hex string when JSON.stringify.
+ */
+export class ArrayBufferWithToJson {
+  private buffer: ArrayBuffer;
+  private dataView: DataView;
+
+  /**
+   * Constructs an instance.
+   * @param arg The length of the buffer in bytes, or a existing ArrayBufferLike
+   */
+  constructor(arg: number | ArrayBufferLike) {
+    if (typeof arg == "number") {
+      this.buffer = new ArrayBuffer(arg);
+    } else {
+      this.buffer = arg;
+    }
+    this.dataView = new DataView(this.buffer);
+  }
+
+  /**
+   * The byte length of the ArrayBuffer.
+   */
+  get byteLength(): number {
+    return this.buffer.byteLength;
+  }
+
+  /**
+   * Creates a new ArrayBuffer with the same contents as this buffer.
+   * @param begin The beginning of the specified portion of the buffer.
+   * @param end The end of the specified portion of the buffer.
+   * @returns A new ArrayBuffer.
+   */
+  slice(begin: number, end?: number): ArrayBuffer {
+    return this.buffer.slice(begin, end);
+  }
+
+  /**
+   * Custom JSON serialization.
+   * @returns A hexadecimal string representation of the buffer's contents.
+   */
+  toJSON(): string {
+    return encodeHex(this.buffer);
+  }
+
+  /**
+   * A utility method to get the underlying ArrayBuffer.
+   * This is not part of the ArrayBufferLike interface but is useful for interacting
+   * with APIs that expect a concrete ArrayBuffer.
+   * @returns The underlying ArrayBuffer.
+   */
+  getBuffer(): ArrayBuffer {
+    return this.buffer;
+  }
+
+  /**
+   * A utility method to write data into the buffer for demonstration.
+   * @param byteOffset The offset in bytes to write at.
+   * @param value The value to write.
+   */
+  writeUint8(byteOffset: number, value: number): void {
+    this.dataView.setUint8(byteOffset, value);
+  }
 }

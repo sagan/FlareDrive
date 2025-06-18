@@ -8,9 +8,12 @@ import {
 } from "@mui/icons-material";
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ShareIcon from '@mui/icons-material/Share';
+import SearchIcon from '@mui/icons-material/Search';
 import LinkIcon from '@mui/icons-material/Link';
+import { KEY_PART_SEARCH, dirname, dirUrlPath, fileUrl } from "../lib/commons";
 import { CopyButton } from "./components";
 import { useConfig } from "./commons";
+
 
 export default function MultiSelectToolbar({
   isSearch,
@@ -47,6 +50,7 @@ export default function MultiSelectToolbar({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false]
+  const dirLink = multiSelected.length === 1 ? fileUrl({ key: dirname(multiSelected[0]), isDir: true }) : ""
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -87,12 +91,27 @@ export default function MultiSelectToolbar({
           <DownloadIcon />
         </IconButton>
         {
-          isSearch ? <IconButton color="primary" disabled={multiSelected.length !== 1}
-            title="Open file / folder location"
-            onClick={() => onOpenDir(multiSelected[0])}>
+          isSearch ? <IconButton color="primary" disabled={multiSelected.length !== 1} href={dirLink}
+            title={`Open ${linkIsDir ? "folder" : "file"} location`}
+            onClick={(e) => {
+              if (e.ctrlKey || e.metaKey) {
+                return
+              }
+              e.preventDefault();
+              onOpenDir(dirname(multiSelected[0]));
+            }}>
             <FolderOpenIcon />
-          </IconButton> : <IconButton disabled={!writable} color="primary" onClick={onDelete}>
-            <DeleteIcon />
+          </IconButton> : <IconButton disabled={!auth || !linkIsDir} color="primary"
+            title={`Search in "${multiSelected[0]}"`}
+            href={dirUrlPath(multiSelected[0] + "/" + KEY_PART_SEARCH)}
+            onClick={e => {
+              if (e.ctrlKey || e.metaKey) {
+                return;
+              }
+              e.preventDefault();
+              onOpenDir(multiSelected[0] + "/" + KEY_PART_SEARCH);
+            }}>
+            <SearchIcon />
           </IconButton>
         }
         <IconButton
@@ -120,6 +139,10 @@ export default function MultiSelectToolbar({
               setAnchorEl(null)
               onMove()
             }}>Move</MenuItem>
+            <MenuItem disabled={!writable} onClick={() => {
+              setAnchorEl(null)
+              onDelete()
+            }}>Delete</MenuItem>
             <MenuItem onClick={() => {
               setAnchorEl(null)
               onSelectAll()
