@@ -66,6 +66,11 @@ export const FULL_CONTROL_VARIABLE = "fullControl";
 export const HTML_VARIABLE = "html";
 
 /**
+ * Output in raw format.
+ */
+export const RAW_VARIABLE = "raw";
+
+/**
  * request timestamp to make each url unique. Do not participate in url signinng
  */
 export const TS_VARIABLE = "_ts";
@@ -98,9 +103,10 @@ export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
- * [token, ts, thumbnail*... (except thumbnailDigest)]
+ * [raw, html, token, ts, thumbnail*... (except thumbnailDigest)]
  */
 export const NOSIGN_VARIABLES: readonly string[] = [
+  RAW_VARIABLE,
   HTML_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
@@ -140,6 +146,11 @@ export const KEY_PART_SEARCH_FULL = ".full";
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 
 /**
+ * Windows .url files
+ */
+export const MIME_URL = "application/x-mswinurl";
+
+/**
  * Fallback MIME for any type file
  */
 export const MIME_DEFAULT = "application/octet-stream";
@@ -168,9 +179,9 @@ export const MIME_TOML = "application/toml";
 
 /**
  * Textual mimes besides "txt/*": ["application/xml", "application/json", "application/x-sh",
- * "application/yaml", "application/toml"]
+ * "application/yaml", "application/toml", "application/x-mswinurl"]
  */
-export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML];
+export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
 
 /**
  * Header used to indicate to server that do NOT generate thumbnail for uploaded file.
@@ -598,6 +609,7 @@ export function fileUrl({
   thumbnailContentType = "",
   fullControl = false,
   isDir = false,
+  raw = false,
 }: {
   key: string;
   token?: string | null;
@@ -616,6 +628,7 @@ export function fileUrl({
   thumbnailContentType?: string;
   fullControl?: boolean;
   isDir?: boolean;
+  raw?: boolean;
 }): string {
   const searchParams = new URLSearchParams();
   if (auth || token) {
@@ -653,6 +666,9 @@ export function fileUrl({
   }
   if (ts) {
     searchParams.set(TS_VARIABLE, `${ts}`);
+  }
+  if (raw) {
+    searchParams.set(RAW_VARIABLE, "1");
   }
   let pathname: string;
   if (isDir) {

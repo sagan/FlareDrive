@@ -110,9 +110,10 @@ export async function queryDbFiles(
     // - `projects/myproject/fileA.txt`
     // - `projects/myproject/fileZ.txt`
     // - `projects/myproject_other/data.doc`
+    // - `projects/nextproject/config.json`
     // And searchPrefix is `projects/myproject/`.
-    // Then `key >= "projects/myproject/"` ifself will incorrectly include the last file,
-    // because "_" char is lexically larger than "/" char.
+    // Then `key >= "projects/myproject/"` ifself will incorrectly include the last two files,
+    // because (lexically) "_" > "/" and "n" > "m".
     const searchPrefix = `${prefix}/`;
     sql += ` AND (key >= ? AND key < ?)`;
     params.push(searchPrefix, searchPrefix + "\uffff");

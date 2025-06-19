@@ -74,6 +74,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
     fullControl: auth ? undefined : fullControl,
+    raw: true,
     ts
   }), [filekey, auth, ts])
 
@@ -122,7 +123,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   const viewLink = useMemo(() => {
     let link = fileLink
     if (filekey.endsWith(".md")) {
-      link = appendQueryStringToUrl(link, HTML_VARIABLE)
+      link = appendQueryStringToUrl(link, HTML_VARIABLE + "=1")
     }
     return link
   }, [fileLink])

@@ -15,6 +15,7 @@ import {
   humanReadableSize,
   encodeHex,
   isDirectory,
+  RAW_VARIABLE,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -217,7 +218,12 @@ export const onRequestGet: FdCfFunc = async function (context) {
     // target is file, but the request path ends with "/"
     return responseNotFound();
   }
-  return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), cors: !!data.cors });
+  return outputR2Object({
+    obj,
+    html: !!str2int(searchParams.get(HTML_VARIABLE)),
+    raw: !!str2int(searchParams.get(RAW_VARIABLE)),
+    cors: !!data.cors,
+  });
 };
 
 export const onRequestHead: FdCfFunc = async function (context) {

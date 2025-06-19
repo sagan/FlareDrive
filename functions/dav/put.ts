@@ -1,4 +1,4 @@
-import mime from "mime";
+import mime from "../../lib/mime";
 import {
   CLOUD_DOWNLOAD_SIZE_LIMIT,
   HEADER_CONTENT_LENGTH,

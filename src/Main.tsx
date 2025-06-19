@@ -101,7 +101,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
 
   let viewSrc = src
   if (src && file.httpMetadata.contentType == MIME_MARKDOWN) {
-    viewSrc = appendQueryStringToUrl(viewSrc, HTML_VARIABLE)
+    viewSrc = appendQueryStringToUrl(viewSrc, HTML_VARIABLE + "=1")
   }
 
   return <Box onClick={onClick} sx={{

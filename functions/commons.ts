@@ -1,5 +1,6 @@
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import { parse as parseIni } from "ini";
 import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
@@ -22,6 +23,7 @@ import {
   MIME_HTML,
   MIME_MARKDOWN,
   MIME_JSON,
+  MIME_URL,
   THUMBNAIL_SIZE,
   sha256,
   hmacSha256Verify,
@@ -504,11 +506,13 @@ export async function outputR2Object({
   obj,
   download,
   html,
+  raw,
   cors,
 }: {
   obj: R2Object | R2ObjectBody;
   download?: boolean;
   html?: boolean;
+  raw?: boolean;
   cors?: boolean;
 }): Promise<Response> {
   if (!("body" in obj)) {
@@ -523,6 +527,13 @@ export async function outputR2Object({
     for (const [key, value] of Object.entries(corsHeaders)) {
       headers.set(key, value);
     }
+  }
+  if (!raw && obj.httpMetadata?.contentType == MIME_URL) {
+    const body = await obj.text();
+    const parsedData = parseIni(body);
+    const url = parsedData.InternetShortcut.URL;
+    // return 302 redirect to the url
+    return responseRedirect(url || "");
   }
   if (html && obj.httpMetadata?.contentType == MIME_MARKDOWN) {
     const body = await obj.text();

@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
+import SearchIcon from '@mui/icons-material/Search';
 import { EXPIRES_VARIABLE, SCOPE_VARIABLE, Permission, dirUrlPath, fileUrl, str2int } from "../lib/commons";
 import { PreventDefaultEventCb, search2Cwd, SearchOptions, useConfig } from "./commons";
 
@@ -93,8 +94,6 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
           }}>{part}</Link>
         )
       })}
-      {isSearch && <Typography color="text.primary">Search</Typography>}
-      {!!searchKeyword && <Typography color="text.primary">{searchKeyword}</Typography>}
       {!!path && (permission === Permission.OpenDir || permission === Permission.OpenFile ||
         permission == Permission.OpenRwDir) && <Button sx={{ minWidth: 0, padding: 0 }}
           title={permissionDescriptions[permission]}
@@ -109,10 +108,25 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
       {!auth && !!authSearchParams?.get(EXPIRES_VARIABLE) && <span>
         ! Expires at {new Date(parseInt(authSearchParams.get(EXPIRES_VARIABLE)!)).toISOString()}
       </span>}
-      {isSearch && <FormControlLabel label="Full" title="Full search"
+      {isSearch && (searchKeyword ? <Link href={dirUrlPath(search2Cwd("", { baseDir: searchOptions.baseDir }))}
+        onClick={e => {
+          if (e.ctrlKey || e.metaKey) {
+            return;
+          }
+          e.preventDefault();
+          setCwd(search2Cwd("", { baseDir: searchOptions.baseDir }));
+        }}>Search</Link> : <Typography color="text.primary">Search</Typography>)}
+      {!!searchKeyword && <Typography color="text.primary">{searchKeyword}</Typography>}
+      {isSearch && <FormControlLabel sx={{ mr: 0 }} label="Full" title="Full search"
         control={<Checkbox sx={{ pt: 0, pb: 0, pr: 0 }} checked={searchOptions.full} onChange={e => {
           setCwd(search2Cwd(searchKeyword, { ...searchOptions, full: !searchOptions.full }))
         }} />} />}
+      {isSearch && !!searchOptions.baseDir && <Button variant="outlined" sx={{ minWidth: 0, pt: 0, pb: 0 }}
+        startIcon={<SearchIcon />} title="Search in the whole drive" onClick={(e) => {
+          setCwd(search2Cwd(searchKeyword, { ...searchOptions, baseDir: "" }))
+        }}>
+        All
+      </Button>}
     </Breadcrumbs >
   );
 }

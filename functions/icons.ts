@@ -1,4 +1,4 @@
-import mime from "mime";
+import mime from "../lib/mime";
 import {
   HEADER_CONTENT_TYPE,
   HEADER_ETAG,

@@ -11,6 +11,7 @@ import {
   THUMBNAIL_VARIABLE,
   str2int,
   isDirectory,
+  RAW_VARIABLE,
 } from "../../lib/commons";
 import { jsonResponse, outputR2Object, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
@@ -79,5 +80,10 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
       obj = indexHtmlObj;
     }
   }
-  return outputR2Object({ obj, html: searchParams.has(HTML_VARIABLE), download: searchParams.has(DOWNLOAD_VARIABLE) });
+  return outputR2Object({
+    obj,
+    html: !!str2int(searchParams.get(HTML_VARIABLE)),
+    raw: !!str2int(searchParams.get(RAW_VARIABLE)),
+    download: searchParams.has(DOWNLOAD_VARIABLE),
+  });
 }

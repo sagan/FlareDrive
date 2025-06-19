@@ -1,6 +1,6 @@
 import pLimit from "p-limit";
-import mime from "mime";
 import { pdfjs } from "react-pdf";
+import mime from "../../lib/mime";
 import {
   WEBDAV_ENDPOINT,
   HEADER_AUTHED,
@@ -21,7 +21,6 @@ import {
   HEADER_CONTENT_LENGTH,
   PART_NUMBER_VARIABLE,
   UPLOAD_ID_VARIABLE,
-  HEADER_ETAG,
   HEADER_RETRY_AFTER,
   HEADER_DESTINATION,
   appendQueryStringToUrl,
