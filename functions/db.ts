@@ -105,8 +105,17 @@ export async function queryDbFiles(
     params.push(depth);
   }
   if (prefix) {
-    sql += ` AND (key LIKE ?)`;
-    params.push(`${prefix}/%`);
+    // Use range query for prefix matching to avoid "LIKE pattern too complex" errors.
+    // The key < ? part is necessary, because, saying we have these file keys:
+    // - `projects/myproject/fileA.txt`
+    // - `projects/myproject/fileZ.txt`
+    // - `projects/myproject_other/data.doc`
+    // And searchPrefix is `projects/myproject/`.
+    // Then `key >= "projects/myproject/"` ifself will incorrectly include the last file,
+    // because "_" char is lexically larger than "/" char.
+    const searchPrefix = `${prefix}/`;
+    sql += ` AND (key >= ? AND key < ?)`;
+    params.push(searchPrefix, searchPrefix + "\uffff");
   }
   sql += ` ORDER BY key`;
   if (limit > 0) {
