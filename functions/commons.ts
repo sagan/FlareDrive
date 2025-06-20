@@ -1,6 +1,5 @@
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
-import { parse as parseIni } from "ini";
 import {
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
@@ -38,6 +37,7 @@ import {
   isImage,
   fileDepth,
 } from "../lib/commons";
+import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles } from "./db";
 
 export type Env = {
@@ -529,11 +529,12 @@ export async function outputR2Object({
     }
   }
   if (!raw && obj.httpMetadata?.contentType == MIME_URL) {
+    if (obj.customMetadata?.url) {
+      return responseRedirect(obj.customMetadata.url);
+    }
     const body = await obj.text();
-    const parsedData = parseIni(body);
-    const url = parsedData.InternetShortcut.URL;
     // return 302 redirect to the url
-    return responseRedirect(url || "");
+    return responseRedirect(parseUrlFile(body));
   }
   if (html && obj.httpMetadata?.contentType == MIME_MARKDOWN) {
     const body = await obj.text();

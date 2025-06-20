@@ -15,7 +15,7 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE,
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, MIME_URL,
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
 } from "../lib/commons";
@@ -102,6 +102,8 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   let viewSrc = src
   if (src && file.httpMetadata.contentType == MIME_MARKDOWN) {
     viewSrc = appendQueryStringToUrl(viewSrc, HTML_VARIABLE + "=1")
+  } else if (file.httpMetadata.contentType === MIME_URL && file.customMetadata?.url) {
+    viewSrc = file.customMetadata.url
   }
 
   return <Box onClick={onClick} sx={{

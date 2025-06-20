@@ -1,4 +1,4 @@
-import mime from "../../lib/mime";
+import mime, { parseUrlFile } from "../../lib/mime";
 import {
   CLOUD_DOWNLOAD_SIZE_LIMIT,
   HEADER_CONTENT_LENGTH,
@@ -21,6 +21,7 @@ import {
   str2int,
   dirname,
   isImage,
+  MIME_URL,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -117,7 +118,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   }
 
   const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
-  const customMetadata = thumbnail ? { thumbnail } : undefined;
+  let customMetadata: Record<string, string> | undefined = thumbnail ? { thumbnail } : undefined;
 
   const oldObject = await bucket.head(path);
 
@@ -185,7 +186,14 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     return responseCreated(r2obj);
   }
 
-  const result = await bucket.put(path, request.body, {
+  let body: ReadableStream | string | null = request.body;
+  if (request.headers.get(HEADER_CONTENT_TYPE) == MIME_URL) {
+    body = await request.text();
+    const url = parseUrlFile(body);
+    customMetadata = customMetadata ? { ...customMetadata, url } : { url };
+  }
+
+  const result = await bucket.put(path, body, {
     onlyIf: request.headers,
     httpMetadata: request.headers,
     customMetadata,

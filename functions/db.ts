@@ -58,8 +58,13 @@ export async function deleteDbFile(db: D1Database, key: string) {
 export async function deleteAllDbFiles(db: D1Database, prefix?: string) {
   prefix = prefix || "";
   prefix = trimPrefixSuffix(prefix.trim(), "/");
-  const sql = prefix ? `DELETE FROM files WHERE key LIKE ?` : `DELETE FROM files`;
-  const params = prefix ? [`${prefix}/%`] : [];
+  let sql = `DELETE FROM files WHERE 1 = 1`;
+  const params: any[] = [];
+  if (prefix) {
+    const searchPrefix = `${prefix}/`;
+    sql += ` AND (key >= ? AND key < ?)`;
+    params.push(searchPrefix, searchPrefix + "\uffff");
+  }
   await db
     .prepare(sql)
     .bind(...params)

@@ -69,7 +69,7 @@ export interface FileItem {
   size: number;
   uploaded: Date;
   httpMetadata: { contentType: string };
-  customMetadata?: { thumbnail?: string };
+  customMetadata?: { thumbnail?: string; url?: string };
   checksums: {
     md5?: string;
     sha1?: string;
