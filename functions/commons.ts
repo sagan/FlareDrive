@@ -15,6 +15,7 @@ import {
   EXPIRES_VARIABLE,
   HEADER_CONTENT_LENGTH,
   HEADER_IF_UNMODIFIED_SINCE,
+  HEADER_REFERRER_POLICY,
   SHARE_ENDPOINT,
   SCOPE_VARIABLE,
   WEBDAV_ENDPOINT,
@@ -173,11 +174,12 @@ export function responseInternalServerError(msg?: string): Response {
  * Return 302 Found redirection response
  * @param url
  */
-export function responseRedirect(url: string): Response {
+export function responseRedirect(url: string, noreferer = false): Response {
   return new Response(null, {
     status: 302,
     headers: {
       Location: url,
+      ...(noreferer ? { [HEADER_REFERRER_POLICY]: "no-referrer" } : {}),
     },
   });
 }
@@ -530,11 +532,11 @@ export async function outputR2Object({
   }
   if (!raw && obj.httpMetadata?.contentType == MIME_URL) {
     if (obj.customMetadata?.url) {
-      return responseRedirect(obj.customMetadata.url);
+      return responseRedirect(obj.customMetadata.url, true);
     }
     const body = await obj.text();
     // return 302 redirect to the url
-    return responseRedirect(parseUrlFile(body));
+    return responseRedirect(parseUrlFile(body), true);
   }
   if (html && obj.httpMetadata?.contentType == MIME_MARKDOWN) {
     const body = await obj.text();

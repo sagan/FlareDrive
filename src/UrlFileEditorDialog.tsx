@@ -10,23 +10,25 @@ import Box from '@mui/material/Box';
 import { Button, TextField } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
-import { MIME_URL } from '../lib/commons';
+import RestoreIcon from '@mui/icons-material/Restore';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { MIME_URL, basename } from '../lib/commons';
 import { generatePassword, useConfig } from './commons';
 import { putFile } from './app/transfer';
 
 
 export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...otherProps }: {
   url?: string;
-  key?: string;
+  filekey?: string;
   cwd?: string;
   open: boolean;
   close: () => void;
   onUpload?: () => void;
 }) {
   const { auth } = useConfig();
-  const [name, setName] = useState(generatePassword(6));
+  const [name, setName] = useState(otherProps.filekey ? basename(otherProps.filekey) : generatePassword(6));
   const [url, setUrl] = useState(otherProps.url || "");
-  const [key, setKey] = useState(otherProps.key || "");
+  const [filekey, setFilekey] = useState(otherProps.filekey || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<any>(null);
 
@@ -37,7 +39,7 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
 
   const onSubmit = useCallback(async (e: SyntheticEvent) => {
     e.preventDefault();
-    const filekey = key || (cwd ? cwd + "/" : "") + name;
+    const key = filekey || (cwd ? cwd + "/" : "") + name;
     let fileurl = "";
     let candicateUrls = [url, "https://" + url];
     let error: any;
@@ -56,8 +58,8 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
     setError(null);
     setSaving(true);
     try {
-      await putFile({ key: filekey, create: !key, auth, contentType: MIME_URL, url: fileurl });
-      setKey(filekey);
+      await putFile({ key, create: !filekey, auth, contentType: MIME_URL, url: fileurl });
+      setFilekey(key);
       setUrl(fileurl);
     } catch (e) {
       setError(e);
@@ -69,17 +71,25 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} className='single-line'>
-      {key ? `Edit URL "${key}"` : `New URL in "${cwd}/"`}
+      {filekey ? `Edit URL "${filekey}"` : `New URL in "${cwd || ""}/"`}
     </DialogTitle>
     <DialogContent autoFocus>
       <form>
         <Box sx={{ mt: 1 }}>
-          <TextField disabled={saving || !!key} fullWidth placeholder={"Name"}
+          <TextField disabled={saving || !!filekey} fullWidth placeholder={"Name"}
             value={name} onChange={e => setName(e.target.value)} InputProps={{
               endAdornment:
                 <>
                   <IconButton
-                    disabled={saving}
+                    onClick={() => navigator.clipboard.writeText(name)}
+                    disabled={!name}
+                    title={`Copy`}
+                    edge="end"
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
+                  <IconButton
+                    disabled={saving || !!filekey}
                     onClick={() => setName(generatePassword(6))}
                     title="Random name"
                     edge="end"
@@ -88,7 +98,7 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
                   </IconButton>
                   <IconButton
                     onClick={() => setName("")}
-                    disabled={saving || !name}
+                    disabled={saving || !!filekey || !name}
                     title='Reset'
                     edge="end"
                   >
@@ -100,19 +110,37 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
         <Box sx={{ mt: 1 }}>
           <TextField disabled={saving} autoFocus={true} label="URL" fullWidth placeholder='http(s)://'
             value={url} onChange={e => setUrl(e.target.value)} InputProps={{
-              endAdornment: <IconButton
-                onClick={() => setUrl("")}
-                disabled={saving}
-                title='Clear'
-                edge="end"
-              >
-                <ClearIcon />
-              </IconButton>
+              endAdornment: <>
+                <IconButton
+                  onClick={() => navigator.clipboard.writeText(url)}
+                  disabled={!url}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+                {otherProps.filekey ? <IconButton
+                  onClick={() => setUrl(otherProps.url || "")}
+                  disabled={saving || url === otherProps.url}
+                  title='Reset'
+                  edge="end"
+                >
+                  <RestoreIcon />
+                </IconButton> : <IconButton
+                  onClick={() => setUrl("")}
+                  disabled={saving || url === ""}
+                  title='Clear'
+                  edge="end"
+                >
+                  <ClearIcon />
+                </IconButton>}
+              </>
             }} />
         </Box>
         {!!error && <Typography>{error.toString()}</Typography>}
         <Box sx={{ mt: 1 }}>
-          <Button disabled={saving || !url || !name} type="submit" onClick={onSubmit} color='primary'>
+          <Button disabled={saving || !url || !name || (!!otherProps.filekey && otherProps.url === url)}
+            type="submit" onClick={onSubmit} color='primary'>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button href={url} disabled={!url}>Go</Button>

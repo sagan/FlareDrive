@@ -479,8 +479,8 @@ export default function Main({
       {editing !== null && <EditorDialog filekey={editing} {...fileViewerProps} />}
       {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
       {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
-      {editingUrl !== null && <UrlFileEditorDialog key={editingUrl.key} url={editingUrl.customMetadata?.url}
-        open={true} close={() => setEditingUrl(null)} />}
+      {editingUrl !== null && <UrlFileEditorDialog filekey={editingUrl.key} url={editingUrl.customMetadata?.url}
+        open={true} close={() => setEditingUrl(null)} onUpload={fetchFiles} />}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}

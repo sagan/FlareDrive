@@ -244,6 +244,8 @@ export const HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
 
 export const HEADER_REFERER = "Referer";
 
+export const HEADER_REFERRER_POLICY = "Referrer-Policy";
+
 /**
  * CF image header.
  * See: https://developers.cloudflare.com/images/reference/troubleshooting/

@@ -16,6 +16,7 @@ import {
   encodeHex,
   isDirectory,
   RAW_VARIABLE,
+  isUrlFile,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -244,6 +245,7 @@ function noindexPage(sitename: string | undefined, desc: string, dir: string): s
     <title>${encodeHtml(title)}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="google" value="notranslate">
+    <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.png" />
   </head>
   <body>
@@ -278,19 +280,24 @@ function indexPage(
     .map((item) => {
       const name = item.key.split("/").pop()!;
       const isDir = isDirectory(item);
-      const href = encodeURIComponent(name) + (isDir ? "/" : ""); // Relative href
+      const href =
+        isUrlFile(item) && item.customMetadata?.url
+          ? item.customMetadata.url
+          : encodeURIComponent(name) + (isDir ? "/" : ""); // Relative href
       const displayName = encodeHtml(name) + (isDir ? "/" : "");
       const sizeDisplay = !isDir ? humanReadableSize(item.size) : "";
       const dateDisplay = item.uploaded.toLocaleString(); // Human-readable date
+      const mimeDisplay = encodeHtml(item.httpMetadata?.contentType || "");
       const md5Display = !isDir && item.checksums?.md5 ? encodeHex(item.checksums.md5) : "";
 
       return `
         <tr>
-          <td data-value="${encodeHtml(name)}"><a href="${href}" class="icon ${
+          <td data-value="${encodeHtml(name)}"><a href="${href}" rel="noopener noreferrer" class="icon ${
         isDir ? "dir" : "file"
       }">${displayName}</a></td>
           <td class="detailsColumn" data-value="${item.size}">${sizeDisplay}</td>
           <td class="detailsColumn" data-value="${+item.uploaded}">${dateDisplay}</td>
+          <td class="detailsColumn" data-value="${mimeDisplay}">${mimeDisplay}</td>
           <td class="detailsColumn" data-value="${md5Display}">${md5Display}</td>
         </tr>`;
     })
@@ -306,6 +313,7 @@ function indexPage(
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark">
 <meta name="google" value="notranslate">
+<meta name="referrer" content="no-referrer" />
 <link rel="icon" href="/favicon.png" />
 
 <script>
@@ -342,7 +350,7 @@ function sortTable(column) {
       return a > b ? newOrder : a < b ? oldOrder : 0;
     }
 
-   // Column 0 (Name) or 3 (MD5) is text.
+   // Column 0 (Name), 3 (MIME), 4 (MD5) is text.
     if (a.toLowerCase() > b.toLowerCase())
       return newOrder;
     if (a.toLowerCase() < b.toLowerCase())
@@ -371,7 +379,8 @@ function onLoad() {
   addHandlers(document.getElementById('nameColumnHeader'), 0);
   addHandlers(document.getElementById('sizeColumnHeader'), 1);
   addHandlers(document.getElementById('dateColumnHeader'), 2);
-  addHandlers(document.getElementById('md5ColumnHeader'), 3);
+  addHandlers(document.getElementById('mimeColumnHeader'), 3);
+  addHandlers(document.getElementById('md5ColumnHeader'), 4);
 }
 
 window.addEventListener('DOMContentLoaded', onLoad);
@@ -455,6 +464,9 @@ ${parentDirLinkHtml}
       </th>
       <th id="dateColumnHeader" class="detailsColumn" tabindex=0 role="button">
         Date Modified
+      </th>
+      <th id="mimeColumnHeader" class="detailsColumn" tabindex=0 role="button">
+        MIME
       </th>
       <th id="md5ColumnHeader" class="detailsColumn" tabindex=0 role="button">
         MD5
