@@ -2,9 +2,7 @@ import { ArrayBufferWithToJson, decodeHex, encodeHex, fileDepth, isDirectory, tr
 import { File } from "../lib/schema";
 
 /**
- * Upsert file meta info to D1 database "files" table
- * Columns of "files":
- *   key, name, size, mime, ctime, mtime
+ * Upsert file meta info to D1 database "files" and "filemeta" table
  */
 export async function upsertDbFile(db: D1Database, file: R2Object) {
   const { key, httpMetadata, customMetadata, size, uploaded, checksums } = file;
@@ -13,27 +11,25 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
   const ctime = new Date(uploaded).getTime();
   const mtime = ctime; // Assuming mtime is same as ctime for now
 
-  await db
-    .prepare(
-      `INSERT INTO files (key, name, depth, size, mime, thumbnail, uploaded, md5, ctime, mtime)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  const statements: D1PreparedStatement[] = [];
+
+  const upsertFileStmt = db.prepare(`INSERT INTO files (key, name, depth, size, mime, uploaded, md5, ctime, mtime)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET
        name = excluded.name,
        depth = excluded.depth,
        size = excluded.size,
        mime = excluded.mime,
-       thumbnail = excluded.thumbnail,
        uploaded = excluded.uploaded,
        md5 = excluded.md5,
-       mtime = excluded.mtime`
-    )
-    .bind(
+       mtime = excluded.mtime`);
+  statements.push(
+    upsertFileStmt.bind(
       key,
       name,
       fileDepth(key),
       size,
       mime,
-      customMetadata?.thumbnail || "",
       uploaded.getTime(),
       // dir object (size = 0) have a fixed md5 d41d8cd98f00b204e9800998ecf8427e
       // do not store it to save database space
@@ -41,7 +37,19 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
       ctime,
       mtime
     )
-    .run();
+  );
+
+  const deleteMetaStmt = db.prepare(`DELETE FROM filemeta WHERE key = ?`);
+  statements.push(deleteMetaStmt.bind(file.key));
+
+  if (customMetadata) {
+    const insertMetaStmt = db.prepare(`INSERT INTO filemeta (key, name, value) VALUES (?, ?, ?)`);
+    for (const [metaKey, metaValue] of Object.entries(customMetadata)) {
+      statements.push(insertMetaStmt.bind(file.key, metaKey, metaValue));
+    }
+  }
+
+  await db.batch(statements);
 }
 
 /**
@@ -92,8 +100,13 @@ export async function queryDbFiles(
 ): Promise<File[]> {
   prefix = trimPrefixSuffix(prefix.trim(), "/");
 
-  let sql = `SELECT key, name, depth, size, mime, thumbnail, uploaded, md5, ctime, mtime
-  FROM files WHERE 1 = 1`;
+  let sql = `
+SELECT
+  f.*,
+  JSON_GROUP_OBJECT(fm.name, fm.value) FILTER (WHERE fm.key IS NOT NULL) AS customMetadata
+FROM files AS f
+LEFT JOIN filemeta AS fm ON f.key = fm.key
+WHERE 1 = 1`;
   const params: any[] = [];
 
   if (query) {
@@ -120,10 +133,15 @@ export async function queryDbFiles(
     // Then `key >= "projects/myproject/"` ifself will incorrectly include the last two files,
     // because (lexically) "_" > "/" and "n" > "m".
     const searchPrefix = `${prefix}/`;
-    sql += ` AND (key >= ? AND key < ?)`;
+    sql += ` AND (f.key >= ? AND f.key < ?)`;
     params.push(searchPrefix, searchPrefix + "\uffff");
   }
-  sql += ` ORDER BY key`;
+  // it's ok to select "f.*" but group by "f.key" in SQLite / D1.
+  // Standard SQL forbid it, but SQLite intentionally relaxes this rule:
+  //   If the SELECT list contains a "bare" column (a column that is not within an aggregate function),
+  //   SQLite is free to return the value from any row within that group.
+  sql += ` GROUP BY f.key`;
+  sql += ` ORDER BY f.key`;
   if (limit > 0) {
     sql += ` LIMIT ? OFFSET ?`;
     params.push(limit, offset);
@@ -141,11 +159,11 @@ export async function queryDbFiles(
     depth: row.depth,
     size: row.size,
     mime: row.mime,
-    thumbnail: row.thumbnail,
     uploaded: new Date(row.uploaded),
     md5: row.md5,
     ctime: new Date(row.ctime),
     mtime: new Date(row.mtime),
+    customMetadata: row.customMetadata ? JSON.parse(row.customMetadata) : {},
   }));
 }
 
@@ -154,7 +172,7 @@ export function dbFile2R2Object(file: File): R2Object {
     key: file.key,
     size: file.size,
     httpMetadata: { contentType: file.mime },
-    customMetadata: { thumbnail: file.thumbnail || undefined },
+    customMetadata: file.customMetadata,
     checksums: {
       md5: file.md5 ? new ArrayBufferWithToJson(decodeHex(file.md5).buffer) : undefined,
     },

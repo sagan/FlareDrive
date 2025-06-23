@@ -107,6 +107,7 @@ export async function fetchPath(
       const size = response.querySelector("getcontentlength")?.textContent;
       const lastModified = response.querySelector("getlastmodified")?.textContent;
       const thumbnail = response.getElementsByTagNameNS("flaredrive", "thumbnail")[0]?.textContent;
+      const url = response.getElementsByTagNameNS("flaredrive", "url")[0]?.textContent;
       const checksums = response.getElementsByTagName("oc:checksum")[0]?.textContent || "";
 
       return {
@@ -114,7 +115,7 @@ export async function fetchPath(
         size: size ? Number(size) : 0,
         uploaded: new Date(lastModified || 0),
         httpMetadata: { contentType: contentType || "" },
-        customMetadata: { thumbnail },
+        customMetadata: { thumbnail, url },
         checksums: checksums
           .split(" ")
           .filter((a) => a)

@@ -170,9 +170,7 @@ export default function App() {
             httpMetadata: {
               contentType: searchFile.mime
             },
-            customMetadata: {
-              thumbnail: searchFile.thumbnail
-            },
+            customMetadata: searchFile.customMetadata,
             checksums: {}
           }
         })

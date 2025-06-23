@@ -24,6 +24,7 @@ type DavProperties = {
   getlastmodified: string | undefined;
   resourcetype: string;
   "fd:thumbnail": string | undefined;
+  "fd:url": string | undefined;
   "oc:checksums": string | undefined;
 };
 
@@ -50,6 +51,7 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     getlastmodified: object.uploaded.toUTCString(),
     resourcetype: isDirectory(object) ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
+    "fd:url": object.customMetadata?.url,
     "oc:checksums": checksums,
   };
 }
