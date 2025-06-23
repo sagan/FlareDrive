@@ -22,6 +22,7 @@ import {
   dirname,
   isImage,
   MIME_URL,
+  URL_VARIABLE,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -188,9 +189,16 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
 
   let body: ReadableStream | string | null = request.body;
   if (request.headers.get(HEADER_CONTENT_TYPE) == MIME_URL) {
-    body = await request.text();
-    const url = parseUrlFile(body);
-    customMetadata = customMetadata ? { ...customMetadata, url } : { url };
+    let url: string | null;
+    if (searchParams.has(URL_VARIABLE)) {
+      url = searchParams.get(URL_VARIABLE);
+    } else {
+      body = await request.text();
+      url = parseUrlFile(body);
+    }
+    if (url) {
+      customMetadata = customMetadata ? { ...customMetadata, url } : { url };
+    }
   }
 
   const result = await bucket.put(path, body, {

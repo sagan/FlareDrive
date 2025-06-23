@@ -31,6 +31,7 @@ import {
   escapeRegExp,
   str2int,
   cut,
+  URL_VARIABLE,
 } from "../../lib/commons";
 import { FileItem } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -403,14 +404,20 @@ export async function putFile({
   auth,
   body,
   contentType,
+  url,
 }: {
   key: string;
   auth: string;
   create?: boolean;
   body?: BodyInit;
   contentType?: string;
+  url?: string;
 }) {
-  const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}`;
+  let searchParams = new URLSearchParams();
+  if (url) {
+    searchParams.set(URL_VARIABLE, url);
+  }
+  const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}${searchParams.size > 0 ? "?" + searchParams.toString() : ""}`;
   const req = applyAuth(
     new Request(uploadUrl, {
       method: "PUT",

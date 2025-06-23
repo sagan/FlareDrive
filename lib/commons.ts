@@ -29,6 +29,13 @@ export const THIRTEEN_MONTHS_DAYS = 398;
 export const THUMBNAIL_VARIABLE = "thumbnail";
 
 /**
+ * url variable.
+ * Only apply MIME_URL files. Set to the url of the file.
+ * @see {MIME_URL}
+ */
+export const URL_VARIABLE = "url";
+
+/**
  * For thumbnail api: set to to the thumbnail file digest.
  */
 export const THUMBNAIL_DIGEST_VARIABLE = "thumbnailDigest";
@@ -103,13 +110,14 @@ export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
- * [raw, html, token, ts, thumbnail*... (except thumbnailDigest)]
+ * [raw, html, token, ts, url, thumbnail*... (except thumbnailDigest)]
  */
 export const NOSIGN_VARIABLES: readonly string[] = [
   RAW_VARIABLE,
   HTML_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
+  URL_VARIABLE,
   THUMBNAIL_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,
@@ -146,9 +154,21 @@ export const KEY_PART_SEARCH_FULL = ".full";
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 
 /**
- * Windows .url files
+ * Windows .url file extension
  */
-export const MIME_URL = "application/x-mswinurl";
+export const EXT_URL = ".url";
+
+/**
+ * macOS .webloc file extension
+ */
+export const EXT_WEBLOC = ".webloc";
+
+/**
+ * Used for "url" files, such as Windows .url files, MacOS .webloc files.
+ * This MIME is introduced by NextCloud.
+ * These files will have a "url" custom metadata set.
+ */
+export const MIME_URL = "application/internet-shortcut";
 
 /**
  * Fallback MIME for any type file
@@ -463,11 +483,20 @@ export function isHttpsOrLocalUrl(url: string): boolean {
   );
 }
 
+/**
+ * Return the extension (with dot) of a file path. E.g. "foo/bar.txt" => ".txt".
+ * Return empty string if last segment of path does not contain a dot.
+ */
 export function extname(path: string): string {
-  if (!path.includes(".")) {
+  const lastDotIndex = path.lastIndexOf(".");
+  if (lastDotIndex < 0) {
     return "";
   }
-  return "." + path.split(".").pop();
+  const lastSlashIndex = path.lastIndexOf("/");
+  if (lastSlashIndex > lastDotIndex) {
+    return "";
+  }
+  return path.substring(lastDotIndex);
 }
 
 /**
@@ -808,6 +837,13 @@ export function isImage(object: R2ObjectAlike): boolean {
  */
 export function isDirectory(object: R2ObjectAlike): boolean {
   return object.httpMetadata?.contentType === MIME_DIR;
+}
+
+/**
+ * Return whether an R2Object or alike is a url (internet shortcut) file
+ */
+export function isUrlFile(object: R2ObjectAlike): boolean {
+  return object.httpMetadata?.contentType === MIME_URL;
 }
 
 /**

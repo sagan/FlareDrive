@@ -110,7 +110,7 @@ WHERE 1 = 1`;
   const params: any[] = [];
 
   if (query) {
-    sql += ` AND (name LIKE ?)`;
+    sql += ` AND (f.name LIKE ?)`;
     if (full) {
       params.push(`%${query}%`);
     } else {
@@ -119,7 +119,7 @@ WHERE 1 = 1`;
   }
 
   if (depth >= 0) {
-    sql += ` AND (depth = ?)`;
+    sql += ` AND (f.depth = ?)`;
     params.push(depth);
   }
   if (prefix) {

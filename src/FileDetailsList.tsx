@@ -14,6 +14,7 @@ import {
   basename,
   humanReadableSize,
   isDirectory,
+  isUrlFile,
 } from "../lib/commons";
 import { ViewProps } from "./commons";
 
@@ -45,13 +46,15 @@ export default function FileDetailsList({
           {files.map((file) => {
             const IconComponent = file.icon;
             const name = file.name || basename(file.key);
-            let title: string | undefined;
-            if (isSearch) {
-              title = `Key: ${file.key}`;
-            } else {
-              title = name;
+            let title = ""
+            if (isUrlFile(file)) {
+              title = file.customMetadata?.url || ""
             }
-
+            if (isSearch) {
+              title += (title ? "\n" : "") + `Key: ${file.key}`;
+            } else {
+              title += (title ? "\n" : "") + name;
+            }
             return (
               <TableRow
                 hover

@@ -18,6 +18,7 @@ import {
   TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, MIME_URL,
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
+  isUrlFile,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -36,6 +37,7 @@ import MimeIcon from "./MimeIcon";
 import EditorDialog from "./EditorDialog";
 import PdfDialog from "./PdfDialog";
 import ImageEditorDialog from "./ImageEditorDialog";
+import UrlFileEditorDialog from "./UrlFileEditorDialog";
 
 
 function DropZone({ disabled, children, onDrop }:
@@ -182,7 +184,7 @@ export default function Main({
   const [editing, setEditing] = useState<string | null>(null); // text editing file key
   const [displayedPdf, setDisplayedPdf] = useState<string | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
-
+  const [editingUrl, setEditingUrl] = useState<FileItem | null>(null);
   const [transferQueue] = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
 
@@ -303,6 +305,8 @@ export default function Main({
     edit: (file) => {
       if (file.httpMetadata.contentType === MIME_PDF) {
         setDisplayedPdf(file.key)
+      } else if (isUrlFile(file)) {
+        setEditingUrl(file);
       } else if (isTextual(file)) {
         setEditing(file.key)
       } else if (isImage(file)) {
@@ -475,6 +479,8 @@ export default function Main({
       {editing !== null && <EditorDialog filekey={editing} {...fileViewerProps} />}
       {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
       {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
+      {editingUrl !== null && <UrlFileEditorDialog key={editingUrl.key} url={editingUrl.customMetadata?.url}
+        open={true} close={() => setEditingUrl(null)} />}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}

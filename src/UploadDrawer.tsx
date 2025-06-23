@@ -8,12 +8,14 @@ import {
   Upload as UploadIcon,
 } from "@mui/icons-material";
 import CreateIcon from '@mui/icons-material/Create';
+import LinkIcon from '@mui/icons-material/Link';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import AddIcon from '@mui/icons-material/Add';
 import { Permission } from "../lib/commons";
 import { putFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
 import CloudDownloadDialog from "./CloudDownloadDialog";
+import UrlFileEditorDialog from "./UrlFileEditorDialog";
 import { useConfig } from "./commons";
 
 
@@ -87,6 +89,7 @@ export default function UploadDrawer({
   const uploadEnqueue = useUploadEnqueue();
 
   const [uploadFromUrlOpen, setUploadFromUrlOpen] = useState(false);
+  const [newUrlOpen, setNewUrlOpen] = useState(false);
 
   const handleUpload = useCallback(
     (action: string) => () => {
@@ -126,6 +129,11 @@ export default function UploadDrawer({
   const onUploadFromUrl = useCallback(() => {
     setOpen(false);
     setUploadFromUrlOpen(true);
+  }, [])
+
+  const onNewUrl = useCallback(() => {
+    setOpen(false);
+    setNewUrlOpen(true);
   }, [])
 
   const onCreate = useCallback(async (edit?: boolean) => {
@@ -222,11 +230,20 @@ export default function UploadDrawer({
                 onClick={() => onCreate(true)}
               />
             </Grid>
+            <Grid item xs={3}>
+              <IconCaptionButton
+                icon={<LinkIcon fontSize="large" />}
+                caption="New Url"
+                onClick={onNewUrl}
+              />
+            </Grid>
           </Grid>
         </Card>
       </Drawer>
       <CloudDownloadDialog cwd={cwd} open={uploadFromUrlOpen} onUpload={onUpload}
-        permission={permission} close={() => setUploadFromUrlOpen(false)} />
+        close={() => setUploadFromUrlOpen(false)} />
+      {newUrlOpen && <UrlFileEditorDialog cwd={cwd} open={newUrlOpen} onUpload={onUpload}
+        close={() => setNewUrlOpen(false)} />}
     </>
   );
 }

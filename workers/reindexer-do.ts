@@ -19,7 +19,7 @@ import {
 import { deleteAllDbFiles, upsertDbFile } from "../functions/db";
 
 const BATCH_SIZE = 100; // Number of files to process per R2 list operation
-const ALARM_DELAY_MS = 5000; // Delay between batches
+const ALARM_DELAY_MS = 1000; // Delay between batches
 
 export class ReindexerDO implements DurableObject {
   state: DurableObjectState;

@@ -1,4 +1,4 @@
-import { MIME_DIR, MIME_GZIP, MIME_JSON, MIME_PDF, MIME_SH, MIME_XML, MIME_ZIP, mimeType } from "../lib/commons";
+import { MIME_DIR, MIME_GZIP, MIME_JSON, MIME_PDF, MIME_SH, MIME_URL, MIME_XML, MIME_ZIP, mimeType } from "../lib/commons";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import CodeIcon from "@mui/icons-material/Code";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -7,6 +7,7 @@ import ImageIcon from "@mui/icons-material/Image";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import PdfIcon from "@mui/icons-material/PictureAsPdf";
 import VideoFileIcon from "@mui/icons-material/VideoFile";
+import LinkIcon from '@mui/icons-material/Link';
 import { SvgIconProps } from "@mui/material";
 
 const icons: Record<string, React.FC<SvgIconProps>> = {
@@ -21,6 +22,7 @@ const icons: Record<string, React.FC<SvgIconProps>> = {
   [MIME_ZIP]: FolderZipOutlinedIcon,
   [MIME_GZIP]: FolderZipOutlinedIcon,
   [MIME_DIR]: FolderIcon,
+  [MIME_URL]: LinkIcon,
   "": InsertDriveFileOutlinedIcon, // fallback
 }
 

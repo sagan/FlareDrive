@@ -19,7 +19,7 @@ import Box from '@mui/material/Box';
 import { Button, TextField } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
-import { Permission, basename, extname, fileUrl, humanReadableSize } from '../lib/commons';
+import { basename, extname, fileUrl, humanReadableSize } from '../lib/commons';
 import { FileItem, generatePassword, useConfig } from './commons';
 import { uploadFromUrl } from './app/transfer';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +27,6 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
   cwd: string;
-  permission: Permission;
   open: boolean;
   close: () => void;
   onUpload: () => void;

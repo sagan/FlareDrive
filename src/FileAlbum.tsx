@@ -5,8 +5,8 @@ import {
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
 import {
-  basename, EXPIRES_VARIABLE, fileUrl, humanReadableSize, SCOPE_VARIABLE, str2int,
-  THUMBNAIL_SIZE, TOKEN_VARIABLE
+  THUMBNAIL_SIZE, TOKEN_VARIABLE, EXPIRES_VARIABLE, SCOPE_VARIABLE,
+  basename, fileUrl, humanReadableSize, isUrlFile, str2int,
 } from "../lib/commons";
 import { ViewProps, useConfig } from "./commons";
 
@@ -39,7 +39,12 @@ export default function FileAlbum({
         fullControl: auth ? undefined : fullControl,
       }) : "";
       const name = f.name || basename(f.key)
-      let title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
+      let title: string
+      if (isUrlFile(f)) {
+        title = f.customMetadata?.url || ""
+      } else {
+        title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
+      }
       if (isSearch) {
         title += `\nKey: ${f.key}`;
       }
