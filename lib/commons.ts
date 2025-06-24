@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { sha256 as sha256Internal, hmac_sha256 } from "./sha256";
 
 export const WEBDAV_ENDPOINT = "/dav/";
@@ -6,6 +7,7 @@ export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
 export const SEARCH_API = "/api/search";
 export const REINDEX_API = "/api/reindex";
+export const CONFIG_API = "/api/config";
 
 /**
  * Cloud Download default file size limit (bytes): 10MiB.
@@ -935,3 +937,36 @@ export class ArrayBufferWithToJson {
     this.dataView.setUint8(byteOffset, value);
   }
 }
+
+// The zod schema of PublicSystemConfig. All fields default to "zero" values.
+export const PublicSystemConfigSchema = z.object({
+  /**
+   * inticates that server status is ok.
+   */
+  ok: z.boolean().default(false),
+  /**
+   * dev mode
+   */
+  dev: z.boolean().default(false),
+  /**
+   * Public prefix list. Each one in list is guaranteed to be not empty
+   * and do not start or end with white space or "/".
+   */
+  publicPrefix: z.array(z.string()).default([]),
+  /**
+   * Public dir prefix list. Each one in list is guaranteed to be not empty
+   * and do not start or end with white space or "/".
+   */
+  publicDirPrefix: z.array(z.string()).default([]),
+  /**
+   * Public writable dir prefix list. Each one in list is guaranteed to be not empty
+   * and do not start or end with white space or "/".
+   */
+  publicRwdirPrefix: z.array(z.string()).default([]),
+});
+
+/**
+ * The public (client visible) system config.
+ * Configurable at runtime by setting Cloudflare Workers "Variables and Secrets".
+ */
+export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;

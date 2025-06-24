@@ -51,17 +51,17 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - Deploy command: `npm run deploy`
   - Version command: `npm run cfversion`
   - Root directory: `/`
-- Variables and Secrets: Set the following variables.
+- Variables and Secrets: Set the following variables. (Any change take effect immediately)
   - `WEBDAV_USERNAME`: username.
   - `WEBDAV_PASSWORD` password.
-- Build - Variables and secrets. (Any changes require re-build to take effect)
+  - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
+- Build - Variables and secrets. (Any change require re-build to take effect)
   - `R2_BUCKET_NAME` : The [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket name.
   - (optional) `KV_ID` : The [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) instance id.
   - (optional) `DATABASE_ID` : The [Cloudflare D1](https://developers.cloudflare.com/d1/) database id.
     - Though `KV_ID` and `DATABASE_ID` are optional, we highly recommand to set them, otherwise some features of this project won't work.
   - (optional) `SITENAME` : Site name. Default is `FlareDrive`.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.
-  - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
 
 ## Deployment to Cloudflare Pages
 

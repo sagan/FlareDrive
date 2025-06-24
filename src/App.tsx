@@ -14,11 +14,15 @@ import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE,
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
+  CONFIG_API,
+  PublicSystemConfig,
+  PublicSystemConfigSchema,
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE,
   FileItem, isThumbnailPossible, ViewMode, Config, ConfigContext, getFilePermission,
   cwd2Search,
+  SystemConfigContext,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -101,6 +105,12 @@ export default function App() {
     return () => clearInterval(iv);
   }, [])
 
+  const [systemConfig, setSystemConfig] = useState<PublicSystemConfig>(PublicSystemConfigSchema.parse({}));
+
+  useEffect(() => {
+    fetch(CONFIG_API).then(res => res.json<PublicSystemConfig>()).then(setSystemConfig);
+  }, [])
+
   const location = useLocation();
   const navigate = useNavigate();
   const cwd = path2Key(location.pathname)
@@ -119,13 +129,13 @@ export default function App() {
     }
   }
 
-  const [permission, prefix] = useMemo(() => getFilePermission(cwd), [cwd])
-  const [isSearch, searchKeyword, searchOptions] = useMemo(() => cwd2Search(cwd), [cwd])
+  const [permission, prefix] = useMemo(() => getFilePermission(cwd, systemConfig), [cwd, systemConfig]);
+  const [isSearch, searchKeyword, searchOptions] = useMemo(() => cwd2Search(cwd), [cwd]);
   const [search, setSearch] = useState(searchKeyword);
-  const currentDir = isSearch ? (searchOptions.baseDir || "") : cwd
+  const currentDir = isSearch ? (searchOptions.baseDir || "") : cwd;
 
   useEffect(() => {
-    document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__
+    document.title = cwd ? `${cwd}/ - ${window.__SITENAME__}` : window.__SITENAME__;
   }, [cwd]);
 
   const thumbnailableFiles = useMemo(() => {
@@ -223,67 +233,69 @@ export default function App() {
   useEffect(() => fetchFiles(), [cwd, auth, ts]);
 
   return (
-    <ConfigContext.Provider value={config}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {globalStyles}
-        <TransferQueueProvider>
-          <Stack sx={{ height: "100%" }}>
-            <Header permission={permission}
-              onSignOut={() => {
-                setAuth("");
-                fetchFiles();
-              }}
-              cwd={cwd}
-              isSearch={isSearch}
-              searchOptions={searchOptions}
-              setCwd={setCwd}
-              onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
-              setSearch={setSearch} setViewMode={setViewMode}
-              sort={sort} setSort={setSort}
-              onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
-              setShowProgressDialog={setShowProgressDialog}
-              setShowAdminDialog={setShowAdminDialog}
-              onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
-                ? () => setSharing(multiSelected[0] || cwd) : undefined}
+    <SystemConfigContext.Provider value={systemConfig}>
+      <ConfigContext.Provider value={config}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          {globalStyles}
+          <TransferQueueProvider>
+            <Stack sx={{ height: "100%" }}>
+              <Header permission={permission}
+                onSignOut={() => {
+                  setAuth("");
+                  fetchFiles();
+                }}
+                cwd={cwd}
+                isSearch={isSearch}
+                searchOptions={searchOptions}
+                setCwd={setCwd}
+                onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
+                setSearch={setSearch} setViewMode={setViewMode}
+                sort={sort} setSort={setSort}
+                onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
+                setShowProgressDialog={setShowProgressDialog}
+                setShowAdminDialog={setShowAdminDialog}
+                onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
+                  ? () => setSharing(multiSelected[0] || cwd) : undefined}
+              />
+              <PathBreadcrumb prefix={prefix} permission={permission}
+                path={currentDir} searchKeyword={searchKeyword}
+                isSearch={isSearch} searchOptions={searchOptions} setCwd={setCwd} setSearch={setSearch} />
+              {
+                cwd == SHARES_FOLDER_KEY
+                  ? <ShareManager setError={setError} fetchFiles={fetchFiles}
+                    search={search} shares={shares} loading={loading} />
+                  : (isSearch && !searchKeyword)
+                    ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
+                    : <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
+                      sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
+                      permission={permission} files={files} setError={setError} isSearch={isSearch}
+                      multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+              }
+            </Stack>
+            <Snackbar
+              autoHideDuration={5000}
+              open={!!error}
+              message={error ? `${error.message || error}` : null}
+              onClose={() => setError(null)}
             />
-            <PathBreadcrumb prefix={prefix} permission={permission}
-              path={currentDir} searchKeyword={searchKeyword}
-              isSearch={isSearch} searchOptions={searchOptions} setCwd={setCwd} setSearch={setSearch} />
-            {
-              cwd == SHARES_FOLDER_KEY
-                ? <ShareManager setError={setError} fetchFiles={fetchFiles}
-                  search={search} shares={shares} loading={loading} />
-                : (isSearch && !searchKeyword)
-                  ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
-                  : <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
-                    sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
-                    permission={permission} files={files} setError={setError} isSearch={isSearch}
-                    multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
-            }
-          </Stack>
-          <Snackbar
-            autoHideDuration={5000}
-            open={!!error}
-            message={error ? `${error.message || error}` : null}
-            onClose={() => setError(null)}
-          />
-          <ProgressDialog
-            open={showProgressDialog}
-            onClose={() => setShowProgressDialog(false)}
-          />
-          <AdminDialog
-            currentDir={currentDir}
-            open={showAdminDialog}
-            onClose={() => setShowAdminDialog(false)}
-          />
-          {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
-            onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
-          </GenerateThumbnailsDialog>}
-          {(requireSignIn || showSignInDialog) && <SignInDialog
-            open={true} onClose={() => setShowSignInDialog(false)} onSignIn={onSignIn} />}
-        </TransferQueueProvider>
-      </ThemeProvider>
-    </ConfigContext.Provider>
+            <ProgressDialog
+              open={showProgressDialog}
+              onClose={() => setShowProgressDialog(false)}
+            />
+            <AdminDialog
+              currentDir={currentDir}
+              open={showAdminDialog}
+              onClose={() => setShowAdminDialog(false)}
+            />
+            {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
+              onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
+            </GenerateThumbnailsDialog>}
+            {(requireSignIn || showSignInDialog) && <SignInDialog
+              open={true} onClose={() => setShowSignInDialog(false)} onSignIn={onSignIn} />}
+          </TransferQueueProvider>
+        </ThemeProvider>
+      </ConfigContext.Provider>
+    </SystemConfigContext.Provider>
   );
 }

@@ -65,8 +65,10 @@ export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
   const isRunning = state?.status == "running"
 
   return <Box>
-    <h4>Reindexer Management  {isLoading && <span>Loading...</span>}</h4>
-    {apiError && <Typography sx={{ color: 'red' }}>API Error: {apiError}</Typography>}
+    <Typography variant="h5" gutterBottom>
+      Reindexer Management  {isLoading && <i>Loading...</i>}
+    </Typography>
+    {apiError && <Typography sx={{ color: 'red' }} gutterBottom>API Error: {apiError}</Typography>}
     {state ? (
       <Box>
         <Box>
@@ -103,7 +105,7 @@ export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
       !isLoading && !apiError && <Typography>Could not load reindexer status.</Typography>
     )}
 
-    <Typography>
+    <Typography gutterBottom>
       <Button color='secondary' onClick={() => handleCommand("start")} disabled={isLoading || isRunning}>
         Start
       </Button>

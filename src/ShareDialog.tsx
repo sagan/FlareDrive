@@ -35,7 +35,7 @@ import {
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix,
   dirUrlPath, Permission, humanReadableSize, isDirectory,
 } from '../lib/commons';
-import { FileItem, generatePassword, getFilePermission, useConfig } from './commons';
+import { FileItem, generatePassword, getFilePermission, useConfig, useSystemConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton } from './components';
 
@@ -61,24 +61,25 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   shareKey: string;
   shareObject: ShareObject
 })) {
-  const { auth, expires } = useConfig()
+  const systemConfig = useSystemConfig();
+  const { auth, expires } = useConfig();
   const [tab, setTab] = useState("shareKey" in otherProps ? 1 : 0);
   const fileKeyWithDirSlash = "shareKey" in otherProps ? otherProps.shareObject.key :
-    (otherProps.file.key + (isDirectory(otherProps.file) ? "/" : ""))
-  const fileKey = trimPrefixSuffix(fileKeyWithDirSlash, "/")
-  const name = basename(fileKey)
-  const [shareKey, setSharekey] = useState("shareKey" in otherProps ? otherProps.shareKey : name)
+    (otherProps.file.key + (isDirectory(otherProps.file) ? "/" : ""));
+  const fileKey = trimPrefixSuffix(fileKeyWithDirSlash, "/");
+  const name = basename(fileKey);
+  const [shareKey, setSharekey] = useState("shareKey" in otherProps ? otherProps.shareKey : name);
   const [shareObject, setShareObject] = useState<ShareObject>(
-    "shareKey" in otherProps ? otherProps.shareObject! : { key: fileKeyWithDirSlash })
+    "shareKey" in otherProps ? otherProps.shareObject! : { key: fileKeyWithDirSlash });
   const [referer, setReferer] = useState("shareKey" in otherProps ?
-    list2Referer(otherProps.shareObject.refererList) : "")
-  const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating)
-  const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1)
+    list2Referer(otherProps.shareObject.refererList) : "");
+  const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating);
+  const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1);
   const [linkTtl, setLinkTtl] = useState(86400);
   const [linkTs, setLinkTs] = useState(+new Date);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
-  const [permission, prefix] = useMemo(() => getFilePermission(fileKey), [fileKey])
+  const [permission, prefix] = useMemo(() => getFilePermission(fileKey, systemConfig), [fileKey, systemConfig])
   const targetIsDir = shareObject.key.endsWith("/")
   const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({
     key: shareObject.key,
@@ -332,7 +333,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             setLinkTtl(parseInt(e.target.value))
           }}>
             <option value={0}>Never</option>
-            {window.__DEV__ && <option value={60}>60 seconds</option>}
+            {systemConfig.dev && <option value={60}>60 seconds</option>}
             <option value={300}>5 minutes</option>
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>
@@ -486,7 +487,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             {status !== Status.Creating && <option value={-1}>No change</option>}
             <option value={0}>Never</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
-            {window.__DEV__ && <option value={62}>60 seconds</option>}
+            {systemConfig.dev && <option value={62}>60 seconds</option>}
             <option value={300}>5 minutes</option>
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>

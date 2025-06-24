@@ -37,6 +37,7 @@ import {
   corsHeaders,
   isImage,
   fileDepth,
+  PublicSystemConfig,
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles } from "./db";
@@ -48,6 +49,10 @@ export type Env = {
   CLOUD_DOWNLOAD_UNLIMITED?: string;
   WEBDAV_USERNAME: string;
   WEBDAV_PASSWORD: string;
+  /**
+   * Flag. set it to any value (e.g. "1") to enable dev mode.
+   */
+  DEV?: string;
   /**
    * Comma-separated "public" path prefixes.
    * Path with any of these prefixes is allowed to read file anonymously
@@ -583,4 +588,26 @@ export function requestJson(url: string | URL, payload: any, method: "POST" | "P
       [HEADER_CONTENT_TYPE]: MIME_JSON,
     },
   });
+}
+
+export function getPublicSystemConfig(env: Env): PublicSystemConfig {
+  return {
+    ok: true,
+    dev: !!env.DEV,
+    publicPrefix: env.PUBLIC_PREFIX
+      ? env.PUBLIC_PREFIX.split(/\s*,\s*/)
+          .map((prefix) => trimPrefixSuffix(prefix, "/"))
+          .filter((prefix) => prefix)
+      : [],
+    publicDirPrefix: env.PUBLIC_DIR_PREFIX
+      ? env.PUBLIC_DIR_PREFIX.split(/\s*,\s*/)
+          .map((prefix) => trimPrefixSuffix(prefix, "/"))
+          .filter((prefix) => prefix)
+      : [],
+    publicRwdirPrefix: env.PUBLIC_RWDIR_PREFIX
+      ? env.PUBLIC_RWDIR_PREFIX.split(/\s*,\s*/)
+          .map((prefix) => trimPrefixSuffix(prefix, "/"))
+          .filter((prefix) => prefix)
+      : [],
+  };
 }

@@ -8,6 +8,7 @@ import {
 import React from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import ReindexerAdmin from './components/ReindexerAdmin';
+import SystemConfigAdmin from "./components/SystemConfigAdmin";
 
 
 export default function AdminDialog({
@@ -27,6 +28,7 @@ export default function AdminDialog({
         <span>Administration</span>
       </DialogTitle>
       <DialogContent sx={{ p: 1 }}>
+        <SystemConfigAdmin />
         <ReindexerAdmin currentDir={currentDir} />
       </DialogContent>
     </Dialog>

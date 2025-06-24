@@ -1,5 +1,13 @@
 import { SyntheticEvent } from "react";
-import { KEY_PART_SEARCH, KEY_PART_SEARCH_FULL, MIME_DEFAULT, TXT_MIMES, Permission, mimeType } from "../lib/commons";
+import {
+  KEY_PART_SEARCH,
+  KEY_PART_SEARCH_FULL,
+  MIME_DEFAULT,
+  TXT_MIMES,
+  Permission,
+  mimeType,
+  PublicSystemConfig,
+} from "../lib/commons";
 import React from "react";
 
 export const VIEWMODE_VARIABLE = "viewMode";
@@ -159,26 +167,36 @@ export function generatePassword(length: number, digitOnly?: boolean) {
 
 export const ConfigContext = React.createContext<Config | null>(null);
 
+export const SystemConfigContext = React.createContext<PublicSystemConfig | null>(null);
+
 /**
  * ConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
  */
 export const useConfig = () => React.useContext<Config | null>(ConfigContext)!;
 
 /**
+ * SystemConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
+ */
+export const useSystemConfig = () => React.useContext<PublicSystemConfig | null>(SystemConfigContext)!;
+
+/**
  * Get permission of a dir / file key, along with matched prefix if any.
  */
-export function getFilePermission(key: string): [permission: Permission, prefix: string] {
-  for (const prefix of window.__PUBLIC_PREFIX__) {
+export function getFilePermission(
+  key: string,
+  systemConfig: PublicSystemConfig
+): [permission: Permission, prefix: string] {
+  for (const prefix of systemConfig.publicPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenFile, prefix];
     }
   }
-  for (const prefix of window.__PUBLIC_DIR_PREFIX__) {
+  for (const prefix of systemConfig.publicDirPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenDir, prefix];
     }
   }
-  for (const prefix of window.__PUBLIC_RWDIR_PREFIX__) {
+  for (const prefix of systemConfig.publicRwdirPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenRwDir, prefix];
     }
