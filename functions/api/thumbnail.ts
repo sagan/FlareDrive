@@ -7,9 +7,9 @@ import {
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,
   THUMBNAIL_NO404_VARIABLE,
-  str2int,
   THUMBNAIL_DIGEST_VARIABLE,
   THUMBNAIL_NOFALLBACK,
+  str2int,
 } from "../../lib/commons";
 import {
   FdCfFunc,

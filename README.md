@@ -22,25 +22,25 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - Upload large files
 - Upload file directly from URL ("Cloud download")
 - Create folders
-- Search files
+- Search files (requires Cloudflare D1 database)
 - Image/video/PDF thumbnails
-- WebDAV endpoint, compatible with rclone [webdav](https://rclone.org/webdav/) backend's `owncloud` vendor, support md5 hashes.
+- WebDAV endpoint, compatible with rclone [webdav](https://rclone.org/webdav/) backend's `owncloud` vendor, support md5 hashes
 - Drag and drop upload
 - Share & Publish files or folders temporarily or permanently. ("Publish" feature requires Cloudflare Workers KV)
 - Images lightbox
 - Online text / image files editor
 - Online PDF files previewer
+- Create and manage "url" (internet shortcut) files
 
 # Installation
 
 Before starting, you should make sure that
 
-- you have created a [Cloudflare](https://dash.cloudflare.com/) account
-- your payment method is added
-- R2 service is activated and at least one bucket is created
-- (optional) KV & D1 instances are created.
+- You have created a [Cloudflare](https://dash.cloudflare.com/) account
+- R2 service is activated (requires payment method added to CF account) and at least one bucket is created
+- (optional but recommended) KV & D1 instances are created.
 
-This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard.
+This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV / D1) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard.
 
 ## Deployment to Cloudflare Workers (recommended)
 
@@ -61,6 +61,7 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - (optional) `DATABASE_ID` : The [Cloudflare D1](https://developers.cloudflare.com/d1/) database id.
     - Though `KV_ID` and `DATABASE_ID` are optional, we highly recommand to set them, otherwise some features of this project won't work.
   - (optional) `SITENAME` : Site name. Default is `FlareDrive`.
+  - (optional) `SHORT_SITENAME` : Short site name. Default is the same value as `SITENAME` variable.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.
 
 ## Deployment to Cloudflare Pages
@@ -72,7 +73,7 @@ Fork this project and connect your fork with Cloudflare Pages. Select `Vite` fra
 - Build system version: Version 3.
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
-  - (optional) `SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
+  - (optional) `SITENAME`, `SHORT_SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
   - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `workers/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.

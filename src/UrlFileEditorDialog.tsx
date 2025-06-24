@@ -17,11 +17,12 @@ import { generatePassword, useConfig } from './commons';
 import { putFile } from './app/transfer';
 
 
-export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...otherProps }: {
+export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUpload, ...otherProps }: {
   url?: string;
   filekey?: string;
   cwd?: string;
   open: boolean;
+  readonly?: boolean;
   close: () => void;
   onUpload?: () => void;
 }) {
@@ -71,7 +72,7 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} className='single-line'>
-      {filekey ? `Edit URL "${filekey}"` : `New URL in "${cwd || ""}/"`}
+      {filekey ? `${readonly ? "View" : "Edit"} URL "${filekey}"` : `New URL in "${cwd || ""}/"`}
     </DialogTitle>
     <DialogContent autoFocus>
       <form>
@@ -108,7 +109,7 @@ export default function UrlFileEditorDialog({ cwd, open, close, onUpload, ...oth
             }} />
         </Box>
         <Box sx={{ mt: 1 }}>
-          <TextField disabled={saving} autoFocus={true} label="URL" fullWidth placeholder='http(s)://'
+          <TextField disabled={saving || readonly} autoFocus={true} label="URL" fullWidth placeholder='http(s)://'
             value={url} onChange={e => setUrl(e.target.value)} InputProps={{
               endAdornment: <>
                 <IconButton

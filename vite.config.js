@@ -11,9 +11,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DefaultPublicVariables = {
   SITENAME: "FlareDrive",
   SHORT_SITENAME: "", // Optional, if not present, app will use SITENAME instead.
-  PUBLIC_PREFIX: "",
-  PUBLIC_DIR_PREFIX: "",
-  PUBLIC_RWDIR_PREFIX: "",
 };
 
 // `npm run cfdev`

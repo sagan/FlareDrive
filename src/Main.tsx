@@ -480,7 +480,7 @@ export default function Main({
       {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
       {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
       {editingUrl !== null && <UrlFileEditorDialog filekey={editingUrl.key} url={editingUrl.customMetadata?.url}
-        open={true} close={() => setEditingUrl(null)} onUpload={fetchFiles} />}
+        open={true} readonly={!permitWrite} close={() => setEditingUrl(null)} onUpload={fetchFiles} />}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}
