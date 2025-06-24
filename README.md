@@ -1,5 +1,7 @@
 # FlareDrive
 
+**English** | [简体中文](./README.zh-Hans.md)
+
 It's a fork of [longern/FlareDrive](https://github.com/longern/FlareDrive), with a lot of new features added and other tweaks applied.
 
 Cloudflare R2 storage manager with Workers or Pages. Free 10 GB storage.
@@ -63,6 +65,7 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - (optional) `SITENAME` : Site name. Default is `FlareDrive`.
   - (optional) `SHORT_SITENAME` : Short site name. Default is the same value as `SITENAME` variable.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.
+  - (optionL) `JS_URL` & `CSS_URL`: Custom JavaScript & CSS file url. If set, they will be injected in the `<head>` element of Web UI.
 
 ## Deployment to Cloudflare Pages
 
@@ -73,13 +76,13 @@ Fork this project and connect your fork with Cloudflare Pages. Select `Vite` fra
 - Build system version: Version 3.
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
-  - (optional) `SITENAME`, `SHORT_SITENAME`, `FAVICON_URL`, `WORKER_URL`, `WORKER_TOKEN`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
+  - (optional) `SITENAME`, `SHORT_SITENAME`, `FAVICON_URL`, `JS_URL`, `CSS_URL`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
   - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `workers/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.
   - (optional) Bind Workers KV to `KV` name.
   - (optional) Bind D1 Database to `DB` name.
-  - (optional) Use wrangler CLI to deploy `workers/reindexer-do.ts` to CF as [Durable Object](https://developers.cloudflare.com/durable-objects/) (bind `BUCKET` and `DB` to them too), than bind it to `REINDEXER_DO` name. It's only required in Pages mode as CF pages don't support Durable Objects directly.
+  - (optional) Use wrangler CLI to deploy `workers/reindexer-do.ts` to CF as [Durable Object](https://developers.cloudflare.com/durable-objects/) (bind `BUCKET` and `DB` to the deployed DO too), than bind the DO to `REINDEXER_DO` name. It's only required in Pages mode as CF pages don't support Durable Objects directly.
 
 You need to retry deployment for any config changes to take effect.
 

@@ -23,7 +23,7 @@ import {
   appendQueryStringToUrl,
   extname, fileUrl, humanReadableSize, str2int
 } from '../lib/commons';
-import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, getFilePermission, useConfig } from './commons';
+import { EDIT_FILE_SIZE_LIMIT, FileViewerProps, getFilePermission, useConfig, useSystemConfig } from './commons';
 import { CopyButton } from './components';
 import { putFile } from './app/transfer';
 
@@ -58,15 +58,16 @@ const extLanguages: Record<string, string> = {
 }
 
 export default function EditorDialog({ filekey, open, close, setError }: FileViewerProps) {
+  const systemConfig = useSystemConfig();
   const { auth, effectiveAuth, authSearchParams, expires, editorPrompt, fullControl,
-    setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig()
-  const language = extLanguages[extname(filekey)] || extLanguages[""]
-  const [state, setState] = useState<State>(State.Idle)
-  const [contents, setContents] = useState<string | undefined>(undefined)
-  const [changed, setChanged] = useState(false)
+    setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig();
+  const language = extLanguages[extname(filekey)] || extLanguages[""];
+  const [state, setState] = useState<State>(State.Idle);
+  const [contents, setContents] = useState<string | undefined>(undefined);
+  const [changed, setChanged] = useState(false);
   const [ts, setTs] = useState(+new Date);
   const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
-  const [permission] = useMemo(() => getFilePermission(filekey), [filekey]);
+  const [permission] = useMemo(() => getFilePermission(filekey, systemConfig), [filekey, systemConfig]);
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
     auth,

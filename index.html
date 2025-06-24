@@ -7,6 +7,23 @@
       (function () {
         // https://v3.vitejs.dev/guide/env-and-mode.html
         window.__SITENAME__ = `%SITENAME%`;
+        window.__JS_URL__ = `%JS_URL%`;
+        window.__CSS_URL__ = `%CSS_URL%`;
+
+        if (window.__CSS_URL__) {
+          var l = document.createElement("link");
+          l.rel = "stylesheet";
+          l.crossOrigin = "anonymous";
+          l.href = window.__CSS_URL__;
+          document.head.appendChild(l);
+        }
+        if (window.__JS_URL__) {
+          var s = document.createElement("script");
+          s.type = "application/javascript";
+          s.crossOrigin = "anonymous";
+          s.src = window.__JS_URL__;
+          document.head.appendChild(s);
+        }
       })();
     </script>
     <link rel="icon" href="/favicon.png" />

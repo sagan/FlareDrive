@@ -189,6 +189,8 @@ export const MIME_PDF = "application/pdf";
 
 export const MIME_SH = "application/x-sh";
 
+export const MIME_JS = "application/javascript";
+
 export const MIME_JSON = "application/json";
 
 export const MIME_ZIP = "application/zip";
@@ -200,10 +202,10 @@ export const MIME_YAML = "application/yaml";
 export const MIME_TOML = "application/toml";
 
 /**
- * Textual mimes besides "txt/*": ["application/xml", "application/json", "application/x-sh",
- * "application/yaml", "application/toml", "application/x-mswinurl"]
+ * Textual mimes besides "txt/*": ["application/xml", "application/javascript", "application/json",
+ *   "application/x-sh","application/yaml", "application/toml", "application/x-mswinurl"]
  */
-export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
+export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
 
 /**
  * Header used to indicate to server that do NOT generate thumbnail for uploaded file.
