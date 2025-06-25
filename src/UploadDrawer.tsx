@@ -137,20 +137,21 @@ export default function UploadDrawer({
   }, [])
 
   const onCreate = useCallback(async (edit?: boolean) => {
-    setOpen(false)
-    const filename = prompt("Enter new file name: ")
+    const filename = prompt("Enter new file name: ");
     if (!filename) {
-      return
+      return;
     }
-    if (filename !== filename.trim()) {
-      setError("invalid filename: cann't start or end with space")
+    if (filename !== filename.trim() || filename.includes("/")) {
+      setError(`invalid filename: cann't start or end with space or contains "/" char`);
+      return;
     }
-    const key = (cwd ? cwd + "/" : "") + filename
+    setOpen(false);
+    const key = (cwd ? cwd + "/" : "") + filename;
     try {
-      await putFile({ key, auth: effectiveAuth, create: true })
-      onUpload(edit ? key : undefined)
+      await putFile({ key, auth: effectiveAuth, create: true });
+      onUpload(edit ? key : undefined);
     } catch (e) {
-      setError(e)
+      setError(e);
     }
   }, [effectiveAuth, cwd, onUpload])
 
@@ -190,21 +191,21 @@ export default function UploadDrawer({
                 icon={<CreateNewFolderIcon fontSize="large" />}
                 caption="Create Folder"
                 onClick={async () => {
-                  setOpen(false);
                   const folderName = prompt("New folder name");
                   if (!folderName) {
-                    return
+                    return;
                   }
                   if (folderName.includes("/") || folderName !== folderName.trim()) {
                     setError(`invalid folder name: cann't contain '/', or start or end with space`);
-                    return
+                    return;
                   }
+                  setOpen(false);
                   const folderKey = (cwd ? cwd + "/" : "") + folderName;
                   try {
                     await createFolder(folderKey, effectiveAuth);
                     onUpload();
                   } catch (e) {
-                    setError(e)
+                    setError(e);
                   }
                 }}
               />

@@ -1,4 +1,4 @@
-import { ArrayBufferWithToJson, decodeHex, encodeHex, fileDepth, isDirectory, trimPrefixSuffix } from "../lib/commons";
+import { EMPTY_MD5_RAW, decodeHex, encodeHex, fileDepth, trimPrefixSuffix } from "../lib/commons";
 import { File } from "../lib/schema";
 
 /**
@@ -31,9 +31,9 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
       size,
       mime,
       uploaded.getTime(),
-      // dir object (size = 0) have a fixed md5 d41d8cd98f00b204e9800998ecf8427e
+      // dir or other empty file (size = 0) have a fixed md5 d41d8cd98f00b204e9800998ecf8427e
       // do not store it to save database space
-      !isDirectory(file) ? encodeHex(checksums.md5) : "",
+      file.size > 0 ? encodeHex(checksums.md5) : "",
       ctime,
       mtime
     )
@@ -174,7 +174,7 @@ export function dbFile2R2Object(file: File): R2Object {
     httpMetadata: { contentType: file.mime },
     customMetadata: file.customMetadata,
     checksums: {
-      md5: file.md5 ? new ArrayBufferWithToJson(decodeHex(file.md5).buffer) : undefined,
+      md5: file.md5 ? decodeHex(file.md5).buffer : file.size === 0 ? EMPTY_MD5_RAW.buffer : undefined,
     },
     uploaded: file.uploaded,
   } as unknown as R2Object;

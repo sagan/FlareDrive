@@ -291,8 +291,8 @@ export default function App() {
             {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
               onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
             </GenerateThumbnailsDialog>}
-            {(requireSignIn || showSignInDialog) && <SignInDialog
-              open={true} onClose={() => setShowSignInDialog(false)} onSignIn={onSignIn} />}
+            {(requireSignIn || showSignInDialog) && <SignInDialog open={true}
+              onClose={requireSignIn ? undefined : () => setShowSignInDialog(false)} onSignIn={onSignIn} />}
           </TransferQueueProvider>
         </ThemeProvider>
       </ConfigContext.Provider>

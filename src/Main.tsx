@@ -305,7 +305,7 @@ export default function Main({
     edit: (file) => {
       if (file.httpMetadata.contentType === MIME_PDF) {
         setDisplayedPdf(file.key)
-      } else if (isUrlFile(file)) {
+      } else if (isUrlFile(file) && file.size === 0) {
         setEditingUrl(file);
       } else if (isTextual(file)) {
         setEditing(file.key)
@@ -492,13 +492,13 @@ export default function Main({
         slides={slides}
         render={{ slide: SlideRender }}
         plugins={[Captions, Counter, Fullscreen, Thumbnails, Video, Share, Download, Slideshow, Zoom]}
-        share={auth ? {
+        share={{
           share: ({ slide }: ShareFunctionProps) => {
             const file: FileItem = (slide as any)._file
             setSharing(file.key)
             // setSlideIndex(-1)
           }
-        } : undefined}
+        }}
       />
     </>
   );

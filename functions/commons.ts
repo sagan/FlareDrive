@@ -32,6 +32,7 @@ import {
   fileUrl,
   basicAuthorizationHeader,
   trimPrefix,
+  constantTimeCompare,
   path2Key,
   trimPrefixSuffix,
   corsHeaders,
@@ -246,7 +247,7 @@ export async function checkAuthFailure(
   let scope: string | undefined | null = undefined;
 
   if (auth) {
-    authed = auth === expectedAuth;
+    authed = constantTimeCompare(auth, expectedAuth);
   } else if (token) {
     authed = await (async () => {
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));

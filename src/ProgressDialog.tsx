@@ -9,6 +9,7 @@ import {
   ListItemText,
   Tooltip,
 } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
 import React from "react";
 import {
   CheckCircleOutline as CheckCircleOutlineIcon,
@@ -37,6 +38,7 @@ export default function ProgressDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", p: 2 }}>
         <span>
+          <IconButton title="Close" color='secondary' onClick={onClose}><CloseIcon /></IconButton>
           <span>Uploads progress</span>
           {hasDoneTask && !hasFailedTask && !hasIncomingTask && <IconButton title="All uploads tasks done">
             <CheckCircleOutlineIcon color="success" />

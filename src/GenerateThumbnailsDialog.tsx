@@ -10,8 +10,10 @@ import {
   ListItemText,
   ListItemIcon,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  IconButton
 } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
 import { fileUrl, isImage } from '../lib/commons';
 import { FileItem, useConfig } from './commons';
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
@@ -115,7 +117,10 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
   }, [files, onDone])
 
   return <Dialog onClose={onClose} open={open} maxWidth="lg">
-    <DialogTitle>(Re)Generate thumbnails of following files?</DialogTitle>
+    <DialogTitle>
+      <IconButton title="Close" color='secondary' onClick={onClose}><CloseIcon /></IconButton>
+      <span>(Re)Generate thumbnails of following files?</span>
+    </DialogTitle>
     <DialogContent>
       <List sx={{ pt: 0 }}>
         {files.map(file => {

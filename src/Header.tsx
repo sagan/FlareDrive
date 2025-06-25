@@ -141,7 +141,7 @@ export default function Header({
         >
           Uploads progress
         </MenuItem>}
-        {!!auth && !!onShare && <MenuItem
+        {!!onShare && <MenuItem
           onClick={() => {
             setAnchorEl(null);
             onShare()

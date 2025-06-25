@@ -72,14 +72,12 @@ export default function MultiSelectToolbar({
           </IconButton>
           <span title={`${multiSelected.length} selected`}>{multiSelected.length}</span>
         </span>
-        {auth
-          ? <IconButton color="primary" disabled={multiSelected.length !== 1} title="Share & Publish" onClick={() => {
-            onShare(multiSelected[0])
-          }}><ShareIcon /></IconButton>
-          : <CopyButton isIcon isLink color="primary" href={link} text={link}><LinkIcon /></CopyButton>
-        }
+        <IconButton color="primary" disabled={multiSelected.length !== 1} title="Share & Publish" onClick={() => {
+          onShare(multiSelected[0])
+        }}><ShareIcon /></IconButton>
         <IconButton
           color="primary"
+          href={link}
           disabled={!link || linkIsDir}
           onClick={() => {
             const a = document.createElement("a");

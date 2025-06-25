@@ -589,6 +589,30 @@ export async function hmacSha256Verify(key: string, signature: string, payload: 
   return verified;
 }
 
+/**
+ * Performs a constant-time comparison of two strings or Uint8Arrays.
+ * This is crucial for comparing secrets (like passwords or HMACs) to prevent timing attacks.
+ * @param a The first string or Uint8Array.
+ * @param b The second string or Uint8Array.
+ * @returns True if the inputs are identical, false otherwise.
+ */
+export function constantTimeCompare(a: string | Uint8Array, b: string | Uint8Array): boolean {
+  const aBytes = typeof a === "string" ? new TextEncoder().encode(a) : a;
+  const bBytes = typeof b === "string" ? new TextEncoder().encode(b) : b;
+
+  if (aBytes.byteLength !== bBytes.byteLength) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < aBytes.byteLength; i++) {
+    result |= aBytes[i] ^ bBytes[i]; // XOR bytes and accumulate result
+  }
+
+  // If result is 0, all bytes were identical.
+  return result === 0;
+}
+
 function signUrl({
   key,
   pathname,
@@ -874,72 +898,6 @@ export function joinPathes(...pathes: string[]): string {
     .join("/");
 }
 
-/**
- * An ArrayBuffer compatible custom type class,
- * it has a custom toJSON() to outout hex string when JSON.stringify.
- */
-export class ArrayBufferWithToJson {
-  private buffer: ArrayBuffer;
-  private dataView: DataView;
-
-  /**
-   * Constructs an instance.
-   * @param arg The length of the buffer in bytes, or a existing ArrayBufferLike
-   */
-  constructor(arg: number | ArrayBufferLike) {
-    if (typeof arg == "number") {
-      this.buffer = new ArrayBuffer(arg);
-    } else {
-      this.buffer = arg;
-    }
-    this.dataView = new DataView(this.buffer);
-  }
-
-  /**
-   * The byte length of the ArrayBuffer.
-   */
-  get byteLength(): number {
-    return this.buffer.byteLength;
-  }
-
-  /**
-   * Creates a new ArrayBuffer with the same contents as this buffer.
-   * @param begin The beginning of the specified portion of the buffer.
-   * @param end The end of the specified portion of the buffer.
-   * @returns A new ArrayBuffer.
-   */
-  slice(begin: number, end?: number): ArrayBuffer {
-    return this.buffer.slice(begin, end);
-  }
-
-  /**
-   * Custom JSON serialization.
-   * @returns A hexadecimal string representation of the buffer's contents.
-   */
-  toJSON(): string {
-    return encodeHex(this.buffer);
-  }
-
-  /**
-   * A utility method to get the underlying ArrayBuffer.
-   * This is not part of the ArrayBufferLike interface but is useful for interacting
-   * with APIs that expect a concrete ArrayBuffer.
-   * @returns The underlying ArrayBuffer.
-   */
-  getBuffer(): ArrayBuffer {
-    return this.buffer;
-  }
-
-  /**
-   * A utility method to write data into the buffer for demonstration.
-   * @param byteOffset The offset in bytes to write at.
-   * @param value The value to write.
-   */
-  writeUint8(byteOffset: number, value: number): void {
-    this.dataView.setUint8(byteOffset, value);
-  }
-}
-
 // The zod schema of PublicSystemConfig. All fields default to "zero" values.
 export const PublicSystemConfigSchema = z.object({
   /**
@@ -972,3 +930,10 @@ export const PublicSystemConfigSchema = z.object({
  * Configurable at runtime by setting Cloudflare Workers "Variables and Secrets".
  */
 export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
+
+/**
+ * The MD5 of empty input (nothing)
+ */
+export const EMPTY_MD5 = "d41d8cd98f00b204e9800998ecf8427e";
+
+export const EMPTY_MD5_RAW = decodeHex(EMPTY_MD5);

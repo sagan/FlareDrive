@@ -3,9 +3,11 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  IconButton,
 } from "@mui/material";
 import Box from '@mui/material/Box';
 import { Button, TextField } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 export default function SignInDialog({ open, onSignIn, onClose }: {
   open: boolean;
@@ -16,8 +18,9 @@ export default function SignInDialog({ open, onSignIn, onClose }: {
   const passEl = useRef<HTMLInputElement>(null)
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-    <DialogTitle sx={{ display: "flex" }}>
-      Sign in to continue
+    <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
+      <span>Sign in to continue</span>
+      {!!onClose && <IconButton title="Close" color='secondary' onClick={onClose}><CloseIcon /></IconButton>}
     </DialogTitle>
     <DialogContent>
       <form>

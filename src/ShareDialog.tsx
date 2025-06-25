@@ -157,6 +157,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} sx={{ p: 1, pb: 0 }} className='single-line'>
+      <IconButton title="Close" color='secondary' onClick={onClose}><CloseIcon /></IconButton>
       <IconButton><ShareIcon /></IconButton>
       <IconButton title="Open share target parent dir" color='secondary' href={targetParentLink} onClick={(e) => {
         if (e.ctrlKey || e.metaKey) {
@@ -183,7 +184,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       }
     }} sx={{ width: "100%" }} >
       <Tab label="Share" />
-      <Tab label="Publish" />
+      {!!auth && <Tab label="Publish" />}
     </Tabs>
     {tab === 0 && <DialogContent sx={{ p: 1 }} >
       <Box sx={{ mt: 1 }}>
@@ -256,6 +257,27 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                   </IconButton>
               }} />
           </Box>
+          {!!otherProps.file.customMetadata?.url && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`URL`} fullWidth value={otherProps.file.customMetadata.url} InputProps={{
+              endAdornment:
+                <>
+                  <IconButton
+                    href={otherProps.file.customMetadata?.url || ""}
+                    edge="end"
+                  >
+                    <LinkIcon />
+                  </IconButton>
+                  <IconButton
+                    disabled={false}
+                    onClick={() => navigator.clipboard.writeText(otherProps.file.customMetadata?.url || "")}
+                    title={`Copy`}
+                    edge="end"
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
+                </>
+            }} />
+          </Box>}
           {!!otherProps.file.checksums.md5 && <Box sx={{ mt: 1 }}>
             <TextField disabled label={`MD5`} fullWidth value={otherProps.file.checksums.md5} InputProps={{
               endAdornment:
@@ -320,66 +342,68 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               </>
             }} />
         </Box>
-        <Typography>
+        {!!auth && <Typography>
           This {targetIsDir ? "dir" : "file"} is publicly accessible according to your env config.
           Create a "<code>{prefix}/{SYSFILE_NOACCESS}</code>" file to disable access temporarily.
-        </Typography>
+        </Typography>}
       </>}
-      <Box sx={{ mt: 1 }}>
-        <FormControl sx={{ m: 1, minWidth: 120 }}>
-          <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
-          <NativeSelect value={linkTtl} inputProps={{ id: 'link-ttl' }} onChange={e => {
-            setLinkTs(+new Date)
-            setLinkTtl(parseInt(e.target.value))
-          }}>
-            <option value={0}>Never</option>
-            {systemConfig.dev && <option value={60}>60 seconds</option>}
-            <option value={300}>5 minutes</option>
-            <option value={3600}>1 hour</option>
-            <option value={86400}>1 day</option>
-            <option value={86400 * 7}>7 days</option>
-            <option value={86400 * 31}>31 days</option>
-            <option value={86400 * 90}>90 days</option>
-            <option value={86400 * 180}>180 days</option>
-            <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
-          </NativeSelect>
-        </FormControl>
-        <FormControlLabel label="Full Control" title="Full control (allow writing)" control={
-          <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
-        />
-      </Box>
-      <Box>
-        <TextField disabled label={`Access link (${linkFullControl ? "full control" : "read only"})`}
-          fullWidth value={linkUrl}
-          InputProps={{
-            startAdornment: <IconButton edge="start">
-              {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
-            </IconButton>,
-            endAdornment: <>
-              <IconButton
-                disabled={false}
-                onClick={() => navigator.clipboard.writeText(linkUrl)}
-                title={`Copy`}
-                edge="end"
-              >
-                <ContentCopyIcon />
-              </IconButton>
-              <IconButton title='Share' onClick={nativeShare}><ShareIcon /></IconButton>
-            </>
-          }} />
-      </Box>
-      {!!linkTtl ? <Typography>
-        Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
-      </Typography> : <Typography sx={{ color: "red" }}>
-        Link will never expire (unless the admin password is changed)
-      </Typography>}
-      {linkFullControl && <Typography sx={{ color: "red" }}>
-        {
-          targetIsDir
-            ? `Link has write access, can manage files in folder`
-            : `Link has write access, send a "PUT" request to update the file contents.`
-        }
-      </Typography>}
+      {!!auth && <>
+        <Box sx={{ mt: 1 }}>
+          <FormControl sx={{ m: 1, minWidth: 120 }}>
+            <InputLabel variant="standard" htmlFor="link-ttl">Link Expiration</InputLabel>
+            <NativeSelect value={linkTtl} inputProps={{ id: 'link-ttl' }} onChange={e => {
+              setLinkTs(+new Date)
+              setLinkTtl(parseInt(e.target.value))
+            }}>
+              <option value={0}>Never</option>
+              {systemConfig.dev && <option value={60}>60 seconds</option>}
+              <option value={300}>5 minutes</option>
+              <option value={3600}>1 hour</option>
+              <option value={86400}>1 day</option>
+              <option value={86400 * 7}>7 days</option>
+              <option value={86400 * 31}>31 days</option>
+              <option value={86400 * 90}>90 days</option>
+              <option value={86400 * 180}>180 days</option>
+              <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
+            </NativeSelect>
+          </FormControl>
+          <FormControlLabel label="Full Control" title="Full control (allow writing)" control={
+            <Checkbox checked={linkFullControl} onChange={e => setLinkFullControl(e.target.checked)} />}
+          />
+        </Box>
+        <Box>
+          <TextField disabled label={`Access link (${linkFullControl ? "full control" : "read only"})`}
+            fullWidth value={linkUrl}
+            InputProps={{
+              startAdornment: <IconButton edge="start">
+                {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
+              </IconButton>,
+              endAdornment: <>
+                <IconButton
+                  disabled={false}
+                  onClick={() => navigator.clipboard.writeText(linkUrl)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+                <IconButton title='Share' onClick={nativeShare}><ShareIcon /></IconButton>
+              </>
+            }} />
+        </Box>
+        {!!linkTtl ? <Typography>
+          Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
+        </Typography> : <Typography sx={{ color: "red" }}>
+          Link will never expire (unless the admin password is changed)
+        </Typography>}
+        {linkFullControl && <Typography sx={{ color: "red" }}>
+          {
+            targetIsDir
+              ? `Link has write access, can manage files in folder`
+              : `Link has write access, send a "PUT" request to update the file contents.`
+          }
+        </Typography>}
+      </>}
     </DialogContent>}
     {tab === 1 && <DialogContent sx={{ p: 1 }} >
       <Box sx={{ mt: 1 }}>
