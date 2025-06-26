@@ -185,6 +185,8 @@ export const MIME_HTML = "text/html";
 
 export const MIME_MARKDOWN = "text/markdown";
 
+export const MIME_TXT = "text/plain";
+
 export const MIME_PDF = "application/pdf";
 
 export const MIME_SH = "application/x-sh";
@@ -206,6 +208,8 @@ export const MIME_TOML = "application/toml";
  *   "application/x-sh","application/yaml", "application/toml", "application/x-mswinurl"]
  */
 export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
+
+export const HEADER_RANGE = "Range";
 
 /**
  * Header used to indicate to server that do NOT generate thumbnail for uploaded file.

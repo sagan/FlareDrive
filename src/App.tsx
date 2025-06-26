@@ -1,10 +1,12 @@
 import { ThemeProvider } from "@emotion/react";
 import {
+  Box,
   createTheme,
   CssBaseline,
   GlobalStyles,
   Snackbar,
   Stack,
+  Typography,
 } from "@mui/material";
 import NProgress from "nprogress"
 import React, { useState, useEffect, useMemo } from "react";
@@ -12,17 +14,20 @@ import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom"
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
-  AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE,
+  AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE, HEADER_RANGE,
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
   CONFIG_API,
   PublicSystemConfig,
   PublicSystemConfigSchema,
+  basename,
+  fileUrl,
 } from "../lib/commons";
 import {
-  SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE,
+  SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
   FileItem, isThumbnailPossible, ViewMode, Config, ConfigContext, getFilePermission,
   cwd2Search,
   SystemConfigContext,
+  response2Html,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -60,7 +65,7 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [showProgressDialog, setShowProgressDialog] = React.useState(false);
   const [showAdminDialog, setShowAdminDialog] = React.useState(false);
@@ -71,7 +76,7 @@ export default function App() {
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [sharing, setSharing] = useState(""); // sharing file key
-  const [ts, setTs] = useState(Date.now())
+  const [ts, setTs] = useState(Date.now());
 
   const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>(VIEWMODE_VARIABLE, 0);
@@ -232,6 +237,44 @@ export default function App() {
 
   useEffect(() => fetchFiles(), [cwd, auth, ts]);
 
+  /**
+ * Readme file key.
+ */
+  const readmeFile = useMemo(() => {
+    for (const file of files) {
+      if (README_FILES.includes(basename(file.key))) {
+        return file.key;
+      }
+    }
+    return "";
+  }, [files])
+  const [readmeContents, setReadmeContents] = useState(""); // readme contents (html)
+  useEffect(() => {
+    if (!readmeFile) {
+      setReadmeContents("");
+      return;
+    }
+    const ac = new AbortController();
+    const fetchReadme = async () => {
+      const res = await fetch(fileUrl({ auth, key: readmeFile, expires: config.expires }), {
+        headers: {
+          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
+        },
+        signal: ac.signal,
+      });
+      try {
+        const html = await response2Html(res);
+        setReadmeContents(html);
+      } catch (e) {
+        setReadmeContents("");
+      }
+    }
+    fetchReadme();
+    return () => {
+      ac.abort();
+    }
+  }, [readmeFile]);
+
   return (
     <SystemConfigContext.Provider value={systemConfig}>
       <ConfigContext.Provider value={config}>
@@ -239,7 +282,7 @@ export default function App() {
           <CssBaseline />
           {globalStyles}
           <TransferQueueProvider>
-            <Stack sx={{ height: "100%" }}>
+            <Stack sx={{ height: readmeContents ? "unset" : "100%" }}>
               <Header permission={permission}
                 onSignOut={() => {
                   setAuth("");
@@ -267,10 +310,16 @@ export default function App() {
                     search={search} shares={shares} loading={loading} />
                   : (isSearch && !searchKeyword)
                     ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
-                    : <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
-                      sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
-                      permission={permission} files={files} setError={setError} isSearch={isSearch}
-                      multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+                    : <>
+                      <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
+                        sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
+                        permission={permission} files={files} setError={setError} isSearch={isSearch}
+                        multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
+                      {!!readmeContents && <Box>
+                        <Typography component={"h2"}>{readmeFile}</Typography>
+                        <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
+                      </Box>}
+                    </>
               }
             </Stack>
             <Snackbar

@@ -1,14 +1,25 @@
 import { SyntheticEvent } from "react";
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import {
   KEY_PART_SEARCH,
   KEY_PART_SEARCH_FULL,
   MIME_DEFAULT,
+  MIME_MARKDOWN,
+  MIME_TXT,
   TXT_MIMES,
   Permission,
   mimeType,
   PublicSystemConfig,
 } from "../lib/commons";
 import React from "react";
+
+/**
+ * GitHub rule:
+ *  /^readme\.(?:markdown|mdown|mkdn|md|textile|rdoc|org|creole|mediawiki|wiki|rst|asciidoc|adoc|asc|pod|txt)/i
+ * For simplicity, we only handle common names: ["README.md", "README.txt", "readme.md", "readme.txt"].
+ */
+export const README_FILES = ["README.md", "README.txt", "readme.md", "readme.txt"];
 
 export const VIEWMODE_VARIABLE = "viewMode";
 
@@ -276,4 +287,23 @@ export function cwd2Search(cwd: string): [isSearch: boolean, keyword: string, op
     full = false;
   }
   return [true, searchKeyword, { baseDir: searchBaseDir, full }];
+}
+
+/**
+ * Return sanitized html of a text Response (text/plain or text/markdown)
+ * @param res
+ */
+export async function response2Html(res: Response): Promise<string> {
+  const [mime] = mimeType(res.headers.get("Content-Type"));
+  if (mime === MIME_MARKDOWN) {
+    const text = await res.text();
+    const htmlOutput = await marked.parse(text);
+    const sanitizedHtml = sanitizeHtml(htmlOutput);
+    return sanitizedHtml;
+  } else if (mime === MIME_TXT) {
+    const text = await res.text();
+    // Simple text to HTML conversion, escaping HTML entities
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  throw new Error("Unsupported response type for conversion to HTML");
 }
