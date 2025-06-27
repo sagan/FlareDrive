@@ -4,10 +4,12 @@ import {
   createTheme,
   CssBaseline,
   GlobalStyles,
+  Paper,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
+import CircularProgress from '@mui/material/CircularProgress';
 import NProgress from "nprogress"
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
@@ -241,35 +243,28 @@ export default function App() {
  * Readme file key.
  */
   const readmeFile = useMemo(() => {
+    if (isSearch) {
+      return "";
+    }
     for (const file of files) {
       if (README_FILES.includes(basename(file.key))) {
         return file.key;
       }
     }
     return "";
-  }, [files])
+  }, [files, isSearch])
+  const [readmeStatus, setReadmeStatus] = useState<"" | "loading" | "ok" | "error">("");
+  const [readmeError, setReadmeError] = useState<any>(null);
   const [readmeContents, setReadmeContents] = useState(""); // readme contents (html)
   useEffect(() => {
     if (!readmeFile) {
       setReadmeContents("");
+      setReadmeError(null);
+      setReadmeStatus("");
       return;
     }
     const ac = new AbortController();
-    const fetchReadme = async () => {
-      const res = await fetch(fileUrl({ auth, key: readmeFile, expires: config.expires }), {
-        headers: {
-          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
-        },
-        signal: ac.signal,
-      });
-      try {
-        const html = await response2Html(res);
-        setReadmeContents(html);
-      } catch (e) {
-        setReadmeContents("");
-      }
-    }
-    fetchReadme();
+    fetchReadme(ac.signal);
     return () => {
       ac.abort();
     }
@@ -282,7 +277,7 @@ export default function App() {
           <CssBaseline />
           {globalStyles}
           <TransferQueueProvider>
-            <Stack sx={{ height: readmeContents ? "unset" : "100%" }}>
+            <Stack sx={{ height: readmeFile ? "unset" : "100%" }}>
               <Header permission={permission}
                 onSignOut={() => {
                   setAuth("");
@@ -315,10 +310,18 @@ export default function App() {
                         sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                         permission={permission} files={files} setError={setError} isSearch={isSearch}
                         multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
-                      {!!readmeContents && <Box>
-                        <Typography component={"h2"}>{readmeFile}</Typography>
-                        <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
-                      </Box>}
+                      {!!readmeFile && <Paper elevation={3} sx={{ m: 1, p: 1 }}>
+                        <Typography component={"h3"} sx={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>{readmeFile}</span>
+                          <CircularProgress sx={{ visibility: readmeStatus === "loading" ? "visible" : "hidden" }}
+                            size={16} />
+                        </Typography>
+                        {
+                          readmeStatus === "error"
+                            ? <Typography>Failed to load: {`${readmeError}`}</Typography>
+                            : <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
+                        }
+                      </Paper>}
                     </>
               }
             </Stack>
@@ -347,4 +350,32 @@ export default function App() {
       </ConfigContext.Provider>
     </SystemConfigContext.Provider>
   );
+
+  async function fetchReadme(signal?: AbortSignal) {
+    const key = readmeFile;
+    if (!key) {
+      return;
+    }
+    setReadmeStatus("loading");
+    try {
+      const res = await fetch(fileUrl({ auth, key, expires: config.expires }), {
+        headers: {
+          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
+        },
+        signal,
+      });
+      if (key === readmeFile) {
+        const html = await response2Html(res);
+        setReadmeContents(html);
+        setReadmeStatus("ok");
+        setReadmeError(null);
+      }
+    } catch (e) {
+      if (key === readmeFile) {
+        setReadmeContents("");
+        setReadmeStatus("error");
+        setReadmeError(e);
+      }
+    }
+  }
 }

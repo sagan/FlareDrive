@@ -33,6 +33,7 @@ export function Centered({ children }: { children: React.ReactNode }) {
         justifyContent: "center",
         alignItems: "center",
         height: "100%",
+        m: 1,
       }}
     >
       {children}

@@ -301,9 +301,13 @@ export async function response2Html(res: Response): Promise<string> {
     const sanitizedHtml = sanitizeHtml(htmlOutput);
     return sanitizedHtml;
   } else if (mime === MIME_TXT) {
-    const text = await res.text();
+    let text = await res.text();
     // Simple text to HTML conversion, escaping HTML entities
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Also, recognize "http(s)://..." urls and convert them to <a> links
+    text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    text = text.replace(/https?:\/\/[^\s]+/g, (url) => `<a href="${url}" rel="noopener noreferrer">${url}</a>`);
+    text = sanitizeHtml(text);
+    return text;
   }
   throw new Error("Unsupported response type for conversion to HTML");
 }

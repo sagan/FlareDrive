@@ -49,7 +49,7 @@ export default function FileGrid({
             e.preventDefault();
             onContextMenu(file);
           }}
-          sx={{ userSelect: "none" }}
+          sx={{ userSelect: "none", pl: 1, pr: 1 }}
         >
           <ListItemIcon>
             {(file.customMetadata?.thumbnail ? (
