@@ -51,6 +51,18 @@ export type Env = {
   WEBDAV_USERNAME: string;
   WEBDAV_PASSWORD: string;
   /**
+   * Cloudflare Account ID.
+   * The uuid part of Cloudflare dashboard url, e.g.
+   * https://dash.cloudflare.com/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 => a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 .
+   * Used by statistics feature.
+   */
+  CF_ACCOUNT_ID?: string;
+  CF_BUCKET_NAME?: string;
+  /**
+   * Cloudflare API token of Analytics. ("Read analytics and logs" template)
+   */
+  CF_ANALYTICS_TOKEN?: string;
+  /**
    * Flag. set it to any value (e.g. "1") to enable dev mode.
    */
   DEV?: string;
@@ -90,7 +102,7 @@ export type Env = {
   DB?: D1Database;
   IMAGES?: ImagesBinding;
   REINDEXER_DO?: DurableObjectNamespace;
-  [key: string]: any;
+  // [key: string]: any;
 };
 
 export type FdCfFuncContext = EventContext<

@@ -28,6 +28,7 @@ export default function FileAlbum({
 
   return <Grid container spacing={1} sx={{ paddingBottom: "48px" }}>
     {files.map((f) => {
+      const IconComponent = f.icon;
       const thumbnailUrl = f.customMetadata?.thumbnail ? fileUrl({
         auth,
         key: f.key,
@@ -61,10 +62,11 @@ export default function FileAlbum({
           sx={{ width: THUMBNAIL_SIZE + 4, height: THUMBNAIL_SIZE + 28 }}>
           <Box className="file-album-item-image" sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}>
             {thumbnailUrl
-              ?
-              <img title={title} src={thumbnailUrl} />
-              : <MimeIcon titleAccess={title} contentType={f.httpMetadata.contentType}
-                sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }} />
+              ? <img title={title} src={thumbnailUrl} />
+              : IconComponent
+                ? <IconComponent sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }} />
+                : <MimeIcon titleAccess={title} contentType={f.httpMetadata.contentType}
+                  sx={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }} />
             }
           </Box>
           <Box className="file-album-item-title single-line" sx={{ width: THUMBNAIL_SIZE, height: 24 }}>

@@ -82,7 +82,7 @@ export interface FileItem {
   /**
    * Icon for system folder
    */
-  icon?: React.FunctionComponent;
+  icon?: React.FunctionComponent<any>;
 
   key: string;
   size: number;
