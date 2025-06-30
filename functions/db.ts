@@ -1,4 +1,4 @@
-import { EMPTY_MD5_RAW, decodeHex, encodeHex, fileDepth, trimPrefixSuffix } from "../lib/commons";
+import { EMPTY_MD5_RAW, KEY_PREFIX_PRIVATE, decodeHex, encodeHex, fileDepth, trimPrefixSuffix } from "../lib/commons";
 import { File } from "../lib/schema";
 
 /**
@@ -6,6 +6,9 @@ import { File } from "../lib/schema";
  */
 export async function upsertDbFile(db: D1Database, file: R2Object) {
   const { key, httpMetadata, customMetadata, size, uploaded, checksums } = file;
+  if (key.startsWith(KEY_PREFIX_PRIVATE)) {
+    return;
+  }
   const mime = httpMetadata?.contentType || "";
   const name = key.split("/").pop() || "";
   const ctime = new Date(uploaded).getTime();
