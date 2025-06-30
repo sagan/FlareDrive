@@ -33,12 +33,15 @@ async function generateWranglerConfig(env) {
   if (!env.R2_BUCKET_NAME) {
     throw new Error("R2_BUCKET_NAME build env must be configured");
   }
+  config.vars.R2_BUCKET_NAME = env.R2_BUCKET_NAME;
   config.r2_buckets = [{ binding: "BUCKET", bucket_name: env.R2_BUCKET_NAME }];
   if (env.KV_ID) {
     config.kv_namespaces = [{ binding: "KV", id: env.KV_ID }];
+    config.vars.KV_ID = env.KV_ID;
   }
   if (env.DATABASE_ID) {
     config.d1_databases = [{ binding: "DB", database_name: "flaredrive", database_id: env.DATABASE_ID }];
+    config.vars.DATABASE_ID = env.DATABASE_ID;
   }
   const contents = JSON.stringify(config, null, 2);
   console.log("generate wrangler.json", contents);

@@ -9,7 +9,6 @@
     "@monaco-editor/react": "^4.6.0",
     "@mui/icons-material": "^5.15.21",
     "@mui/material": "^5.15.21",
-    "@shopify/graphql-client": "^1.4.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@uidotdev/usehooks": "^2.4.1",
@@ -33,10 +32,12 @@
     "zod": "^3.25.61"
   },
   "scripts": {
+    "codegen": "graphql-codegen --config codegen.ts",
     "start": "vite",
     "build": "vite build",
     "build:worker": "wrangler pages functions build --outdir=./dist_worker",
-    "build:all": "npm run build && npm run build:worker",
+    "build:all": "npm run codegen && npm run build && npm run build:worker",
+    "build:all-pages": "npm run codegen && npm run build",
     "cfdev": "wrangler dev",
     "cfpagesdev": "wrangler pages dev",
     "cfversion": "wrangler versions upload",
@@ -68,6 +69,10 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@cloudflare/workers-types": "^4.20240620.0",
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-generic-sdk": "^4.0.2",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -77,6 +82,8 @@
     "@types/sanitize-html": "^2.13.0",
     "@vitejs/plugin-react": "^4.3.4",
     "favicons": "^7.2.0",
+    "graphql": "^16.11.0",
+    "tslib": "^2.8.1",
     "typescript": "^5.5.3",
     "vite": "^6.0.2",
     "wrangler": "^4.19.1"

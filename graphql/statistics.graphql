@@ -1,0 +1,99 @@
+query GetStatistics(
+  $accountTag: string!
+  $startTimeOfMonth: Time! # 2025-06-01T00:00:00Z
+  $endTimeOfMonth: Time! # 2025-06-30T23:59:59Z
+  $currentDate: Date! # current date: 2025-06-20
+  $startDate: Date! # some date early from today: 2025-06-13
+) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      workersInvocationsAdaptive(filter: { date_geq: $currentDate, date_leq: $currentDate }, limit: 1) {
+        sum {
+          requests
+        }
+      }
+      r2StorageAdaptiveGroups(
+        filter: { date_geq: $startDate, date_leq: $currentDate }
+        limit: 3
+        orderBy: [date_DESC]
+      ) {
+        # It may be broken as r2StorageAdaptiveGroups is grouped by bucketNames.
+        # So this should be "sum", which doesn't exist.
+        # Anyway, CF dashboard display the same query data as "total storage".
+        max {
+          payloadSize
+          metadataSize
+        }
+        dimensions {
+          date
+        }
+      }
+      classA: r2OperationsAdaptiveGroups(
+        filter: {
+          datetime_geq: $startTimeOfMonth
+          datetime_leq: $endTimeOfMonth
+          actionType_in: [
+            "ListBuckets"
+            "PutBucket"
+            "ListObjects"
+            "PutObject"
+            "CopyObject"
+            "CompleteMultipartUpload"
+            "CreateMultipartUpload"
+            "ListMultipartUploads"
+            "UploadPart"
+            "UploadPartCopy"
+            "ListParts"
+            "PutBucketEncryption"
+            "PutBucketCors"
+            "PutBucketLifecycleConfiguration"
+          ]
+        }
+        limit: 1
+      ) {
+        sum {
+          requests
+        }
+      }
+      classB: r2OperationsAdaptiveGroups(
+        filter: {
+          datetime_geq: $startTimeOfMonth
+          datetime_leq: $endTimeOfMonth
+          actionType_in: [
+            "HeadBucket"
+            "HeadObject"
+            "GetObject"
+            "GetBucketEncryption"
+            "GetBucketLocation"
+            "GetBucketCors"
+            "GetBucketLifecycleConfiguration"
+          ]
+        }
+        limit: 1
+      ) {
+        sum {
+          requests
+        }
+      }
+      d1AnalyticsAdaptiveGroups(limit: 1, filter: { date: $currentDate }) {
+        sum {
+          rowsRead
+          rowsWritten
+        }
+      }
+
+      d1StorageAdaptiveGroups(
+        limit: 1
+        orderBy: [date_DESC] # Order by date descending
+        filter: { date_geq: $startDate, date_leq: $currentDate }
+      ) {
+        max {
+          databaseSizeBytes
+        }
+        dimensions {
+          date
+        }
+      }
+    }
+  }
+}

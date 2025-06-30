@@ -9,6 +9,7 @@ import React from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import ReindexerAdmin from './components/ReindexerAdmin';
 import SystemConfigAdmin from "./components/SystemConfigAdmin";
+import StatisticsAdmin from "./components/StatisticsAdmin";
 
 
 export default function AdminDialog({
@@ -30,6 +31,7 @@ export default function AdminDialog({
       <DialogContent sx={{ p: 1 }}>
         <SystemConfigAdmin />
         <ReindexerAdmin currentDir={currentDir} />
+        <StatisticsAdmin />
       </DialogContent>
     </Dialog>
   );

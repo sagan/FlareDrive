@@ -57,6 +57,9 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - `WEBDAV_USERNAME`: username.
   - `WEBDAV_PASSWORD` password.
   - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
+  - (optional) `CF_ACCOUNT_ID` & `CF_ANALYTICS_TOKEN`. For access Clareflare Resources (Workers / R2 / KV / D1) usage statistics data.
+    - `CF_ACCOUNT_ID`: Cloudflare Account ID. The uuid part of Cloudflare dashboard url, e.g. `https://dash.cloudflare.com/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` => `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` .
+    - `CF_ANALYTICS_TOKEN`: Cloudflare API token of Analytics. Create one [here](https://dash.cloudflare.com/profile/api-tokens). Use `Read analytics and logs` template.
 - Build - Variables and secrets. (Any change require re-build to take effect)
   - `R2_BUCKET_NAME` : The [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket name.
   - (optional) `KV_ID` : The [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) instance id.
@@ -71,12 +74,13 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
 
 Fork this project and connect your fork with Cloudflare Pages. Select `Vite` framework preset. Cloudflare dashboard Settings:
 
-- Build command: `npm run build`
+- Build command: `npm run build:all-pages`
 - Build output: `dist`
 - Build system version: Version 3.
 - Variables and Secrets: See above (the Workers version) for meanings.
   - `WEBDAV_USERNAME`, `WEBDAV_PASSWORD`
   - (optional) `SITENAME`, `SHORT_SITENAME`, `FAVICON_URL`, `JS_URL`, `CSS_URL`, `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`.
+  - (optional) `CF_ACCOUNT_ID` & `CF_ANALYTICS_TOKEN`.
   - (optional) `WORKER_URL` & `WORKER_TOKEN` : The server side thumbnail generation feature uses [Cloudflare Images Resizing](https://developers.cloudflare.com/images/transform-images/bindings/), which is only supported in Workers but not Pages. To use this feature in Pages deployment, you need to (manually) deploy `workers/forwarder.js` file to Cloudflare Worker (set the `TOKEN` variable), then set these variables to worker url & token.
 - Bindings:
   - Bind R2 bucket to `BUCKET` name.
@@ -115,6 +119,7 @@ Prepare development environment:
 2. Copy `.env.sample` to `.env.local` and modify it to set environment variables. (Note: `.env.local` is used by Vite. Cloudflare Wrangler only recognizes `.dev.vars` file, running `npm run build` will automatically copy the former to the latter)
 3. Copy `wrangler.sample.toml` (Running as Workers) or `wrangler.example-pages.toml` (Running as Pages) to `wrangler.toml`.
 4. Run `wrangler d1 migrations apply flaredrive --local` to apply local D1 database [migrations](https://developers.cloudflare.com/d1/reference/migrations/), which are defined inside `migrations/` folder.
+5. Run `npm run codegen` to generate `graphql/generated/*.ts` files from `graphql/*.graphql` source files.
 
 ## Run this project locally as Workers
 

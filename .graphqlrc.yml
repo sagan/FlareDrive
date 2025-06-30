@@ -1,0 +1,9 @@
+# .graphqlrc.yml
+# Used by "GraphQL: Language Feature Support" VS Code extension:
+# https://marketplace.visualstudio.com/items?itemName=GraphQL.vscode-graphql
+
+# The local schema file you downloaded earlier
+schema: "schema.graphql"
+
+# A glob pattern to find all your .graphql files
+documents: "graphql/**/*.graphql"

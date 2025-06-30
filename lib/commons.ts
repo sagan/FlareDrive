@@ -6,6 +6,7 @@ export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
 export const SIGNOUT_API = "/api/signout";
 export const SEARCH_API = "/api/search";
+export const STATISTICS_API = "/api/statistics";
 export const REINDEX_API = "/api/reindex";
 export const CONFIG_API = "/api/config";
 

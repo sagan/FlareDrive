@@ -57,7 +57,18 @@ export type Env = {
    * Used by statistics feature.
    */
   CF_ACCOUNT_ID?: string;
-  CF_BUCKET_NAME?: string;
+  /**
+   * R2 bucket name. For CF Analytics API.
+   */
+  R2_BUCKET_NAME?: string;
+  /**
+   * KV id. For CF Analytics API.
+   */
+  KV_ID?: string;
+  /**
+   * D1 database id. For CF Analytics API.
+   */
+  DATABASE_ID?: string;
   /**
    * Cloudflare API token of Analytics. ("Read analytics and logs" template)
    */
