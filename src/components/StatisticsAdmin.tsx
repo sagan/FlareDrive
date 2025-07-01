@@ -5,9 +5,6 @@ import {
   CardContent,
   CardHeader,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
   Paper,
   Table,
   TableBody,
@@ -17,9 +14,9 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { HEADER_AUTHORIZATION, STATISTICS_API, humanReadableSize } from '../../lib/commons';
+import { HEADER_AUTHORIZATION, STATISTICS_API, FORCR_VARIABLE, humanReadableSize } from '../../lib/commons';
 import { useConfig } from '../commons';
-import { GetStatisticsQuery } from '../../graphql/generated/graphql';
+import { Statistics, StatisticsSchema } from '../../graphql/statistics';
 
 // All limits are per-account. Paid plan refers to the "Workers Paid" plan.
 const usageLimits = [
@@ -41,9 +38,9 @@ export default function StatisticsAdmin() {
   const { auth } = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<any>(null);
-  const [stats, setStats] = useState<GetStatisticsQuery | null>(null);
+  const [stats, setStats] = useState<Statistics | null>(null);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (force = false) => {
     setStats(null);
     if (!auth) {
       return;
@@ -51,7 +48,7 @@ export default function StatisticsAdmin() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(STATISTICS_API, {
+      const res = await fetch(`${STATISTICS_API}?${FORCR_VARIABLE}=${force ? "1" : "0"}`, {
         headers: {
           [HEADER_AUTHORIZATION]: auth,
         },
@@ -59,7 +56,7 @@ export default function StatisticsAdmin() {
       if (!res.ok) {
         throw new Error(`Failed to fetch statistics: ${res.status} ${await res.text()}`);
       }
-      const data = await res.json<GetStatisticsQuery>();
+      const data = StatisticsSchema.parse(await res.json());
       setStats(data);
     } catch (e) {
       setError(e);
@@ -72,71 +69,81 @@ export default function StatisticsAdmin() {
     fetchStats();
   }, [fetchStats]);
 
-  const totalR2Storage = useMemo(() => {
-    let stat = stats?.viewer?.accounts[0].r2StorageAdaptiveGroups[0]
-    if (!stat?.max) {
-      return 0;
-    }
-    return stat.max.metadataSize + stat.max.payloadSize;
+  const tableData = useMemo(() => {
+    const formatNumber = (num: number) => num != null ? num.toLocaleString('en-US') : '-';
+    const placeholder = '-';
+
+    return usageLimits.map(limit => {
+      let todayStat = placeholder;
+      let monthStat = placeholder;
+
+      if (stats) {
+        switch (limit.resource) {
+          case 'Workers Requests':
+            todayStat = formatNumber(stats.workersRequestsToday);
+            break;
+          case 'R2 (Standard storage) Storage':
+            // Storage is a snapshot, best represented as a monthly-billed value
+            monthStat = humanReadableSize(stats.r2TotalStorage);
+            break;
+          case 'R2 (Standard storage) Class A Ops (write/list)':
+            monthStat = formatNumber(stats.r2OperationsAThisMonth);
+            break;
+          case 'R2 (Standard storage) Class B Ops (read)':
+            monthStat = formatNumber(stats.r2OperationsBThisMonth);
+            break;
+          case 'D1 Rows Read':
+            todayStat = formatNumber(stats.d1RowsReadToday);
+            break;
+          case 'D1 Rows Written':
+            todayStat = formatNumber(stats.d1RowsWrittenToday);
+            break;
+          // KV and D1 Storage stats are not in the API response, so they remain '-'
+          default:
+            break;
+        }
+      }
+
+      return {
+        ...limit,
+        today: todayStat,
+        month: monthStat,
+      };
+    });
   }, [stats]);
 
   return (
     <Card>
       <CardHeader
         title="Statistics"
-        action={<Button onClick={fetchStats} disabled={loading || !auth}>Refresh</Button>}
+        action={<>
+          <CircularProgress size={16} style={{ visibility: loading ? "visible" : "hidden" }} />
+          <Button onClick={() => fetchStats(true)} disabled={loading || !auth}>Force Update</Button>
+          <Button onClick={() => fetchStats()} disabled={loading || !auth}>Refresh</Button>
+        </>}
       />
       <CardContent>
-        {loading && <CircularProgress />}
         {!!error && <Typography color="error">Error: {error.message}</Typography>}
-        {!!stats && (<List dense>
-          <ListItem>
-            <ListItemText primary="Workers Requests (today)"
-              secondary={stats.viewer?.accounts[0]?.workersInvocationsAdaptive[0]?.sum?.requests} />
-          </ListItem>
-          <ListItem>
-            <ListItemText primary="R2 Operations A (this month)"
-              secondary={stats.viewer?.accounts[0]?.classA[0]?.sum?.requests} />
-          </ListItem>
-          <ListItem>
-            <ListItemText primary="R2 Operations B (this month)"
-              secondary={stats.viewer?.accounts[0]?.classB[0]?.sum?.requests} />
-          </ListItem>
-          <ListItem>
-            <ListItemText primary="R2 Total Storage (current)"
-              secondary={humanReadableSize(totalR2Storage)} />
-          </ListItem>
-          <ListItem>
-            <ListItemText primary="D1 Rows read (today)"
-              secondary={stats.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups[0]?.sum?.rowsRead} />
-          </ListItem>
-          <ListItem>
-            <ListItemText primary="D1 Rows written (today)"
-              secondary={stats.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups[0]?.sum?.rowsWritten} />
-          </ListItem>
-        </List>
-        )}
-        <Typography variant="h6">
-          Cloudflare Usage Limits
-        </Typography>
+        <Typography>Data date: {stats ? stats.date.toISOString().slice(0, 19) + "Z" : "-"}</Typography>
         <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 650 }} size="small" aria-label="usage limits table">
+          <Table aria-label="usage and limits table">
             <TableHead>
               <TableRow>
                 <TableCell>Resource</TableCell>
+                <TableCell align="right">Today</TableCell>
+                <TableCell align="right">This Month</TableCell>
                 <TableCell align="right">Free Plan (Free Tier)</TableCell>
                 <TableCell align="right">Paid Plan (Workers Paid)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {usageLimits.map((row) => (
-                <TableRow
-                  key={row.resource}
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                >
+              {tableData.map((row) => (
+                <TableRow key={row.resource}>
                   <TableCell component="th" scope="row">
                     {row.resource}
                   </TableCell>
+                  <TableCell align="right">{row.today}</TableCell>
+                  <TableCell align="right">{row.month}</TableCell>
                   <TableCell align="right">{row.free}</TableCell>
                   <TableCell align="right">{row.paid}</TableCell>
                 </TableRow>
@@ -145,7 +152,8 @@ export default function StatisticsAdmin() {
           </Table>
         </TableContainer>
         <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
-          Data from Cloudflare documents:&nbsp;
+          This is the usage data of your whole Cloudflare account.&nbsp;
+          Limits data from Cloudflare documents:&nbsp;
           <a href="https://developers.cloudflare.com/workers/platform/pricing/">Workers Pricing</a>,&nbsp;
           <a href="https://developers.cloudflare.com/r2/pricing/">R2 Pricing</a>,&nbsp;
           <a href="https://developers.cloudflare.com/kv/platform/pricing/">KV Pricing</a>,&nbsp;

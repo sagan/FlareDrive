@@ -2,7 +2,10 @@
 // It depends on "./dist_worker/index.js",
 // which itself is compiled at build time by "npm run build:worker".
 import Worker from "./dist_worker/index.js";
-import { ReindexerDO } from "./workers/reindexer-do.js";
+import { ReindexerDO } from "./workers/reindexer-do.ts";
+import { scheduled } from "./scheduled.ts";
 
+Worker.scheduled = scheduled;
 export default Worker;
+
 export { ReindexerDO };

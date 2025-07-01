@@ -9,6 +9,8 @@ FlareDrive 是一个基于 Cloudflare Workers 和 R2 存储构建的私有化部
 ## 特性
 
 - **基于 Cloudflare R2 存储**: 利用 Cloudflare R2 的全球分布式存储能力，提供高可用性和低延迟的文件访问。
+  - 使用 [Bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/) 的方式通过 Workers 访问 R2，不直接对外暴露 R2 的存储桶公开地址。基本上不用担心被人恶意刷 R2 请求产生天价账单。
+  - 使用网盘“文件系统”模式管理文件。上传的文件的 R2 key 是其完整路径，例如 `path/to/file.png`，对应的 URL 是 `https://example.com/dav/path/to/file.png`（默认私有，必须登录才能访问）。
 - **Cloudflare Workers 驱动**: 后端逻辑运行在 Cloudflare Workers 上，实现无服务器、高性能的请求处理。
 - **WebDAV 支持**: 通过 WebDAV 协议，您可以将 FlareDrive 挂载为本地文件系统，方便地进行文件管理。
 - **安全认证**: 支持基本认证和基于签名的私有链接，确保文件访问的安全性。

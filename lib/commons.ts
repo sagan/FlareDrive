@@ -10,6 +10,12 @@ export const STATISTICS_API = "/api/statistics";
 export const REINDEX_API = "/api/reindex";
 export const CONFIG_API = "/api/config";
 
+export const KEY_STATISTICS = "statistics";
+
+export const KEY_GLOBAL_CONFIG = "globalConfig";
+
+export const FORCR_VARIABLE = "force";
+
 /**
  * Cloud Download default file size limit (bytes): 10MiB.
  */
@@ -935,6 +941,8 @@ export const PublicSystemConfigSchema = z.object({
  * Configurable at runtime by setting Cloudflare Workers "Variables and Secrets".
  */
 export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
+
+export interface GlobalConfig extends PublicSystemConfig {}
 
 /**
  * The MD5 of empty input (nothing)

@@ -39,3 +39,5 @@ export function createSdk(token: string) {
   };
   return getSdk(requester);
 }
+
+export type Sdk = ReturnType<typeof createSdk>;

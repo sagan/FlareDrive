@@ -39,6 +39,9 @@ import {
   isImage,
   fileDepth,
   PublicSystemConfig,
+  GlobalConfig,
+  KEY_GLOBAL_CONFIG,
+  PublicSystemConfigSchema,
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles } from "./db";
@@ -614,8 +617,38 @@ export function requestJson(url: string | URL, payload: any, method: "POST" | "P
   });
 }
 
-export function getPublicSystemConfig(env: Env): PublicSystemConfig {
-  return {
+let globalConfig: GlobalConfig | null | undefined;
+let globalConfigTs = 0;
+const CACHE_DURATION_MS = 60 * 1000;
+
+export async function putGlobalConfig(env: Env, data: GlobalConfig) {
+  if (!env.KV) {
+    return;
+  }
+  await env.KV.put(KEY_GLOBAL_CONFIG, JSON.stringify(data));
+  globalConfigTs = Date.now();
+  globalConfig = data;
+}
+
+export async function getGlobalConfig(env: Env, nocache = false): Promise<GlobalConfig> {
+  const now = Date.now();
+  if (!nocache && globalConfig !== undefined && now - globalConfigTs <= CACHE_DURATION_MS) {
+    if (globalConfig === null) {
+      throw new Error("invalid globalConfig");
+    }
+    return globalConfig;
+  }
+
+  if (env.KV) {
+    const data = await env.KV.get<GlobalConfig>(KEY_GLOBAL_CONFIG);
+    if (data) {
+      globalConfig = data;
+      globalConfigTs = now;
+      return globalConfig;
+    }
+  }
+
+  const fallbackData = {
     ok: true,
     dev: !!env.DEV,
     publicPrefix: env.PUBLIC_PREFIX
@@ -634,4 +667,18 @@ export function getPublicSystemConfig(env: Env): PublicSystemConfig {
           .filter((prefix) => prefix)
       : [],
   };
+  globalConfig = fallbackData;
+  globalConfigTs = now;
+  return globalConfig;
+}
+
+export function getPublicSystemConfig(globalConfig: GlobalConfig): PublicSystemConfig {
+  const publicConfig = {
+    ok: globalConfig.ok,
+    dev: globalConfig.dev,
+    publicPrefix: globalConfig.publicPrefix,
+    publicDirPrefix: globalConfig.publicDirPrefix,
+    publicRwdirPrefix: globalConfig.publicRwdirPrefix,
+  };
+  return publicConfig;
 }

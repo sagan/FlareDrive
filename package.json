@@ -38,7 +38,7 @@
     "build:worker": "wrangler pages functions build --outdir=./dist_worker",
     "build:all": "npm run codegen && npm run build && npm run build:worker",
     "build:all-pages": "npm run codegen && npm run build",
-    "cfdev": "wrangler dev",
+    "cfdev": "wrangler dev --test-scheduled",
     "cfpagesdev": "wrangler pages dev",
     "cfversion": "wrangler versions upload",
     "deploy": "node scripts/conditional-d1-migrate.cjs flaredrive && wrangler deploy"

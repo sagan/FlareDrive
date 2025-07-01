@@ -23,6 +23,10 @@ import {
   PublicSystemConfigSchema,
   basename,
   fileUrl,
+  GlobalConfig,
+  HEADER_CONTENT_TYPE,
+  MIME_JSON,
+  HEADER_AUTHORIZATION,
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
@@ -120,17 +124,17 @@ export default function App() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const cwd = path2Key(location.pathname)
+  const cwd = path2Key(location.pathname);
 
   const setCwd = (cwd: string) => {
-    const pathname = dirUrlPath(cwd)
-    const scope = searchParams.get(SCOPE_VARIABLE)
-    let search = ""
+    const pathname = dirUrlPath(cwd);
+    const scope = searchParams.get(SCOPE_VARIABLE);
+    let search = "";
     if (scope && pathname.startsWith(dirUrlPath(scope))) {
-      search = "?" + searchParams.toString()
+      search = "?" + searchParams.toString();
     }
     if (pathname === location.pathname && search === location.search) {
-      setTs(Date.now())
+      setTs(Date.now());
     } else {
       navigate({ pathname, search });
     }
@@ -146,16 +150,16 @@ export default function App() {
   }, [cwd]);
 
   const thumbnailableFiles = useMemo(() => {
-    let items = files.filter(isThumbnailPossible)
+    let items = files.filter(isThumbnailPossible);
     if (multiSelected.length > 0) {
-      items = items.filter(f => multiSelected.includes(f.key))
+      items = items.filter(f => multiSelected.includes(f.key));
     }
-    return items
+    return items;
   }, [files, multiSelected])
 
   useEffect(() => {
     if (loading) {
-      NProgress.start()
+      NProgress.start();
     } else {
       NProgress.done();
     }
@@ -168,14 +172,14 @@ export default function App() {
     console.log("fetch", cwd, isSearch)
     if (cwd == SHARES_FOLDER_KEY) {
       listShares(auth).then(setShares).catch(e => {
-        setShares([])
-        setError(e)
+        setShares([]);
+        setError(e);
       }).finally(() => setLoading(false))
-      return
+      return;
     }
     if (isSearch) {
       if (!searchKeyword) {
-        setLoading(false)
+        setLoading(false);
         return;
       }
       searchFiles(auth, searchKeyword, searchOptions).then(result => {
@@ -191,8 +195,8 @@ export default function App() {
             checksums: {}
           }
         })
-        setFiles(files)
-      }).catch(e => setError(e)).finally(() => setLoading(false))
+        setFiles(files);
+      }).catch(e => setError(e)).finally(() => setLoading(false));
       return;
     }
     fetchPath(cwd, config.effectiveAuth).then(({
@@ -200,41 +204,41 @@ export default function App() {
       authed,
       items
     }) => {
-      setRequireSignIn(false)
+      setRequireSignIn(false);
       if (authed) {
-        setShowSignInDialog(false)
+        setShowSignInDialog(false);
         if (sentbackAuth && sentbackAuth !== auth) {
-          setAuth(sentbackAuth)
+          setAuth(sentbackAuth);
         }
       } else if (auth) {
-        setAuth("")
+        setAuth("");
       }
       if (items) {
         if (!cwd) {
-          items = [...systemFolders, ...items]
+          items = [...systemFolders, ...items];
         }
         setFiles(items);
       } else {
-        setError(new Error("dir not found"))
+        setError(new Error("dir not found"));
       }
     }).catch(e => {
-      setFiles([])
-      setError(e)
+      setFiles([]);
+      setError(e);
       if (`${e}`.includes("status=401")) {
         if (auth) {
-          setAuth("")
+          setAuth("");
         }
-        setRequireSignIn(true)
+        setRequireSignIn(true);
       }
     }).finally(() => setLoading(false));
   }
 
   const onSignIn = (user: string, pass: string) => {
     if (!user && !pass) {
-      setError(new Error("username & password can not be both empty"))
-      return
+      setError(new Error("username & password can not be both empty"));
+      return;
     }
-    setAuth(() => basicAuthorizationHeader(user, pass))
+    setAuth(() => basicAuthorizationHeader(user, pass));
   }
 
   useEffect(() => fetchFiles(), [cwd, auth, ts]);
@@ -252,7 +256,7 @@ export default function App() {
       }
     }
     return "";
-  }, [files, isSearch])
+  }, [files, isSearch]);
   const [readmeStatus, setReadmeStatus] = useState<"" | "loading" | "ok" | "error">("");
   const [readmeError, setReadmeError] = useState<any>(null);
   const [readmeContents, setReadmeContents] = useState(""); // readme contents (html)
@@ -350,6 +354,16 @@ export default function App() {
       </ConfigContext.Provider>
     </SystemConfigContext.Provider>
   );
+
+  async function updateSystemConfig(config: GlobalConfig) {
+    await fetch(CONFIG_API, {
+      method: "POST", headers: {
+        [HEADER_CONTENT_TYPE]: MIME_JSON,
+        [HEADER_AUTHORIZATION]: auth,
+      },
+      body: JSON.stringify(config),
+    })
+  }
 
   async function fetchReadme(signal?: AbortSignal) {
     const key = readmeFile;

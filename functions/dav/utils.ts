@@ -7,7 +7,7 @@ import {
   basename,
   path2Key,
 } from "../../lib/commons";
-import { getPublicSystemConfig, type FdCfFuncContext } from "../commons";
+import { getGlobalConfig, type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
   context: FdCfFuncContext;
@@ -64,11 +64,11 @@ function testKeyHasPrefix(key: string, prefixes: string[], includeSelf?: boolean
 export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: boolean, scope: string]> {
   const { env, params } = context;
   const key = path2Key(((params.path as string[]) || []).join("/"));
-  const publicSystemConfig = getPublicSystemConfig(env);
+  const globalConfig = await getGlobalConfig(env);
   if (key && !SYSFILES.includes(basename(key))) {
     let matched = false;
     if (!matched) {
-      const prefix = testKeyHasPrefix(key, publicSystemConfig.publicPrefix, true);
+      const prefix = testKeyHasPrefix(key, globalConfig.publicPrefix, true);
       if (prefix) {
         matched = true;
         if (METHODS_READ_FILE.includes(context.request.method)) {
@@ -80,7 +80,7 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
       }
     }
     if (!matched) {
-      const prefix = testKeyHasPrefix(key, publicSystemConfig.publicDirPrefix, true);
+      const prefix = testKeyHasPrefix(key, globalConfig.publicDirPrefix, true);
       if (prefix) {
         matched = true;
         if (METHODS_READ_DIR.includes(context.request.method)) {
@@ -94,7 +94,7 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
     if (!matched) {
       const prefix = testKeyHasPrefix(
         key,
-        publicSystemConfig.publicRwdirPrefix,
+        globalConfig.publicRwdirPrefix,
         METHODS_READ_DIR.includes(context.request.method)
       );
       if (prefix) {
@@ -110,12 +110,8 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
 }
 
 export function parseBucketPath(context: FdCfFuncContext): [R2Bucket, string] {
-  const { request, env, params } = context;
-  const url = new URL(request.url);
-
+  const { env, params } = context;
   const pathSegments = (params.path || []) as String[];
   const path = decodeURIComponent(pathSegments.join("/"));
-  const driveid = url.hostname.replace(/\..*/, "");
-
-  return [(env[driveid] as R2Bucket) || env.BUCKET, path];
+  return [env.BUCKET, path];
 }

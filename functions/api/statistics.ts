@@ -1,5 +1,7 @@
+import { KEY_STATISTICS, FORCR_VARIABLE, str2int } from "../../lib/commons";
+import { fetchStatistics, Statistics, StatisticsSchema, updateStatistics } from "../../graphql/statistics";
 import { checkAuthFailure, FdCfFunc, jsonResponse, responseInternalServerError } from "../commons";
-import { createSdk } from "../../graphql/index";
+import { createSdk } from "../../graphql";
 
 export const onRequestGet: FdCfFunc = async function (context) {
   const { request, env } = context;
@@ -7,23 +9,27 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (failResponse) {
     return failResponse;
   }
-  if (!env.CF_ACCOUNT_ID || !env.CF_ANALYTICS_TOKEN) {
-    return responseInternalServerError("CF_ACCOUNT_ID, CF_ANALYTICS_TOKEN env must be set to access statistics");
+  if (!env.KV || !env.CF_ACCOUNT_ID || !env.CF_ANALYTICS_TOKEN) {
+    return responseInternalServerError("KV, CF_ACCOUNT_ID, CF_ANALYTICS_TOKEN env must be set to access statistics");
   }
 
-  const sdk = createSdk(env.CF_ANALYTICS_TOKEN);
-  const today = new Date();
-  const startTimeOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
-  const endTimeOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
-  const dayOneWeekBefore = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 7));
+  const url = new URL(request.url);
+  const searchParams = url.searchParams;
+  const doUpdate = !!str2int(searchParams.get(FORCR_VARIABLE));
 
-  const data = await sdk.GetStatistics({
-    accountTag: env.CF_ACCOUNT_ID,
-    startTimeOfMonth: startTimeOfMonth.toISOString().slice(0, 19) + "Z",
-    endTimeOfMonth: endTimeOfMonth.toISOString().slice(0, 19) + "Z",
-    currentDate: today.toISOString().slice(0, 10),
-    startDate: dayOneWeekBefore.toISOString().slice(0, 10),
-  });
+  let stats: Statistics;
+  if (doUpdate) {
+    const sdk = createSdk(env.CF_ANALYTICS_TOKEN);
+    const now = new Date();
+    stats = await fetchStatistics(sdk, env.CF_ACCOUNT_ID, now);
+    await updateStatistics(env, stats);
+  } else {
+    const data = await env.KV.get(KEY_STATISTICS);
+    if (!data) {
+      return responseInternalServerError("statistics data not ready yet");
+    }
+    stats = StatisticsSchema.parse(JSON.parse(data));
+  }
 
-  return jsonResponse(data);
+  return jsonResponse(stats);
 };

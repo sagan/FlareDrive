@@ -10,6 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReindexerAdmin from './components/ReindexerAdmin';
 import SystemConfigAdmin from "./components/SystemConfigAdmin";
 import StatisticsAdmin from "./components/StatisticsAdmin";
+import packageInfo from "../package.json";
 
 
 export default function AdminDialog({
@@ -32,6 +33,12 @@ export default function AdminDialog({
         <SystemConfigAdmin />
         <ReindexerAdmin currentDir={currentDir} />
         <StatisticsAdmin />
+        <Typography variant="h5" gutterBottom>
+          About
+        </Typography>
+        <Typography>
+          FlareDrive v{packageInfo.version} (<a href="https://github.com/sagan/FlareDrive">GitHub</a>)
+        </Typography>
       </DialogContent>
     </Dialog>
   );

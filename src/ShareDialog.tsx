@@ -195,7 +195,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               {targetIsDir ? <FolderIcon /> : <AttachFileIcon />}
             </IconButton>,
             endAdornment: <>
-              {!!onEdit && !targetIsDir && <IconButton
+              {!!auth && !!onEdit && !targetIsDir && <IconButton
                 onClick={onEdit}
                 title={`View / Edit`}
                 edge="end"
