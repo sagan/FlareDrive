@@ -15,6 +15,7 @@ import {
   humanReadableSize,
   isDirectory,
   isUrlFile,
+  validateAndGetSafeUrl,
 } from "../lib/commons";
 import { ViewProps } from "./commons";
 
@@ -48,7 +49,7 @@ export default function FileDetailsList({
             const name = file.name || basename(file.key);
             let title = ""
             if (isUrlFile(file)) {
-              title = file.customMetadata?.url || ""
+              title = validateAndGetSafeUrl(file.customMetadata?.url || "") || ""
             }
             if (isSearch) {
               title += (title ? "\n" : "") + `Key: ${file.key}`;

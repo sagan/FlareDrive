@@ -1,4 +1,4 @@
-import { FORCR_VARIABLE, GlobalConfig, KEY_GLOBAL_CONFIG, str2int } from "../../lib/commons";
+import { GlobalConfig, GlobalConfigSchema } from "../../lib/commons";
 import {
   checkAuthFailure,
   FdCfFunc,
@@ -6,6 +6,7 @@ import {
   getPublicSystemConfig,
   jsonResponse,
   putGlobalConfig,
+  responseBadRequest,
   responseInternalServerError,
 } from "../commons";
 
@@ -25,8 +26,12 @@ export const onRequestPost: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseInternalServerError("KV must be set to update globalConfig");
   }
-
-  let globalConfig = await request.json<GlobalConfig>();
+  let globalConfig: GlobalConfig;
+  try {
+    globalConfig = GlobalConfigSchema.parse(await request.json());
+  } catch (e) {
+    return responseBadRequest(`Invalid globalConfig: ${e}`);
+  }
   await putGlobalConfig(env, globalConfig);
   const publicSystemConfig = getPublicSystemConfig(globalConfig);
   return jsonResponse(publicSystemConfig);

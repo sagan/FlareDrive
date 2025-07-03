@@ -32,8 +32,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
   SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, SYSFILE_NOACCESS,
-  ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix,
-  dirUrlPath, Permission, humanReadableSize, isDirectory,
+  ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
+  Permission, humanReadableSize, isDirectory, validateAndGetSafeUrl,
 } from '../lib/commons';
 import { FileItem, generatePassword, getFilePermission, useConfig, useSystemConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
@@ -262,7 +262,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment:
                 <>
                   <IconButton
-                    href={otherProps.file.customMetadata?.url || ""}
+                    href={validateAndGetSafeUrl(otherProps.file.customMetadata?.url || "")}
                     edge="end"
                   >
                     <LinkIcon />

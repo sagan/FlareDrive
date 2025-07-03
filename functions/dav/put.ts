@@ -23,6 +23,7 @@ import {
   isImage,
   MIME_URL,
   URL_VARIABLE,
+  validateAndGetSafeUrl,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -195,6 +196,9 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     } else {
       body = await request.text();
       url = parseUrlFile(body);
+    }
+    if (url) {
+      url = validateAndGetSafeUrl(url);
     }
     if (url) {
       customMetadata = customMetadata ? { ...customMetadata, url } : { url };

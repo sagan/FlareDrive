@@ -56,7 +56,7 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
 - Variables and Secrets: Set the following variables. (Any change take effect immediately)
   - `WEBDAV_USERNAME`: username.
   - `WEBDAV_PASSWORD` password.
-  - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
+  - (optional) `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously. If `KV` is binded, these prefixes can be configured through Web UI instead.
   - (optional) `CF_ACCOUNT_ID` & `CF_ANALYTICS_TOKEN`. For access Clareflare Resources (Workers / R2 / KV / D1) usage statistics data.
     - `CF_ACCOUNT_ID`: Cloudflare Account ID. The uuid part of Cloudflare dashboard url, e.g. `https://dash.cloudflare.com/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` => `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` .
     - `CF_ANALYTICS_TOKEN`: Cloudflare API token of Analytics. Create one [here](https://dash.cloudflare.com/profile/api-tokens). Use `Read analytics and logs` template.

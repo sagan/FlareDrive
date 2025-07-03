@@ -12,7 +12,7 @@ import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { MIME_URL, basename } from '../lib/commons';
+import { MIME_URL, basename, validateAndGetSafeUrl } from '../lib/commons';
 import { generatePassword, useConfig } from './commons';
 import { putFile } from './app/transfer';
 
@@ -45,12 +45,11 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
     let candicateUrls = [url, "https://" + url];
     let error: any;
     for (const candicateUrl of candicateUrls) {
-      try {
-        fileurl = new URL(candicateUrl.trim()).href;
+      fileurl = validateAndGetSafeUrl(candicateUrl.trim())
+      if (fileurl) {
         break;
-      } catch (e) {
-        error = e;
       }
+      error = new Error("invalid url");
     }
     if (!fileurl) {
       setError(error);
@@ -144,7 +143,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
             type="submit" onClick={onSubmit} color='primary'>
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button href={url} disabled={!url}>Go</Button>
+          <Button href={validateAndGetSafeUrl(url)} disabled={!url}>Go</Button>
         </Box>
       </form>
     </DialogContent>

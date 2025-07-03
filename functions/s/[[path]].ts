@@ -5,6 +5,7 @@ import {
   HEADER_REFERER,
   HTML_VARIABLE,
   INDEX_FILE,
+  RAW_VARIABLE,
   type ShareObject,
   path2Key,
   trimPrefix,
@@ -15,8 +16,8 @@ import {
   humanReadableSize,
   encodeHex,
   isDirectory,
-  RAW_VARIABLE,
   isUrlFile,
+  validateAndGetSafeUrl,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -282,7 +283,7 @@ function indexPage(
       const isDir = isDirectory(item);
       const href =
         isUrlFile(item) && item.customMetadata?.url
-          ? item.customMetadata.url
+          ? validateAndGetSafeUrl(item.customMetadata.url)
           : encodeURIComponent(name) + (isDir ? "/" : ""); // Relative href
       const displayName = encodeHtml(name) + (isDir ? "/" : "");
       const sizeDisplay = !isDir ? humanReadableSize(item.size) : "";

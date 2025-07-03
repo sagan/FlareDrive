@@ -247,6 +247,18 @@ export const HEADER_AUTHORIZATION = "Authorization";
 
 export const HEADER_CONTENT_TYPE = "Content-Type";
 
+export const HEADER_CONTENT_SECURITY_POLICY = "Content-Security-Policy";
+
+/**
+ * A restrictive Content-Security-Policy for serving user-provided content.
+ * It uses 'sandbox' to prevent script execution, form submission, etc.
+ * It allows inline styles and images from any source to provide a good viewing experience for sanitized HTML/Markdown.
+ */
+export const CONTENT_SECURITY_POLICY_SANDBOX =
+  "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src * data:;";
+// a more restrictive version:
+// export const CONTENT_SECURITY_POLICY_SANDBOX = "sandbox; default-src 'none'; script-src 'none'; plugin-types 'none'; style-src 'self'; img-src 'self'";
+
 export const HEADER_CONTENT_LENGTH = "Content-Length";
 
 export const HEADER_ETAG = "ETag";
@@ -867,6 +879,15 @@ interface R2ObjectAlike {
 }
 
 /**
+ * Return whether the R2Object is a html file
+ */
+export function isHtml(object: R2ObjectAlike): boolean {
+  return (
+    object.httpMetadata?.contentType === MIME_HTML || !!object.httpMetadata?.contentType?.startsWith(MIME_HTML + ";")
+  );
+}
+
+/**
  * Return whether the R2Object is a image file
  */
 export function isImage(object: R2ObjectAlike): boolean {
@@ -923,17 +944,17 @@ export const PublicSystemConfigSchema = z.object({
    * Public prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicPrefix: z.array(z.string()).default([]),
+  publicPrefix: z.array(z.string().nonempty()).default([]),
   /**
    * Public dir prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicDirPrefix: z.array(z.string()).default([]),
+  publicDirPrefix: z.array(z.string().nonempty()).default([]),
   /**
    * Public writable dir prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicRwdirPrefix: z.array(z.string()).default([]),
+  publicRwdirPrefix: z.array(z.string().nonempty()).default([]),
 });
 
 /**
@@ -942,7 +963,13 @@ export const PublicSystemConfigSchema = z.object({
  */
 export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
 
-export interface GlobalConfig extends PublicSystemConfig {}
+export const GlobalConfigSchema = PublicSystemConfigSchema.extend({}).strict();
+
+/**
+ * For now, GlobalConfig is same as PublicSystemConfig.
+ * It may contain some server-side only (not visible to client) configurations in the future.
+ */
+export type GlobalConfig = z.infer<typeof GlobalConfigSchema>;
 
 /**
  * The MD5 of empty input (nothing)
@@ -950,3 +977,23 @@ export interface GlobalConfig extends PublicSystemConfig {}
 export const EMPTY_MD5 = "d41d8cd98f00b204e9800998ecf8427e";
 
 export const EMPTY_MD5_RAW = decodeHex(EMPTY_MD5);
+
+export const FALLBACK_URL = "about:blank";
+
+/**
+ * Make sure url is valid and safe (no XSS vulnerability).
+ * Return sanitized url if it's safe, otherwise return empty string.
+ */
+export function validateAndGetSafeUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    // Allow only specific protocols
+    if (!["http:", "https:", "ftp:", "mailto:"].includes(parsedUrl.protocol)) {
+      return "";
+    }
+    return parsedUrl.href;
+  } catch (error) {
+    console.error("Invalid URL:", error);
+    return "";
+  }
+}

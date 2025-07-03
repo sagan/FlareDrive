@@ -6,7 +6,7 @@ import {
 import MimeIcon from "./MimeIcon";
 import {
   THUMBNAIL_SIZE, TOKEN_VARIABLE, EXPIRES_VARIABLE, SCOPE_VARIABLE,
-  basename, fileUrl, humanReadableSize, isUrlFile, str2int,
+  basename, fileUrl, humanReadableSize, isUrlFile, str2int, validateAndGetSafeUrl,
 } from "../lib/commons";
 import { ViewProps, useConfig } from "./commons";
 
@@ -42,7 +42,7 @@ export default function FileAlbum({
       const name = f.name || basename(f.key)
       let title: string
       if (isUrlFile(f)) {
-        title = f.customMetadata?.url || ""
+        title = validateAndGetSafeUrl(f.customMetadata?.url || "") || ""
       } else {
         title = `Size: ${humanReadableSize(f.size)}\nDate: ${f.uploaded.toUTCString()}`
       }

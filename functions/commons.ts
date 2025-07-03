@@ -25,6 +25,9 @@ import {
   MIME_JSON,
   MIME_URL,
   THUMBNAIL_SIZE,
+  KEY_GLOBAL_CONFIG,
+  HEADER_CONTENT_SECURITY_POLICY,
+  CONTENT_SECURITY_POLICY_SANDBOX,
   sha256,
   hmacSha256Verify,
   key2Path,
@@ -40,8 +43,8 @@ import {
   fileDepth,
   PublicSystemConfig,
   GlobalConfig,
-  KEY_GLOBAL_CONFIG,
-  PublicSystemConfigSchema,
+  GlobalConfigSchema,
+  isHtml,
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles } from "./db";
@@ -570,15 +573,19 @@ export async function outputR2Object({
     // return 302 redirect to the url
     return responseRedirect(parseUrlFile(body), true);
   }
-  if (html && obj.httpMetadata?.contentType == MIME_MARKDOWN) {
+  if (html && obj.httpMetadata?.contentType === MIME_MARKDOWN) {
     const body = await obj.text();
     const htmlOutput = await marked.parse(body);
     const sanitizedHtml = sanitizeHtml(htmlOutput);
     headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
+    headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     headers.delete(HEADER_CONTENT_LENGTH);
     return new Response(sanitizedHtml, { headers });
   }
   // headers.set("Cache-Control", "max-age=31536000");
+  if (isHtml(obj)) {
+    headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
+  }
   return new Response(obj.body, { headers });
 }
 
@@ -630,6 +637,10 @@ export async function putGlobalConfig(env: Env, data: GlobalConfig) {
   globalConfig = data;
 }
 
+/**
+ * Return current effective globalConfig from KV or environment variables.
+ * This function do internal caching.
+ */
 export async function getGlobalConfig(env: Env, nocache = false): Promise<GlobalConfig> {
   const now = Date.now();
   if (!nocache && globalConfig !== undefined && now - globalConfigTs <= CACHE_DURATION_MS) {
@@ -640,11 +651,15 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
   }
 
   if (env.KV) {
-    const data = await env.KV.get<GlobalConfig>(KEY_GLOBAL_CONFIG);
+    const data = await env.KV.get(KEY_GLOBAL_CONFIG);
     if (data) {
-      globalConfig = data;
-      globalConfigTs = now;
-      return globalConfig;
+      try {
+        globalConfig = GlobalConfigSchema.parse(JSON.parse(data));
+        globalConfigTs = now;
+        return globalConfig;
+      } catch (e) {
+        console.log(`Failed to parse KV globalConfig: ${e}`);
+      }
     }
   }
 

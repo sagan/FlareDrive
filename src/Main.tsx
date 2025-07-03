@@ -19,6 +19,7 @@ import {
   Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
   isUrlFile,
+  validateAndGetSafeUrl,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -105,7 +106,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
   if (src && file.httpMetadata.contentType == MIME_MARKDOWN) {
     viewSrc = appendQueryStringToUrl(viewSrc, HTML_VARIABLE + "=1")
   } else if (file.httpMetadata.contentType === MIME_URL && file.customMetadata?.url) {
-    viewSrc = file.customMetadata.url
+    viewSrc = validateAndGetSafeUrl(file.customMetadata.url)
   }
 
   return <Box onClick={onClick} sx={{

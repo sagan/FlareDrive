@@ -8,7 +8,7 @@ import {
 import MimeIcon from "./MimeIcon";
 import {
   EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE,
-  fileUrl, humanReadableSize, basename, str2int, isDirectory, isUrlFile,
+  fileUrl, humanReadableSize, basename, str2int, isDirectory, isUrlFile, validateAndGetSafeUrl,
 } from "../lib/commons";
 import { ViewProps, useConfig } from "./commons";
 
@@ -32,7 +32,7 @@ export default function FileGrid({
       const IconComponent = file.icon
       let title = ""
       if (isUrlFile(file)) {
-        title = file.customMetadata?.url || ""
+        title = validateAndGetSafeUrl(file.customMetadata?.url || "") || ""
       }
       if (isSearch) {
         title += (title ? "\n" : "") + `Key: ${file.key}`;

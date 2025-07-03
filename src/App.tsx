@@ -23,10 +23,6 @@ import {
   PublicSystemConfigSchema,
   basename,
   fileUrl,
-  GlobalConfig,
-  HEADER_CONTENT_TYPE,
-  MIME_JSON,
-  HEADER_AUTHORIZATION,
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
@@ -343,6 +339,7 @@ export default function App() {
               currentDir={currentDir}
               open={showAdminDialog}
               onClose={() => setShowAdminDialog(false)}
+              setSystemConfig={setSystemConfig}
             />
             {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
               onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
@@ -354,16 +351,6 @@ export default function App() {
       </ConfigContext.Provider>
     </SystemConfigContext.Provider>
   );
-
-  async function updateSystemConfig(config: GlobalConfig) {
-    await fetch(CONFIG_API, {
-      method: "POST", headers: {
-        [HEADER_CONTENT_TYPE]: MIME_JSON,
-        [HEADER_AUTHORIZATION]: auth,
-      },
-      body: JSON.stringify(config),
-    })
-  }
 
   async function fetchReadme(signal?: AbortSignal) {
     const key = readmeFile;
