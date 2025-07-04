@@ -8,7 +8,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   <head>
     <meta charset="utf-8" />
     <title>${context.env.SITENAME || "FlareDrive"}</title>
-    <link rel="icon" href="/favicon.png" />
+    <link rel="icon" href="/assets/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
   </head>

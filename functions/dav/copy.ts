@@ -11,6 +11,7 @@ import {
   isDirectory,
 } from "../../lib/commons";
 import {
+  checkInvalidUserFileKey,
   listAll,
   responseBadRequest,
   responseConflict,
@@ -41,9 +42,12 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
     return responseBadRequest();
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
-
-  if (destination === path || (isDirectory(src) && destination.startsWith(path + "/"))) {
+  if (!destination || destination === path || (isDirectory(src) && destination.startsWith(path + "/"))) {
     return responseBadRequest();
+  }
+  const invalidPathResponse = await checkInvalidUserFileKey(destination);
+  if (invalidPathResponse) {
+    return invalidPathResponse;
   }
   if ((scope && !destination.startsWith(scope + "/")) || (!authed && SYSFILES.includes(basename(destination)))) {
     return responseForbidden();

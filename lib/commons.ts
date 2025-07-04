@@ -308,15 +308,10 @@ export const HEADER_SOURCE_ASYNC = "X-Source-Async";
 export const INDEX_FILE = "index.html";
 
 /**
- * Flag file that disables anonymous (unauthenticated) access of current public folder
- */
-export const SYSFILE_NOACCESS = ".noaccess";
-
-/**
  * System files which only admin can manage / write / update:
  * [".noaccess"].
  */
-export const SYSFILES: readonly string[] = [SYSFILE_NOACCESS];
+export const SYSFILES: readonly string[] = [];
 
 /**
  * Dir access permission.
@@ -930,6 +925,18 @@ export function joinPathes(...pathes: string[]): string {
     .join("/");
 }
 
+/**
+ * Return true if prefix is a non-empty string and doesn't start or end with whitespace or "/".
+ * @param prefix
+ * @returns
+ */
+function validatePrefix(prefix: string): boolean {
+  let normalizedPrefix = trimPrefixSuffix(prefix.trim(), "/").trim();
+  return !!normalizedPrefix && normalizedPrefix === prefix;
+}
+
+const INVALID_PREFIX_MESSAGE = `prefix must NOT be empty or start or end with whitespace or "/" char`;
+
 // The zod schema of PublicSystemConfig. All fields default to "zero" values.
 export const PublicSystemConfigSchema = z.object({
   /**
@@ -944,17 +951,17 @@ export const PublicSystemConfigSchema = z.object({
    * Public prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicPrefix: z.array(z.string().nonempty()).default([]),
+  publicPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
   /**
    * Public dir prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicDirPrefix: z.array(z.string().nonempty()).default([]),
+  publicDirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
   /**
    * Public writable dir prefix list. Each one in list is guaranteed to be not empty
    * and do not start or end with white space or "/".
    */
-  publicRwdirPrefix: z.array(z.string().nonempty()).default([]),
+  publicRwdirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
 });
 
 /**

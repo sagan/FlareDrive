@@ -21,6 +21,9 @@ export async function updateGlobalConfig(auth: string, config: GlobalConfig): Pr
     },
     body: JSON.stringify(config),
   });
+  if (!res.ok) {
+    throw new Error(`Status ${res.status}: ${await res.text()}`);
+  }
   const systemConfig = PublicSystemConfigSchema.parse(await res.json());
   return systemConfig;
 }

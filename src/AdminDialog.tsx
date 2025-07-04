@@ -37,7 +37,14 @@ export default function AdminDialog({
           onClick={onClose}><CloseIcon /></IconButton>
         <span>Administration</span>
       </DialogTitle>
-      <Tabs value={tab} onChange={(_, newTab) => setTab(newTab)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Tabs
+        value={tab}
+        onChange={(_, newTab) => setTab(newTab)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
+      >
         <Tab label="System Config" />
         <Tab label="Reindexer" />
         <Tab label="Statistics" />

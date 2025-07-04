@@ -250,6 +250,36 @@ export function htmlResponse(html: string) {
 }
 
 /**
+ * Some path prefixes and filenames are reserved by FlareDrive and can't be used by user.
+ * If key is not a valid R2 file key, return a fail response.
+ * Otherwise return null.
+ */
+export async function checkInvalidUserFileKey(key: string): Promise<Response | null> {
+  const invalidKeys = [
+    "index.html",
+    "favicon.ico",
+    "sitemap.xml",
+    // When a user adds a website to the home screen of an Apple device (like an iPhone or iPad),
+    // the device looks for an image file with this name at the root to use as the icon.
+    "apple-touch-icon.png",
+    // used by Microsoft browsers (Internet Explorer and Edge) to define the appearance of a website's tile
+    // when it is pinned to the Windows Start screen.
+    "browserconfig.xml",
+    ".well-known",
+
+    "assets",
+    "dav",
+    "s",
+    "api",
+  ];
+  const parts = key.split("/");
+  if (invalidKeys.includes(parts[0])) {
+    return responseForbidden(`Prefix name "${parts[0]}" is reserved.`);
+  }
+  return null;
+}
+
+/**
  * If authentication fails, return a failure response.
  * Otherwise return null, besides auth's valid scope, if any.
  * @param request

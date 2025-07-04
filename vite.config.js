@@ -69,8 +69,8 @@ async function generateAssets(variables) {
   // console.log(response.images) // Array of { name: string, contents: <buffer> }
   const faviconFiles = {
     "favicon.ico": "favicon.ico",
-    "favicon-32x32.png": "favicon.png",
-    "android-chrome-192x192.png": "favicon-192x192.png",
+    "favicon-32x32.png": "assets/favicon.png",
+    "android-chrome-192x192.png": "assets/favicon-192x192.png",
   };
   for (let file of response.images) {
     if (!faviconFiles[file.name]) {
@@ -80,7 +80,7 @@ async function generateAssets(variables) {
   }
   manifest.name = variables.SITENAME;
   manifest.short_name = variables.SHORT_SITENAME || variables.SITENAME;
-  await fs.writeFile(path.join(__dirname, "public/manifest.json"), JSON.stringify(manifest, null, 2));
+  await fs.writeFile(path.join(__dirname, "public/assets/manifest.json"), JSON.stringify(manifest, null, 2));
 }
 
 export default defineConfig(async ({ command, mode }) => {
@@ -122,7 +122,7 @@ export default defineConfig(async ({ command, mode }) => {
 
   let assetExists = false;
   try {
-    await fs.access(path.join(__dirname, "public/manifest.json"));
+    await fs.access(path.join(__dirname, "public/assets/manifest.json"));
     assetExists = true;
   } catch (e) {}
   if (!assetExists || command === "build") {

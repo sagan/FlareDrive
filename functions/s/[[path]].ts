@@ -247,7 +247,7 @@ function noindexPage(sitename: string | undefined, desc: string, dir: string): s
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="google" value="notranslate">
     <meta name="referrer" content="no-referrer" />
-    <link rel="icon" href="/favicon.png" />
+    <link rel="icon" href="/assets/favicon.png" />
   </head>
   <body>
     <h1>Index of ${encodeHtml(dir)}</h1>
@@ -315,7 +315,7 @@ function indexPage(
 <meta name="color-scheme" content="light dark">
 <meta name="google" value="notranslate">
 <meta name="referrer" content="no-referrer" />
-<link rel="icon" href="/favicon.png" />
+<link rel="icon" href="/assets/favicon.png" />
 
 <script>
 function sortTable(column) {

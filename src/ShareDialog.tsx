@@ -31,7 +31,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
-  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, SYSFILE_NOACCESS,
+  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS,
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
   Permission, humanReadableSize, isDirectory, validateAndGetSafeUrl,
 } from '../lib/commons';
@@ -343,8 +343,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             }} />
         </Box>
         {!!auth && <Typography>
-          This {targetIsDir ? "dir" : "file"} is publicly accessible according to your env config.
-          Create a "<code>{prefix}/{SYSFILE_NOACCESS}</code>" file to disable access temporarily.
+          This {targetIsDir ? "dir" : "file"} is publicly accessible according to your system config.
         </Typography>}
       </>}
       {!!auth && <>

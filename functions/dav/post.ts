@@ -6,7 +6,13 @@ import {
   UPLOAD_ID_VARIABLE,
   isImage,
 } from "../../lib/commons";
-import { generateFileThumbnail, responseBadRequest, responseMethodNotAllowed, responseNotFound } from "../commons";
+import {
+  checkInvalidUserFileKey,
+  generateFileThumbnail,
+  responseBadRequest,
+  responseMethodNotAllowed,
+  responseNotFound,
+} from "../commons";
 import { upsertDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";
 
@@ -57,6 +63,11 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
 export const handleRequestPost = async function ({ bucket, path, request, context, scope }: RequestHandlerParams) {
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
+
+  const invalidPathResponse = await checkInvalidUserFileKey(path);
+  if (invalidPathResponse) {
+    return invalidPathResponse;
+  }
 
   if (searchParams.has(UPLOADS_VARIABLE)) {
     return handleRequestPostCreateMultipart({ bucket, path, request, context, scope });

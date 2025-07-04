@@ -63,7 +63,7 @@ export default function Header({
         setCwd("");
       }}>
         <IconButton title={window.__SITENAME__} sx={{ width: 24, height: 24 }}>
-          <img src="/favicon.png" style={{ objectFit: "contain" }} />
+          <img src="/assets/favicon.png" style={{ objectFit: "contain" }} />
         </IconButton>
       </Link>
       <form

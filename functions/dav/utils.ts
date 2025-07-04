@@ -1,12 +1,4 @@
-import {
-  METHODS_READ_DIR,
-  METHODS_READ_FILE,
-  MIME_DIR,
-  SYSFILES,
-  SYSFILE_NOACCESS,
-  basename,
-  path2Key,
-} from "../../lib/commons";
+import { METHODS_READ_DIR, MIME_DIR, SYSFILES, basename, path2Key } from "../../lib/commons";
 import { getGlobalConfig, type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
@@ -71,24 +63,12 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
       const prefix = testKeyHasPrefix(key, globalConfig.publicPrefix, true);
       if (prefix) {
         matched = true;
-        if (METHODS_READ_FILE.includes(context.request.method)) {
-          const flagFile = await context.env.BUCKET.head(prefix + "/" + SYSFILE_NOACCESS);
-          if (!flagFile) {
-            return [true, prefix];
-          }
-        }
       }
     }
     if (!matched) {
       const prefix = testKeyHasPrefix(key, globalConfig.publicDirPrefix, true);
       if (prefix) {
         matched = true;
-        if (METHODS_READ_DIR.includes(context.request.method)) {
-          const flagFile = await context.env.BUCKET.head(prefix + "/" + SYSFILE_NOACCESS);
-          if (!flagFile) {
-            return [true, prefix];
-          }
-        }
       }
     }
     if (!matched) {
@@ -99,10 +79,6 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
       );
       if (prefix) {
         matched = true;
-        const flagFile = await context.env.BUCKET.head(prefix + "/" + SYSFILE_NOACCESS);
-        if (!flagFile) {
-          return [true, prefix];
-        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import { KEY_PREFIX_PRIVATE, MIME_DIR, dirname } from "../../lib/commons";
-import { responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
+import { checkInvalidUserFileKey, responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
 import { upsertDbFile } from "../db";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
@@ -8,6 +8,10 @@ export async function handleRequestMkcol({ bucket, context, path }: RequestHandl
   const resource = await bucket.head(path);
   if (resource !== null) {
     return responseMethodNotAllowed();
+  }
+  const invalidPathResponse = await checkInvalidUserFileKey(path);
+  if (invalidPathResponse) {
+    return invalidPathResponse;
   }
 
   // Check if the parent directory exists

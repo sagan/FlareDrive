@@ -27,6 +27,7 @@ import {
 } from "../../lib/commons";
 import {
   checkConflict,
+  checkInvalidUserFileKey,
   generateFileThumbnail,
   jsonResponse,
   responseBadRequest,
@@ -65,6 +66,10 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
 }
 
 export async function handleRequestPut({ context, bucket, path, request, scope }: RequestHandlerParams) {
+  const invalidPathResponse = await checkInvalidUserFileKey(path);
+  if (invalidPathResponse) {
+    return invalidPathResponse;
+  }
   const searchParams = new URLSearchParams(new URL(request.url).search);
 
   if (str2int(searchParams.get(THUMBNAIL_VARIABLE))) {

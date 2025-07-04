@@ -3,12 +3,12 @@
   "name": "FlareDrive",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "/assets/favicon.png",
       "type": "image/png",
       "sizes": "32x32"
     },
     {
-      "src": "/favicon-192x192.png",
+      "src": "/assets/favicon-192x192.png",
       "type": "image/png",
       "sizes": "192x192"
     }
