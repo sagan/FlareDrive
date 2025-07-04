@@ -87,7 +87,7 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
 
 export function parseBucketPath(context: FdCfFuncContext): [R2Bucket, string] {
   const { env, params } = context;
-  const pathSegments = (params.path || []) as String[];
+  const pathSegments = (params.path || []) as string[];
   const path = decodeURIComponent(pathSegments.join("/"));
   return [env.BUCKET, path];
 }

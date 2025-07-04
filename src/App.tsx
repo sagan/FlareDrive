@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import CircularProgress from '@mui/material/CircularProgress';
 import NProgress from "nprogress"
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
@@ -73,7 +73,7 @@ export default function App() {
   const [showAdminDialog, setShowAdminDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = React.useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
@@ -105,7 +105,8 @@ export default function App() {
       auth, authSearchParams, viewMode, sort, editorPrompt, editorReadOnly, expires,
       setAuth, setViewMode, setSort, setEditorPrompt, setEditorReadOnly
     } as Config
-  }, [auth, authSearchParams, viewMode, sort, editorPrompt, editorReadOnly, expires])
+  }, [auth, authSearchParams, viewMode, sort, editorPrompt, editorReadOnly, expires,
+    setAuth, setViewMode, setSort, setEditorPrompt, setEditorReadOnly])
 
   useEffect(() => {
     const iv = setInterval(() => setExpires(nextDayEndTimestamp()), 3600000 * 8)
@@ -115,7 +116,7 @@ export default function App() {
   const [systemConfig, setSystemConfig] = useState<PublicSystemConfig>(PublicSystemConfigSchema.parse({}));
 
   useEffect(() => {
-    fetch(CONFIG_API).then(res => res.json<PublicSystemConfig>()).then(setSystemConfig);
+    void fetch(CONFIG_API).then(res => res.json<PublicSystemConfig>()).then(setSystemConfig);
   }, [])
 
   const location = useLocation();
@@ -161,7 +162,7 @@ export default function App() {
     }
   }, [loading])
 
-  const fetchFiles = () => {
+  const fetchFiles = useCallback(() => {
     setLoading(true);
     setMultiSelected([]);
     setFiles([]);
@@ -227,7 +228,7 @@ export default function App() {
         setRequireSignIn(true);
       }
     }).finally(() => setLoading(false));
-  }
+  }, [auth, config.effectiveAuth, cwd, isSearch, searchKeyword, searchOptions, setAuth])
 
   const onSignIn = (user: string, pass: string) => {
     if (!user && !pass) {
@@ -237,7 +238,7 @@ export default function App() {
     setAuth(() => basicAuthorizationHeader(user, pass));
   }
 
-  useEffect(() => fetchFiles(), [cwd, auth, ts]);
+  useEffect(() => fetchFiles(), [cwd, auth, ts, fetchFiles]);
 
   /**
  * Readme file key.
@@ -254,8 +255,37 @@ export default function App() {
     return "";
   }, [files, isSearch]);
   const [readmeStatus, setReadmeStatus] = useState<"" | "loading" | "ok" | "error">("");
-  const [readmeError, setReadmeError] = useState<any>(null);
-  const [readmeContents, setReadmeContents] = useState(""); // readme contents (html)
+  const [readmeError, setReadmeError] = useState<unknown>(null);
+  const [readmeContents, setReadmeContents] = useState(""); // readme contents (html);
+
+  const fetchReadme = useCallback(async (signal?: AbortSignal) => {
+    const key = readmeFile;
+    if (!key) {
+      return;
+    }
+    setReadmeStatus("loading");
+    try {
+      const res = await fetch(fileUrl({ auth, key, expires: config.expires }), {
+        headers: {
+          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
+        },
+        signal,
+      });
+      if (key === readmeFile) {
+        const html = await response2Html(res);
+        setReadmeContents(html);
+        setReadmeStatus("ok");
+        setReadmeError(null);
+      }
+    } catch (e) {
+      if (key === readmeFile) {
+        setReadmeContents("");
+        setReadmeStatus("error");
+        setReadmeError(e);
+      }
+    }
+  }, [auth, config.expires, readmeFile]);
+
   useEffect(() => {
     if (!readmeFile) {
       setReadmeContents("");
@@ -264,11 +294,11 @@ export default function App() {
       return;
     }
     const ac = new AbortController();
-    fetchReadme(ac.signal);
+    void fetchReadme(ac.signal);
     return () => {
       ac.abort();
     }
-  }, [readmeFile]);
+  }, [fetchReadme, readmeFile]);
 
   return (
     <SystemConfigContext.Provider value={systemConfig}>
@@ -328,7 +358,7 @@ export default function App() {
             <Snackbar
               autoHideDuration={5000}
               open={!!error}
-              message={error ? `${error.message || error}` : null}
+              message={error ? `${error}` : null}
               onClose={() => setError(null)}
             />
             <ProgressDialog
@@ -351,32 +381,4 @@ export default function App() {
       </ConfigContext.Provider>
     </SystemConfigContext.Provider>
   );
-
-  async function fetchReadme(signal?: AbortSignal) {
-    const key = readmeFile;
-    if (!key) {
-      return;
-    }
-    setReadmeStatus("loading");
-    try {
-      const res = await fetch(fileUrl({ auth, key, expires: config.expires }), {
-        headers: {
-          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
-        },
-        signal,
-      });
-      if (key === readmeFile) {
-        const html = await response2Html(res);
-        setReadmeContents(html);
-        setReadmeStatus("ok");
-        setReadmeError(null);
-      }
-    } catch (e) {
-      if (key === readmeFile) {
-        setReadmeContents("");
-        setReadmeStatus("error");
-        setReadmeError(e);
-      }
-    }
-  }
 }

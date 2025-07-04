@@ -62,7 +62,7 @@ export class ReindexerDO implements DurableObject {
           endTime: 0,
         };
         // storage.put(obj: Record<string, any>) will ignore items which value is undefined
-        await this.state.storage.put<any>(data);
+        await this.state.storage.put<unknown>(data);
 
         await this.state.storage.setAlarm(Date.now() + 100); // Start processing shortly
         return jsonResponse({ message: "Re-indexing started." });
@@ -79,7 +79,7 @@ export class ReindexerDO implements DurableObject {
           currentR2Cursor: "",
           endTime: Date.now(),
         };
-        await this.state.storage.put<any>(data);
+        await this.state.storage.put(data);
         return jsonResponse({ message: "Re-indexing stopped." });
       }
 
@@ -91,7 +91,7 @@ export class ReindexerDO implements DurableObject {
       if (command === "status") {
         // storage.get return Map, which is not recognized by JSON.stringify (serialized to "{}")
         const data = Object.fromEntries(
-          await this.state.storage.get<any>(ReindexerStorageKeys)
+          await this.state.storage.get(ReindexerStorageKeys)
         ) as unknown as ReindexerStorage;
         return jsonResponse(data);
       }
@@ -100,9 +100,7 @@ export class ReindexerDO implements DurableObject {
   }
 
   async alarm() {
-    const data = Object.fromEntries(
-      await this.state.storage.get<any>(ReindexerStorageKeys)
-    ) as unknown as ReindexerStorage;
+    const data = Object.fromEntries(await this.state.storage.get(ReindexerStorageKeys)) as unknown as ReindexerStorage;
     if (data.status != "running" || !this.env.DB) {
       return;
     }
@@ -115,7 +113,7 @@ export class ReindexerDO implements DurableObject {
         prefix: pathPrefix,
         limit: BATCH_SIZE,
         cursor: data.currentR2Cursor || undefined,
-        // @ts-ignore
+        // @ts-expect-error include not defined in types
         include: ["httpMetadata", "customMetadata"],
       };
       const listed = await this.env.BUCKET.list(listOptions);
@@ -124,12 +122,12 @@ export class ReindexerDO implements DurableObject {
         try {
           await upsertDbFile(this.env.DB, obj);
           filesProcessed++;
-        } catch (fileError: any) {
+        } catch (fileError: unknown) {
           filesFailed++;
-          console.error(`Error processing file ${obj.key}: ${fileError.message}`);
+          console.error(`Error processing file ${obj.key}: ${fileError}`);
           await this.state.storage.put<ReindexerStorageLastError>(
             REINDEXER_KEY_LAST_ERROR,
-            `Error processing ${obj.key}: ${fileError.message}`
+            `Error processing ${obj.key}: ${fileError}`
           );
         }
       }
@@ -152,7 +150,7 @@ export class ReindexerDO implements DurableObject {
           `Re-indexing completed for prefix '${pathPrefix}'. Processed: ${filesProcessed}, Failed: ${filesFailed}`
         );
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       const updateData: ReindexerStorage = {
         status: "failed",
         lastError: `${e}`,

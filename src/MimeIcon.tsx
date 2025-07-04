@@ -27,7 +27,7 @@ const icons: Record<string, React.FC<SvgIconProps>> = {
 }
 
 export default function MimeIcon({ contentType, ...others }: SvgIconProps & { contentType?: string; }) {
-  let [mime, mimeCat] = mimeType(contentType)
+  const [mime, mimeCat] = mimeType(contentType)
   const Icon = icons[mime] || icons[mimeCat] || icons[""]
   return <Icon fontSize="large" {...others} />
 }

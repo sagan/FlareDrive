@@ -91,7 +91,7 @@ export default function SystemConfigAdmin({ setSystemConfig }: {
         <Button variant="contained" onClick={handleCancel} disabled={!isEditing || isSaving}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={isSaving || !isEditing || !isChanged}>
+        <Button variant="contained" onClick={() => void handleSave()} disabled={isSaving || !isEditing || !isChanged}>
           Save
         </Button>
         {isSaving && <CircularProgress size={24} />}
@@ -103,10 +103,10 @@ export default function SystemConfigAdmin({ setSystemConfig }: {
             <li><code>publicPrefix</code>: An array of path prefixes. Files under these paths are publicly readable.</li>
             <li><code>publicDirPrefix</code>: An array of path prefixes. Directories under these paths are publicly listable. This implies files are also readable.</li>
             <li><code>publicRwdirPrefix</code>: An array of path prefixes. Directories under these paths are publicly writable (upload/modify/delete). This implies directory listing and file reading.</li>
-            <li>Each one of the above lists must not be empty and do not start or end with white space or "/".</li>
+            <li>Each one of the above lists must not be empty and do not start or end with white space or &quot;/&quot;.</li>
           </ul>
         </Typography>
       </Box>
-    </Box>
+    </Box >
   );
 }

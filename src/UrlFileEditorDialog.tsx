@@ -31,7 +31,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
   const [url, setUrl] = useState(otherProps.url || "");
   const [filekey, setFilekey] = useState(otherProps.filekey || "");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const onClose = useCallback(() => {
     setError(null)
@@ -42,8 +42,8 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
     e.preventDefault();
     const key = filekey || (cwd ? cwd + "/" : "") + name;
     let fileurl = "";
-    let candicateUrls = [url, "https://" + url];
-    let error: any;
+    const candicateUrls = [url, "https://" + url];
+    let error: unknown;
     for (const candicateUrl of candicateUrls) {
       fileurl = validateAndGetSafeUrl(candicateUrl.trim())
       if (fileurl) {
@@ -65,8 +65,10 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
       setError(e);
     }
     setSaving(false);
-    onUpload && onUpload();
-  }, [url, name]);
+    if (onUpload) {
+      onUpload();
+    }
+  }, [filekey, cwd, name, url, onUpload, auth]);
 
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
@@ -81,7 +83,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
               endAdornment:
                 <>
                   <IconButton
-                    onClick={() => navigator.clipboard.writeText(name)}
+                    onClick={() => void navigator.clipboard.writeText(name)}
                     disabled={!name}
                     title={`Copy`}
                     edge="end"
@@ -112,7 +114,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
             value={url} onChange={e => setUrl(e.target.value)} InputProps={{
               endAdornment: <>
                 <IconButton
-                  onClick={() => navigator.clipboard.writeText(url)}
+                  onClick={() => void navigator.clipboard.writeText(url)}
                   disabled={!url}
                   title={`Copy`}
                   edge="end"
@@ -140,7 +142,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
         {!!error && <Typography>{error.toString()}</Typography>}
         <Box sx={{ mt: 1 }}>
           <Button disabled={saving || !url || !name || (!!otherProps.filekey && otherProps.url === url)}
-            type="submit" onClick={onSubmit} color='primary'>
+            type="submit" onClick={(e) => void onSubmit(e)} color='primary'>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button href={validateAndGetSafeUrl(url)} disabled={!url}>Go</Button>

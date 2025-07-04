@@ -143,7 +143,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
       return responseBadRequest();
     }
     let [contentType] = mimeType(request.headers.get(HEADER_CONTENT_TYPE));
-    let sourceUrlOptions: any = {};
+    let sourceUrlOptions: RequestInit = {};
     if (request.headers.has(HEADER_SOURCE_URL_OPTIONS)) {
       sourceUrlOptions = JSON.parse(request.headers.get(HEADER_SOURCE_URL_OPTIONS)!);
     }
@@ -173,15 +173,11 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
         customMetadata,
       });
     } else {
-      r2req = new Promise((resolve) => {
-        setTimeout(async () => {
-          let body = await sourceReponse.blob();
-          let obj = await bucket.put(path, body, {
-            httpMetadata: sourceReponse.headers,
-            customMetadata,
-          });
-          resolve(obj);
-        }, 0);
+      r2req = sourceReponse.blob().then((body) => {
+        return bucket.put(path, body, {
+          httpMetadata: sourceReponse.headers,
+          customMetadata,
+        });
       });
     }
     r2req = r2req.then((obj) => postUploadTasks(obj));

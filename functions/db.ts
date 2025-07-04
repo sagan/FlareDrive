@@ -70,7 +70,7 @@ export async function deleteAllDbFiles(db: D1Database, prefix?: string) {
   prefix = prefix || "";
   prefix = trimPrefixSuffix(prefix.trim(), "/");
   let sql = `DELETE FROM files WHERE 1 = 1`;
-  const params: any[] = [];
+  const params: unknown[] = [];
   if (prefix) {
     const searchPrefix = `${prefix}/`;
     sql += ` AND (key >= ? AND key < ?)`;
@@ -110,7 +110,7 @@ SELECT
 FROM files AS f
 LEFT JOIN filemeta AS fm ON f.key = fm.key
 WHERE 1 = 1`;
-  const params: any[] = [];
+  const params: unknown[] = [];
 
   if (query) {
     sql += ` AND (f.name LIKE ?)`;
@@ -156,6 +156,7 @@ WHERE 1 = 1`;
     .bind(...params)
     .all();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return rows.results.map((row: any) => ({
     key: row.key,
     name: row.name,

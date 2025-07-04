@@ -13,7 +13,7 @@ export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
-    if (!config.auth) {
+    if (!auth) {
       return;
     }
     setIsLoading(true);
@@ -36,7 +36,7 @@ export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
 
   useEffect(() => {
     if (auth) {
-      fetchStatus();
+      void fetchStatus();
     }
   }, [fetchStatus, auth]);
 
@@ -106,21 +106,21 @@ export default function ReindexerAdmin({ currentDir }: { currentDir: string }) {
     )}
 
     <Typography gutterBottom>
-      <Button color='secondary' onClick={() => handleCommand("start")} disabled={isLoading || isRunning}>
+      <Button color='secondary' onClick={() => void handleCommand("start")} disabled={isLoading || isRunning}>
         Start
       </Button>
-      <Button color='secondary' onClick={() => handleCommand("stop")} disabled={isLoading}>
+      <Button color='secondary' onClick={() => void handleCommand("stop")} disabled={isLoading}>
         Stop
       </Button>
       <Button color='secondary' onClick={() => {
         if (!confirm(`Flush all indexes of dir "${pathPrefixInput}"`)) {
           return
         }
-        handleCommand("flush");
+        void handleCommand("flush");
       }} disabled={isLoading}>
         Flush
       </Button>
-      <Button color='secondary' onClick={fetchStatus} disabled={isLoading}>
+      <Button color='secondary' onClick={() => void fetchStatus()} disabled={isLoading}>
         Refresh
       </Button>
     </Typography>

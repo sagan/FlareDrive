@@ -25,20 +25,20 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
   onDone: () => void;
   files: FileItem[];
 }) {
-  const initialFilenames = useMemo(() => others.files.map(f => f.key), [])
-  const { auth, expires } = useConfig()
-  const [ts, setTs] = useState(0)
-  const [force, setForce] = useState(false)
-  const [ss, setSs] = useState(false) // server side
-  const [working, setWorking] = useState(false)
-  const [result, setResult] = useState<Record<string, string>>({})
-  const mountedRef = useRef(true)
-  const files = others.files.filter(f => initialFilenames.includes(f.key))
+  const initialFilenames = useMemo(() => others.files.map(f => f.key), [others.files]);
+  const { auth, expires } = useConfig();
+  const [ts, setTs] = useState(0);
+  const [force, setForce] = useState(false);
+  const [ss, setSs] = useState(false); // server side
+  const [working, setWorking] = useState(false);
+  const [result, setResult] = useState<Record<string, string>>({});
+  const mountedRef = useRef(true);
+  const files = others.files.filter(f => initialFilenames.includes(f.key));
 
   /**
    * Record key is digest, if target thumbnail image fails to load (not exists), set value to 1.
    */
-  const thumbnailError = useRef<Record<string, number>>({})
+  const thumbnailError = useRef<Record<string, number>>({});
 
   useEffect(() => {
     // required, as React 18+ call useEffect twice in development mode during component initialization.
@@ -46,12 +46,12 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
     return () => {
       mountedRef.current = false
     }
-  }, [])
+  }, []);
 
   const onGenerateThumbnailsSS = useCallback((force: boolean) => {
     setWorking(true)
     setResult({});
-    (async () => {
+    void (async () => {
       let successCnt = 0
       for (const file of files) {
         if (!mountedRef.current) {
@@ -80,13 +80,13 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
         onDone()
       }
     })();
-  }, [files, onDone])
+  }, [auth, files, onDone]);
 
   const onGenerateThumbnails = useCallback((force: boolean) => {
     const items = files
     setWorking(true);
     setResult({});
-    (async () => {
+    void (async () => {
       let successCnt = 0
       for (const file of items) {
         if (!mountedRef.current) {
@@ -114,7 +114,7 @@ export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...oth
         onDone()
       }
     })();
-  }, [files, onDone])
+  }, [auth, expires, files, onDone]);
 
   return <Dialog onClose={onClose} open={open} maxWidth="lg">
     <DialogTitle>

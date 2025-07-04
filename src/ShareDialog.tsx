@@ -53,7 +53,7 @@ enum Status {
 export default function ShareDialog({ open, onClose, setError, setSlideIndex, postDelete, onEdit, ...otherProps }: {
   open: boolean;
   onClose: () => void;
-  setError: React.Dispatch<any>;
+  setError: React.Dispatch<unknown>;
   setSlideIndex?: (value: React.SetStateAction<number>) => void;
   postDelete?: (sharekey: string) => void;
   onEdit?: () => void;
@@ -110,7 +110,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     } catch (e) {
       setStatus(Status.Editing)
     }
-  }, [shareKey, postDelete])
+  }, [shareKey, shareObject.key, auth, postDelete])
 
   const doShare = useCallback(async () => {
     const previousStatus = status
@@ -130,7 +130,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       setError(`${e}`)
       setStatus(previousStatus)
     }
-  }, [shareKey, referer, shareObject, ttl]);
+  }, [status, shareObject, ttl, referer, shareKey, auth, setError]);
 
   const isOpen = permission == Permission.OpenRwDir || permission == Permission.OpenDir ||
     (!targetIsDir && permission === Permission.OpenFile)
@@ -148,11 +148,11 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     fullControl: linkFullControl,
     scope: targetIsDir ? fileKeyWithDirSlash : undefined,
     isDir: targetIsDir,
-  }), [fileKey, targetIsDir, linkTs, linkTtl, linkFullControl])
+  }), [fileKey, auth, linkTtl, linkTs, linkFullControl, targetIsDir, fileKeyWithDirSlash])
 
 
   function nativeShare() {
-    navigator.share({ url: isOpen ? linkOpenUrl : linkUrl, title: name });
+    void navigator.share({ url: isOpen ? linkOpenUrl : linkUrl, title: name });
   }
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
@@ -165,7 +165,9 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
         }
         e.preventDefault();
         onClose();
-        setSlideIndex && setSlideIndex(-1);
+        if (setSlideIndex) {
+          setSlideIndex(-1);
+        }
         navigate(targetParentLink);
       }}><FolderOpenIcon /></IconButton>
       <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
@@ -203,7 +205,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                 <VisibilityIcon />
               </IconButton>}
               <IconButton
-                onClick={() => navigator.clipboard.writeText(fileKey)}
+                onClick={() => void navigator.clipboard.writeText(fileKey)}
                 title={`Copy`}
                 edge="end"
               >
@@ -220,7 +222,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
           endAdornment:
             <IconButton
               disabled={false}
-              onClick={() => navigator.clipboard.writeText(name)}
+              onClick={() => void navigator.clipboard.writeText(name)}
               title={`Copy`}
               edge="end"
             >
@@ -235,7 +237,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment:
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(otherProps.file.httpMetadata.contentType)}
+                  onClick={() => void navigator.clipboard.writeText(otherProps.file.httpMetadata.contentType)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -249,7 +251,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                 endAdornment:
                   <IconButton
                     disabled={false}
-                    onClick={() => navigator.clipboard.writeText(`${otherProps.file.size}`)}
+                    onClick={() => void navigator.clipboard.writeText(`${otherProps.file.size}`)}
                     title={`Copy`}
                     edge="end"
                   >
@@ -269,7 +271,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                   </IconButton>
                   <IconButton
                     disabled={false}
-                    onClick={() => navigator.clipboard.writeText(otherProps.file.customMetadata?.url || "")}
+                    onClick={() => void navigator.clipboard.writeText(otherProps.file.customMetadata?.url || "")}
                     title={`Copy`}
                     edge="end"
                   >
@@ -283,7 +285,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment:
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.md5!)}
+                  onClick={() => void navigator.clipboard.writeText(otherProps.file.checksums.md5!)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -297,7 +299,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment:
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.sha1!)}
+                  onClick={() => void navigator.clipboard.writeText(otherProps.file.checksums.sha1!)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -311,7 +313,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment:
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(otherProps.file.checksums.sha256!)}
+                  onClick={() => void navigator.clipboard.writeText(otherProps.file.checksums.sha256!)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -332,7 +334,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment: <>
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(linkOpenUrl)}
+                  onClick={() => void navigator.clipboard.writeText(linkOpenUrl)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -380,7 +382,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               endAdornment: <>
                 <IconButton
                   disabled={false}
-                  onClick={() => navigator.clipboard.writeText(linkUrl)}
+                  onClick={() => void navigator.clipboard.writeText(linkUrl)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -390,7 +392,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               </>
             }} />
         </Box>
-        {!!linkTtl ? <Typography>
+        {linkTtl ? <Typography>
           Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
         </Typography> : <Typography sx={{ color: "red" }}>
           Link will never expire (unless the admin password is changed)
@@ -444,7 +446,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                 </IconButton>
                 <IconButton
                   disabled={status === Status.Creating}
-                  onClick={() => navigator.clipboard.writeText(link)}
+                  onClick={() => void navigator.clipboard.writeText(link)}
                   title={`Copy link`}
                   edge="end"
                 >
@@ -484,7 +486,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                 </IconButton>
                 <IconButton
                   disabled={!shareObject.auth}
-                  onClick={() => navigator.clipboard.writeText(shareObject.auth!)}
+                  onClick={() => void navigator.clipboard.writeText(shareObject.auth!)}
                   title={`Copy`}
                   edge="end"
                 >
@@ -549,7 +551,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
         <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
           helperText={<>
             One <a href="https://github.com/clearlylocal/browser-extension-url-match">url pattern</a> per line.
-            Enter a empty line with a trailing "\n" to include "no referer" or direct access.
+            Enter a empty line with a trailing &quot;\n&quot; to include &quot;no referer&quot; or direct access.
           </>} value={referer} onChange={e => setReferer(e.target.value)}
         />
       </div>}
@@ -566,7 +568,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
           <LinkIcon />
         </CopyButton>
       }
-      <IconButton disabled={invalid || status === Status.Sharing} onClick={doShare} color='primary'
+      <IconButton disabled={invalid || status === Status.Sharing} onClick={() => void doShare()} color='primary'
         title={{
           [Status.Creating]: "Create",
           [Status.Sharing]: "Updating...",
@@ -576,7 +578,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       {
         status != Status.Creating &&
         <IconButton disabled={status !== Status.Editing} color='warning'
-          onClick={doDeleteShare} title="Delete share"><DeleteIcon />
+          onClick={() => void doDeleteShare()} title="Delete share"><DeleteIcon />
         </IconButton>
       }
       <IconButton onClick={onClose} color='secondary'><CloseIcon /></IconButton>

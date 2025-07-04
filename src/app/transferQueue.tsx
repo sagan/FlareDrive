@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useContext,
@@ -26,7 +27,7 @@ export interface TransferTask {
   name: string;
   loaded: number;
   total: number;
-  error?: any;
+  error?: unknown;
 }
 
 const TransferQueueContext = createContext<TransferTask[]>([]);
@@ -50,7 +51,7 @@ export function useTransferQueue(): [tasks: TransferTask[],
     }
     abortController.abort(ERR_ABORT)
     setAbortController(new AbortController)
-  }, [abortController])
+  }, [abortController, setAbortController, setTasks]);
   return [tasks, setTasks, cancelTasks];
 }
 
@@ -145,7 +146,7 @@ export function TransferQueueProvider({
         }
         taskProcessing.current = null;
       });
-  }, [transferTasks]);
+  }, [abortController.signal, effectiveAuth, transferTasks]);
 
   return (
     <TransferQueueContext.Provider value={transferTasks}>

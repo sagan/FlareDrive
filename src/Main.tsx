@@ -100,6 +100,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
     return undefined
   }
   const thumbSize = 128
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const file: FileItem = (slide as any)._file
 
   let viewSrc = src
@@ -177,7 +178,7 @@ export default function Main({
 
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
-  setError: React.Dispatch<React.SetStateAction<any>>;
+  setError: React.Dispatch<React.SetStateAction<unknown>>;
 }) {
   const { auth, effectiveAuth, authSearchParams, sort, viewMode, expires, fullControl } = useConfig()
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
@@ -224,7 +225,7 @@ export default function Main({
       }
       return [...multiSelected, key];
     });
-  }, []);
+  }, [setMultiSelected]);
 
   const [slideIndex, setSlideIndex] = useState(-1);
 
@@ -266,10 +267,11 @@ export default function Main({
         title: name,
         description: `${name} (${size})`,
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (slides[slides.length - 1] as any)._file = file
     }
     return { slides, slideIndexes };
-  }, [files])
+  }, [auth, authSearchParams, expires, files, fullControl])
 
   const toggleLightboxControls = useCallback(() => setHideLightboxControls((state) => !state), [])
 
@@ -290,14 +292,14 @@ export default function Main({
         expires,
       }));
     }
-  }, [multiSelected, slideIndexes, auth, permission]);
+  }, [multiSelected.length, slideIndexes, handleMultiSelect, setCwd, auth, expires]);
 
   const onContextMenu = useCallback((file: FileItem) => {
     if (file.system) {
       return
     }
     handleMultiSelect(file.key, true);
-  }, [])
+  }, [handleMultiSelect])
 
   //  Record<string, SlideCallback>
   const lightboxCallbacks: SlidesExtendedCallbacks = {
@@ -352,6 +354,79 @@ export default function Main({
 
   const permitWrite = !isSearch && (!!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir))
 
+  const onRename = async () => {
+    const oldName = basename(multiSelected[0]);
+    const newName = window.prompt("Rename to:", oldName);
+    if (!newName || oldName === newName) {
+      return;
+    }
+    try {
+      await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, effectiveAuth, true);
+      fetchFiles();
+    } catch (e) {
+      setError(e)
+    }
+  };
+
+  const onDuplicate = async () => {
+    const newkey = prompt(`Create a copy of "${multiSelected[0]}" at path`,
+      getDuplicateName(multiSelected[0], files))
+    if (!newkey) {
+      return
+    }
+    try {
+      await copyPaste(multiSelected[0], newkey, effectiveAuth, false);
+      fetchFiles();
+    } catch (e) {
+      setError(e)
+    }
+  };
+
+  const onMove = async () => {
+    const dir = cwd || "/";
+    let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
+    if (!newdir) {
+      return;
+    }
+    newdir = cleanPath(newdir);
+    if (newdir == dir) {
+      return;
+    }
+    if (!newdir.endsWith("/")) {
+      newdir += "/"
+    }
+    for (const file of multiSelected) {
+      const name = basename(file);
+      const src = (cwd ? cwd + "/" : "") + name;
+      const dst = trimPrefixSuffix(newdir + name, "/");
+      try {
+        await copyPaste(src, dst, effectiveAuth, true);
+      } catch (e) {
+        setError(e)
+      }
+    }
+    fetchFiles();
+  };
+
+  const onDelete = async () => {
+    if (multiSelected.length == 0) {
+      return;
+    }
+    const filenames = multiSelected.map((key) => key.replace(/\/$/, "").split("/").pop()).join("\n");
+    const confirmMessage = `Delete the following ${multiSelected.length} file(s) permanently?\n${filenames}`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    for (const key of multiSelected) {
+      try {
+        await deleteFile(key, effectiveAuth)
+      } catch (e) {
+        setError(e)
+      }
+    }
+    fetchFiles();
+  };
+
   return (
     <>
       {loading ? (
@@ -360,7 +435,7 @@ export default function Main({
         </Centered>
       ) : (
         <DropZone disabled={!permitWrite}
-          onDrop={async (files) => {
+          onDrop={(files) => {
             uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
             setShowProgressDialog(true)
           }}
@@ -405,75 +480,10 @@ export default function Main({
         }}
         onShare={setSharing}
         onClose={() => setMultiSelected([])}
-        onRename={async () => {
-          const oldName = basename(multiSelected[0]);
-          const newName = window.prompt("Rename to:", oldName);
-          if (!newName || oldName === newName) {
-            return;
-          }
-          try {
-            await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, effectiveAuth, true);
-            fetchFiles();
-          } catch (e) {
-            setError(e)
-          }
-        }}
-        onDuplicate={async () => {
-          let newkey = prompt(`Create a copy of "${multiSelected[0]}" at path`,
-            getDuplicateName(multiSelected[0], files))
-          if (!newkey) {
-            return
-          }
-          try {
-            await copyPaste(multiSelected[0], newkey, effectiveAuth, false);
-            fetchFiles();
-          } catch (e) {
-            setError(e)
-          }
-        }}
-        onMove={async () => {
-          let dir = cwd || "/";
-          let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
-          if (!newdir) {
-            return;
-          }
-          newdir = cleanPath(newdir);
-          if (newdir == dir) {
-            return;
-          }
-          if (!newdir.endsWith("/")) {
-            newdir += "/"
-          }
-          for (const file of multiSelected) {
-            const name = basename(file);
-            const src = (cwd ? cwd + "/" : "") + name;
-            const dst = trimPrefixSuffix(newdir + name, "/");
-            try {
-              await copyPaste(src, dst, effectiveAuth, true);
-            } catch (e) {
-              setError(e)
-            }
-          }
-          fetchFiles();
-        }}
-        onDelete={async () => {
-          if (multiSelected.length == 0) {
-            return;
-          }
-          const filenames = multiSelected.map((key) => key.replace(/\/$/, "").split("/").pop()).join("\n");
-          const confirmMessage = `Delete the following ${multiSelected.length} file(s) permanently?\n${filenames}`;
-          if (!window.confirm(confirmMessage)) {
-            return;
-          }
-          for (const key of multiSelected) {
-            try {
-              await deleteFile(key, effectiveAuth)
-            } catch (e) {
-              setError(e)
-            }
-          }
-          fetchFiles();
-        }}
+        onRename={() => void onRename()}
+        onDuplicate={() => void onDuplicate()}
+        onMove={() => void onMove()}
+        onDelete={() => void onDelete()}
       />
       {!!sharingFile && <ShareDialog setSlideIndex={setSlideIndex} setError={setError} file={sharingFile} open={true}
         onClose={() => setSharing("")} onEdit={() => lightboxCallbacks.edit(sharingFile)} />}
@@ -495,6 +505,7 @@ export default function Main({
         plugins={[Captions, Counter, Fullscreen, Thumbnails, Video, Share, Download, Slideshow, Zoom]}
         share={{
           share: ({ slide }: ShareFunctionProps) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const file: FileItem = (slide as any)._file
             setSharing(file.key)
             // setSlideIndex(-1)
@@ -511,7 +522,7 @@ function getDuplicateName(filekey: string, files: FileItem[]): string {
   const ext = extname(filename)
   let base = filename.slice(0, filename.length - ext.length)
   let i = 1
-  let match = base.match(/^(.*) \((\d+)\)$/)
+  const match = base.match(/^(.*) \((\d+)\)$/)
   if (match) {
     base = match[1]
     i = str2int(match[2]) + 1

@@ -37,6 +37,7 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
   }
   const multipartUpload = bucket.resumeMultipartUpload(path, uploadId);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const completeBody = await request.json<{ parts: Array<any> }>();
 
   try {
@@ -45,18 +46,22 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
     if (context.env.IMAGES && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(object)) {
       try {
         await generateFileThumbnail({ images: context.env.IMAGES, bucket, key: object.key });
-      } catch (e) {}
+      } catch (e) {
+        /* empty */
+      }
     }
     if (context.env.DB && !object.key.startsWith(KEY_PREFIX_PRIVATE)) {
       try {
         await upsertDbFile(context.env.DB, object);
-      } catch (e) {}
+      } catch (e) {
+        /* empty */
+      }
     }
     return new Response(null, {
       headers: { etag: object.httpEtag },
     });
-  } catch (err: any) {
-    return responseBadRequest(`${err.message || err}}`);
+  } catch (err: unknown) {
+    return responseBadRequest(`${err}}`);
   }
 }
 

@@ -1,7 +1,7 @@
 import { HEADER_AUTHORIZATION, HEADER_CONTENT_TYPE, MIME_JSON, REINDEX_API } from "../../lib/commons";
 import { ReindexerPayload, ReindexerStorage } from "../../lib/reindexer";
 
-export async function reindexerApi(auth: string, payload: ReindexerPayload): Promise<any> {
+export async function reindexerApi(auth: string, payload: ReindexerPayload): Promise<unknown> {
   const res = await fetch(`${REINDEX_API}`, {
     method: "POST",
     headers: {

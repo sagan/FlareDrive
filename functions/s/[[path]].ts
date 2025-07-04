@@ -172,7 +172,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
 
   const filekey = trimSuffix(data.key, "/") + (relpath ? "/" + relpath : "");
-  let obj = await env.BUCKET.get(filekey, {
+  const obj = await env.BUCKET.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
   });
@@ -198,7 +198,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
         return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
       }
     }
-    let files = await findChildren({
+    const files = await findChildren({
       bucket: context.env.BUCKET,
       path: filekey,
       depth: "1",
@@ -486,7 +486,7 @@ ${parentDirLinkHtml}
 }
 
 function encodeHtml(str: string): string {
-  var map: Record<string, string> = {
+  const map: Record<string, string> = {
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",

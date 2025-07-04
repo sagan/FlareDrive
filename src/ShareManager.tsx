@@ -18,7 +18,7 @@ export default function ShareManager({ search, shares, loading, fetchFiles, setE
   shares: string[];
   loading: boolean;
   fetchFiles: () => void
-  setError: React.Dispatch<React.SetStateAction<any>>;
+  setError: React.Dispatch<React.SetStateAction<unknown>>;
 }) {
   const { auth } = useConfig()
   const [shareObject, setShareObject] = useState<ShareObject | null>(null)
@@ -39,11 +39,12 @@ export default function ShareManager({ search, shares, loading, fetchFiles, setE
       {filteredShares.map((share) => {
         return <Grid item key={share} xs={12} sm={6} md={4} lg={3} xl={2}>
           <ListItemButton
-            onClick={async () => {
-              const shareKey = share
-              const shareObject = await getShare(shareKey, auth)
-              setShareObject(shareObject)
-              setShareKey(shareKey)
+            onClick={() => {
+              const shareKey = share;
+              getShare(shareKey, auth).then(shareObject => {
+                setShareObject(shareObject)
+                setShareKey(shareKey)
+              }).catch(e => { });
             }}
             sx={{ userSelect: "none" }}
           >

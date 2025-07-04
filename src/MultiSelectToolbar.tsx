@@ -2,16 +2,13 @@ import React, { useState } from "react";
 import { IconButton, Menu, MenuItem, Slide, Toolbar } from "@mui/material";
 import {
   Close as CloseIcon,
-  Delete as DeleteIcon,
   Download as DownloadIcon,
   MoreHoriz as MoreHorizIcon,
 } from "@mui/icons-material";
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ShareIcon from '@mui/icons-material/Share';
 import SearchIcon from '@mui/icons-material/Search';
-import LinkIcon from '@mui/icons-material/Link';
 import { KEY_PART_SEARCH, dirname, dirUrlPath, fileUrl } from "../lib/commons";
-import { CopyButton } from "./components";
 import { useConfig } from "./commons";
 
 

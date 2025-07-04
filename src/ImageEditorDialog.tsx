@@ -27,7 +27,7 @@ export default function ImageEditorDialog({ filekey, open, close, setError }: Fi
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
     fullControl: auth ? undefined : fullControl,
-  }), [filekey, auth])
+  }), [filekey, auth, expires, authSearchParams, fullControl])
 
   const { base } = parseFilePath(filekey)
 

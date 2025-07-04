@@ -82,6 +82,7 @@ export interface FileItem {
   /**
    * Icon for system folder
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon?: React.FunctionComponent<any>;
 
   key: string;
@@ -110,7 +111,7 @@ export interface FileViewerProps {
   filekey: string;
   open: boolean;
   close: () => void;
-  setError: React.Dispatch<React.SetStateAction<any>>;
+  setError: React.Dispatch<React.SetStateAction<unknown>>;
 }
 
 export function isThumbnailPossible(file: FileItem) {

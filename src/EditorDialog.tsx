@@ -77,10 +77,10 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     fullControl: auth ? undefined : fullControl,
     raw: true,
     ts
-  }), [filekey, auth, ts])
+  }), [filekey, auth, expires, authSearchParams, fullControl, ts])
 
   const onLoad = useCallback(() => {
-    (async () => {
+    void (async () => {
       setState(State.Loading)
       try {
         const res = await fetch(fileLink)
@@ -103,14 +103,13 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
         setState(State.Idle)
       }
     })();
-  }, [fileLink])
+  }, [fileLink, setError]);
 
   useEffect(() => {
     onLoad()
-  }, [])
+  }, [onLoad]);
 
-
-  const onChange = useCallback((value: string | undefined, event: any) => {
+  const onChange: EditorProps["onChange"] = useCallback((value: string | undefined) => {
     setChanged(value !== contents)
   }, [contents])
 
@@ -127,7 +126,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
       link = appendQueryStringToUrl(link, HTML_VARIABLE + "=1")
     }
     return link
-  }, [fileLink])
+  }, [fileLink, filekey])
 
   const onClose = useCallback(() => {
     if (changed && !confirm("Exit? Your edit will be lost.")) {
@@ -154,7 +153,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
       setError(err)
     }
     setState(State.Editing)
-  }, [contents, auth, editorPrompt])
+  }, [editorPrompt, filekey, effectiveAuth, setError])
 
   const onReset = useCallback(() => {
     if (!editorRef.current) {
@@ -166,12 +165,12 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     editorRef.current.setValue(contents || "")
   }, [contents, editorPrompt])
 
-  function handleKeyDown(event: any) {
+  const handleKeyDown: React.KeyboardEventHandler<unknown> = function (event) {
     // ctrl + s
     if ((event.ctrlKey || event.metaKey) && event.key === "s") {
       event.preventDefault(); // Prevent the default browser behavior (saving the webpage)
       if (state === State.Editing) {
-        onSave();
+        void onSave();
       }
     }
   }
@@ -205,7 +204,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
             <ConfirmationNumberIcon />
           </IconButton>
           <IconButton title="Save (Ctrl+S)" color={changed ? "primary" : "inherit"}
-            disabled={roMode || !changed} onClick={onSave}>
+            disabled={roMode || !changed} onClick={() => void onSave()}>
             <SaveIcon />
           </IconButton>
           <IconButton title="Reset" color={changed ? "primary" : "inherit"}

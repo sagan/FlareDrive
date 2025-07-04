@@ -232,7 +232,7 @@ export function responseMethodNotAllowed(): Response {
  * @param status
  * @returns
  */
-export function jsonResponse<T = any>(obj: T, status = 200) {
+export function jsonResponse<T = unknown>(obj: T, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: {
@@ -349,12 +349,13 @@ export async function checkAuthFailure(
 
 export async function* listAll(bucket: R2Bucket, prefix?: string, isRecursive: boolean = false) {
   let cursor: string | undefined = undefined;
+  let r2Objects: R2Objects;
   do {
-    var r2Objects = await bucket.list({
+    r2Objects = await bucket.list({
       prefix: prefix,
       delimiter: isRecursive ? undefined : "/",
       cursor: cursor,
-      // @ts-ignore
+      // @ts-expect-error include is not defined in type
       include: ["httpMetadata", "customMetadata"],
     });
 
@@ -431,15 +432,13 @@ export async function generateFileThumbnail({
     }
   }
 
-  let thumbResponse: Response;
-  let thumbResponseHeaders: Headers;
   const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
   const format = "image/avif";
   const fileContents = await file.blob();
   const result = await images.input(fileContents.stream()).transform(transform).output({ format });
-  thumbResponse = result.response();
+  const thumbResponse = result.response();
   // Does the response have headers?
-  thumbResponseHeaders = new Headers({
+  const thumbResponseHeaders = new Headers({
     [HEADER_CONTENT_TYPE]: format,
   });
 
@@ -501,15 +500,13 @@ export async function generateFileThumbnailWithWorker({
       return 3;
     }
   }
-  let thumbResponse: Response;
-  let thumbResponseHeaders: Headers;
   const transform: ImageTransform = { width: thumbSize, height: thumbSize, fit: "scale-down" };
 
   // CF image resizing does NOT work in Pages (functions), Use standalone worker instead.
   // Note: must put auth info in target url, cann't put it in options.headers,
   // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
   const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
-  thumbResponse = await fetch(workerUrl, {
+  const thumbResponse = await fetch(workerUrl, {
     method: "POST",
     headers: {
       [HEADER_CONTENT_TYPE]: "application/json",
@@ -529,11 +526,11 @@ export async function generateFileThumbnailWithWorker({
   if (!thumbResponse.headers.get(HEADER_CF_RESIZED)) {
     return 4;
   }
-  let thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
+  const thumbResponseSize = str2int(thumbResponse.headers.get(HEADER_CONTENT_LENGTH));
   if (!thumbResponseSize || thumbResponseSize >= file.size) {
     return 5;
   }
-  thumbResponseHeaders = thumbResponse.headers;
+  const thumbResponseHeaders = thumbResponse.headers;
 
   const thumbContents = await thumbResponse.blob();
   const thumbContentsDigest = await sha256(thumbContents);
@@ -641,7 +638,7 @@ export function checkConflict(request: Request, object?: R2Object | null | undef
  * Return a "Content-Type: application/json" request to url.
  * @param method default to POST.
  */
-export function requestJson(url: string | URL, payload: any, method: "POST" | "PUT" | "DELETE" = "POST"): Request {
+export function requestJson(url: string | URL, payload: unknown, method: "POST" | "PUT" | "DELETE" = "POST"): Request {
   if (url instanceof URL) {
     url = url.href;
   }

@@ -789,6 +789,7 @@ export async function sha256(content: Blob | string | ArrayBuffer | { buffer: Ar
  * @returns
  */
 export function sha256Sync(content: string | ArrayBuffer | { buffer: ArrayBufferLike }): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let input: any;
   if (content instanceof ArrayBuffer) {
     input = new Uint8Array(content);
@@ -799,7 +800,7 @@ export function sha256Sync(content: string | ArrayBuffer | { buffer: ArrayBuffer
 }
 
 export function headers2Obj(headers: Headers): Record<string, string> {
-  let obj: Record<string, string> = {};
+  const obj: Record<string, string> = {};
   headers.forEach((value, key) => {
     obj[key] = value;
   });
@@ -931,7 +932,7 @@ export function joinPathes(...pathes: string[]): string {
  * @returns
  */
 function validatePrefix(prefix: string): boolean {
-  let normalizedPrefix = trimPrefixSuffix(prefix.trim(), "/").trim();
+  const normalizedPrefix = trimPrefixSuffix(prefix.trim(), "/").trim();
   return !!normalizedPrefix && normalizedPrefix === prefix;
 }
 

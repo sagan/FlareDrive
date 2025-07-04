@@ -31,7 +31,9 @@ export async function handleRequestDelete({ bucket, path, context }: RequestHand
     if (context.env.DB) {
       try {
         await deleteDbFile(context.env.DB, path);
-      } catch (e) {}
+      } catch (e) {
+        /* empty */
+      }
     }
     if (deletedObj === null) {
       return responseNotFound();
@@ -47,7 +49,9 @@ export async function handleRequestDelete({ bucket, path, context }: RequestHand
     if (context.env.DB) {
       try {
         await deleteDbFile(context.env.DB, child.key);
-      } catch (e) {}
+      } catch (e) {
+        /* empty */
+      }
     }
   }
 

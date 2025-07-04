@@ -46,7 +46,7 @@ function IconCaptionButton({
 }
 
 export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
-  function ({ onClick }, ref) {
+  function uploadFab({ onClick }, ref) {
     return (
       <Fab
         ref={ref}
@@ -83,7 +83,7 @@ export default function UploadDrawer({
    * @returns
    */
   onUpload: (created?: string) => void;
-  setError: React.Dispatch<React.SetStateAction<any>>;
+  setError: React.Dispatch<React.SetStateAction<unknown>>;
 }) {
   const { auth, effectiveAuth } = useConfig()
   const uploadEnqueue = useUploadEnqueue();
@@ -119,7 +119,7 @@ export default function UploadDrawer({
       };
       input.click();
     },
-    [cwd, onUpload, setOpen, uploadEnqueue]
+    [cwd, onStartUpload, setOpen, uploadEnqueue]
   );
 
   const takePhoto = useMemo(() => handleUpload("photo"), [handleUpload]);
@@ -129,12 +129,12 @@ export default function UploadDrawer({
   const onUploadFromUrl = useCallback(() => {
     setOpen(false);
     setUploadFromUrlOpen(true);
-  }, [])
+  }, [setOpen])
 
   const onNewUrl = useCallback(() => {
     setOpen(false);
     setNewUrlOpen(true);
-  }, [])
+  }, [setOpen])
 
   const onCreate = useCallback(async (edit?: boolean) => {
     const filename = prompt("Enter new file name: ");
@@ -153,7 +153,26 @@ export default function UploadDrawer({
     } catch (e) {
       setError(e);
     }
-  }, [effectiveAuth, cwd, onUpload])
+  }, [setOpen, cwd, setError, effectiveAuth, onUpload])
+
+  const onCreateFolder = useCallback(async () => {
+    const folderName = prompt("New folder name");
+    if (!folderName) {
+      return;
+    }
+    if (folderName.includes("/") || folderName !== folderName.trim()) {
+      setError(`invalid folder name: cann't contain '/', or start or end with space`);
+      return;
+    }
+    setOpen(false);
+    const folderKey = (cwd ? cwd + "/" : "") + folderName;
+    try {
+      await createFolder(folderKey, effectiveAuth);
+      onUpload();
+    } catch (e) {
+      setError(e);
+    }
+  }, [cwd, effectiveAuth, onUpload, setError, setOpen])
 
   return (
     <>
@@ -190,24 +209,7 @@ export default function UploadDrawer({
               <IconCaptionButton
                 icon={<CreateNewFolderIcon fontSize="large" />}
                 caption="Create Folder"
-                onClick={async () => {
-                  const folderName = prompt("New folder name");
-                  if (!folderName) {
-                    return;
-                  }
-                  if (folderName.includes("/") || folderName !== folderName.trim()) {
-                    setError(`invalid folder name: cann't contain '/', or start or end with space`);
-                    return;
-                  }
-                  setOpen(false);
-                  const folderKey = (cwd ? cwd + "/" : "") + folderName;
-                  try {
-                    await createFolder(folderKey, effectiveAuth);
-                    onUpload();
-                  } catch (e) {
-                    setError(e);
-                  }
-                }}
+                onClick={() => void onCreateFolder()}
               />
             </Grid>
             {!!auth && <Grid item xs={3}>
@@ -221,14 +223,14 @@ export default function UploadDrawer({
               <IconCaptionButton
                 icon={<AddIcon fontSize="large" />}
                 caption="New file"
-                onClick={() => onCreate()}
+                onClick={() => void onCreate()}
               />
             </Grid>
             <Grid item xs={3}>
               <IconCaptionButton
                 icon={<CreateIcon fontSize="large" />}
                 caption="Create text"
-                onClick={() => onCreate(true)}
+                onClick={() => void onCreate(true)}
               />
             </Grid>
             <Grid item xs={3}>

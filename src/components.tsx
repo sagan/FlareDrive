@@ -134,6 +134,7 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
 
 export function TooltipIconButton({ href, children, ...others }: {
   title: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   href?: string, color?: string, children: any
 }) {
   return <Tooltip
@@ -146,13 +147,14 @@ export function TooltipIconButton({ href, children, ...others }: {
   </Tooltip>
 }
 
-export function CopyButton({ disabled, isIcon, isLink, get, text, children, ...others }: {
+export function CopyButton({ disabled, isIcon, isLink, text, children, ...others }: {
+  color?: string;
   disabled?: boolean;
   isIcon?: boolean;
   isLink?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children?: any;
   text: string | (() => string);
-  [key: string]: any;
   href?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -163,14 +165,14 @@ export function CopyButton({ disabled, isIcon, isLink, get, text, children, ...o
 
   const isDisabled = disabled !== undefined ? disabled : !text;
 
-  const Component: React.FC<Record<string, any>> = isIcon ? IconButton : Button;
+  const Component: React.FC<Record<string, unknown>> = isIcon ? IconButton : Button;
 
   const onCopy = React.useCallback((e: SyntheticEvent) => {
     e.preventDefault();
-    const txt = typeof text == "function" ? text() : text
+    const txt = typeof text == "function" ? text() : text;
     if (txt) {
-      navigator.clipboard.writeText(txt)
-      setOpen(true)
+      void navigator.clipboard.writeText(txt);
+      setOpen(true);
     }
   }, [text]);
 

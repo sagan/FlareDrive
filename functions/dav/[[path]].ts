@@ -36,6 +36,7 @@ export const onRequest: FdCfFunc = async function (context) {
     return handleRequestOptions();
   }
 
+  // eslint-disable-next-line prefer-const
   let [authFailResponse, scope] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (authFailResponse) {
     const [open, _scope] = await isOpenRequest(context);

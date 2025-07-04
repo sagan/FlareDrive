@@ -37,7 +37,7 @@ const usageLimits = [
 export default function StatisticsAdmin() {
   const { auth } = useConfig();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
   const [stats, setStats] = useState<Statistics | null>(null);
 
   const fetchStats = useCallback(async (force = false) => {
@@ -66,7 +66,7 @@ export default function StatisticsAdmin() {
   }, [auth]);
 
   useEffect(() => {
-    fetchStats();
+    void fetchStats();
   }, [fetchStats]);
 
   const tableData = useMemo(() => {
@@ -118,12 +118,12 @@ export default function StatisticsAdmin() {
         title="Statistics"
         action={<>
           <CircularProgress size={16} style={{ visibility: loading ? "visible" : "hidden" }} />
-          <Button onClick={() => fetchStats(true)} disabled={loading || !auth}>Force Update</Button>
-          <Button onClick={() => fetchStats()} disabled={loading || !auth}>Refresh</Button>
+          <Button onClick={() => void fetchStats(true)} disabled={loading || !auth}>Force Update</Button>
+          <Button onClick={() => void fetchStats()} disabled={loading || !auth}>Refresh</Button>
         </>}
       />
       <CardContent>
-        {!!error && <Typography color="error">Error: {error.message}</Typography>}
+        {!!error && <Typography color="error">Error: {`${error}`}</Typography>}
         <Typography>Data date: {stats ? stats.date.toISOString().slice(0, 19) + "Z" : "-"}</Typography>
         <TableContainer component={Paper}>
           <Table aria-label="usage and limits table">

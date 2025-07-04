@@ -27,6 +27,7 @@ export function createSdk(token: string) {
       throw new Error(`GraphQL request failed: ${apiResponse.status} ${apiResponse.statusText} - ${errorText}`);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await apiResponse.json<any>();
 
     // The generic SDK expects the `data` part of the GraphQL response.

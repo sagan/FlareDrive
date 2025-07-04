@@ -145,40 +145,39 @@ export async function generateThumbnailFromFile(file: File): Promise<Blob> {
 }
 
 export async function generateThumbnailFromUrl(url: string, contentType?: string): Promise<Blob> {
+  // The canvas and context are created, but their dimensions will be set later.
   const canvas = document.createElement("canvas");
-  canvas.width = THUMBNAIL_SIZE;
-  canvas.height = THUMBNAIL_SIZE;
-  var ctx = canvas.getContext("2d")!;
-
+  const ctx = canvas.getContext("2d")!;
   if (!contentType) {
     contentType = mime.getType(url) || "";
   }
 
   if (contentType.startsWith("image/")) {
-    const image = await new Promise<HTMLImageElement>((resolve) => {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Failed to load image"));
       image.src = url;
     });
-    ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+    const scale = THUMBNAIL_SIZE / Math.max(image.width, image.height);
+    const thumbWidth = image.width * scale;
+    const thumbHeight = image.height * scale;
+    canvas.width = thumbWidth;
+    canvas.height = thumbHeight;
+    ctx.drawImage(image, 0, 0, thumbWidth, thumbHeight);
   } else if (contentType === "video/mp4") {
-    // Generate thumbnail from video
-    const video = await new Promise<HTMLVideoElement>(async (resolve, reject) => {
-      const video = document.createElement("video");
-      video.muted = true;
-      video.src = url;
-      setTimeout(() => reject(new Error("Video load timeout")), 2000);
-      await video.play();
-      video.pause();
-      video.currentTime = 0;
-      resolve(video);
-    });
-    ctx.drawImage(video, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+    const video = await createAndLoadVideo(url);
+    const scale = THUMBNAIL_SIZE / Math.max(video.videoWidth, video.videoHeight);
+    const thumbWidth = video.videoWidth * scale;
+    const thumbHeight = video.videoHeight * scale;
+    canvas.width = thumbWidth;
+    canvas.height = thumbHeight;
+    ctx.drawImage(video, 0, 0, thumbWidth, thumbHeight);
   } else if (contentType === "application/pdf") {
     const pdf = await pdfjs.getDocument(url).promise;
     const page = await pdf.getPage(1);
     const { width, height } = page.getViewport({ scale: 1 });
-    var scale = THUMBNAIL_SIZE / Math.max(width, height);
+    const scale = THUMBNAIL_SIZE / Math.max(width, height);
     const viewport = page.getViewport({ scale });
     const renderContext = { canvasContext: ctx, viewport };
     await page.render(renderContext).promise;
@@ -187,9 +186,8 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
   }
 
   const thumbnailBlob = await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject("canvas toBlob failed")), CLIENT_THUMBNAIL_TYPE)
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("canvas toBlob failed"))), CLIENT_THUMBNAIL_TYPE)
   );
-
   return thumbnailBlob;
 }
 
@@ -413,7 +411,7 @@ export async function putFile({
   contentType?: string;
   url?: string;
 }) {
-  let searchParams = new URLSearchParams();
+  const searchParams = new URLSearchParams();
   if (url) {
     searchParams.set(URL_VARIABLE, url);
   }
@@ -547,7 +545,7 @@ export async function generateThumbnailsServerSide(
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
   }
-  let result = await res.json<Record<string, number>>();
+  const result = await res.json<Record<string, number>>();
   return result;
 }
 
@@ -559,7 +557,7 @@ export async function generateThumbnailsServerSide(
  * @returns
  */
 export async function putThumbnail(key: string, blob: Blob, auth: string | null): Promise<ThumbnailObject> {
-  let res = await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
+  const res = await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
     method: "PUT",
     body: blob,
     headers: {
@@ -610,6 +608,7 @@ export async function uploadFromUrl({
   return {
     key: obj.key,
     size: obj.size,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     uploaded: new Date((obj as any).uploaded),
     httpMetadata: {
       contentType: obj.httpMetadata?.contentType || "",
@@ -617,4 +616,38 @@ export async function uploadFromUrl({
     customMetadata: obj.customMetadata,
     checksums: {},
   };
+}
+
+function createAndLoadVideo(url: string, timeout = 2000): Promise<HTMLVideoElement> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.src = url;
+
+    const timeoutId = setTimeout(() => {
+      // Clean up event listeners to prevent memory leaks
+      video.removeEventListener("loadeddata", onLoadedData);
+      video.removeEventListener("error", onError);
+      reject(new Error("Video load timeout"));
+    }, timeout);
+
+    const onLoadedData = () => {
+      clearTimeout(timeoutId);
+      // Clean up the other listener
+      video.removeEventListener("error", onError);
+      resolve(video);
+    };
+
+    const onError = () => {
+      clearTimeout(timeoutId);
+      // Clean up the other listener
+      video.removeEventListener("loadeddata", onLoadedData);
+      reject(new Error("Failed to load video"));
+    };
+
+    video.addEventListener("loadeddata", onLoadedData);
+    video.addEventListener("error", onError);
+
+    video.load(); // Start loading the video data
+  });
 }

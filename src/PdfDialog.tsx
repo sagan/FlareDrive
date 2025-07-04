@@ -23,7 +23,7 @@ export default function PdfDialog({ filekey, open, close }: FileViewerProps) {
     scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
     token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
     fullControl: auth ? undefined : fullControl,
-  }), [filekey, auth])
+  }), [filekey, auth, expires, authSearchParams, fullControl]);
   const [numPages, setNumPages] = useState<number>();
 
   function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy): void {

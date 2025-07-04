@@ -41,7 +41,7 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
   }[]>([])
   const [asyncMode, setAsyncMode] = useState(false)
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
   const [ac, setAc] = useState<AbortController | null>(null)
 
   const autoName = useMemo(() => {
@@ -51,61 +51,61 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
         return "index.html"
       }
       let name = basename(decodeURI(url.pathname).trim())
-      let ext = extname(name)
+      const ext = extname(name)
       if (!ext) {
         name += ".html"
       }
       return name
-    } catch (e) { }
+    } catch (e) { /* empty */ }
     return ""
   }, [source])
 
-  const ext = extname(autoName) || ".bin"
+  const ext = extname(autoName) || ".bin";
 
   const onClose = useCallback(() => {
-    setError(null)
-    close()
-  }, [close, ac])
+    setError(null);
+    close();
+  }, [close]);
 
   const onSubmit = useCallback(async (e: SyntheticEvent) => {
     e.preventDefault();
-    let sourceUrl = ""
+    let sourceUrl = "";
     try {
-      sourceUrl = new URL(source.trim()).href
+      sourceUrl = new URL(source.trim()).href;
     } catch (e) {
-      setError(e)
-      return
+      setError(e);
+      return;
     }
-    let saveName = name || autoName
-    let _asyncMode = asyncMode
+    const saveName = name || autoName;
+    const _asyncMode = asyncMode;
     if (!sourceUrl || !saveName) {
-      setError(new Error(`invalid source url or save name`))
-      return
+      setError(new Error(`invalid source url or save name`));
+      return;
     }
-    const dir = cwd
+    const dir = cwd;
     const key = (cwd ? cwd + "/" : "") + saveName;
-    const ac = new AbortController()
+    const ac = new AbortController();
     setError(null);
     setUploading(true);
     setAc(ac);
     try {
-      let file = await uploadFromUrl({ key, auth, sourceUrl, asyncMode: _asyncMode, signal: ac.signal })
-      setUploaded(uploaded => [{ file, dir, sourceUrl, saveName }, ...uploaded])
-      setSource("")
+      const file = await uploadFromUrl({ key, auth, sourceUrl, asyncMode: _asyncMode, signal: ac.signal });
+      setUploaded(uploaded => [{ file, dir, sourceUrl, saveName }, ...uploaded]);
+      setSource("");
       setName("")
     } catch (e) {
-      setError(e)
+      setError(e);
     }
-    setUploading(false)
+    setUploading(false);
     if (!_asyncMode) {
       onUpload();
     }
-  }, [source, name, autoName, asyncMode]);
+  }, [name, autoName, asyncMode, cwd, source, auth, onUpload]);
 
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
     <DialogTitle component={Typography} className='single-line'>
-      Download to "{cwd + "/"}"
+      Download to &quot;{cwd + "/"}&quot;
     </DialogTitle>
     <DialogContent autoFocus>
       <form>
@@ -151,7 +151,7 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
           <FormControlLabel disabled={uploading} label="Async" title="Async download mode" control={
             <Checkbox checked={asyncMode} onChange={e => setAsyncMode(e.target.checked)} />
           } />
-          <Button disabled={uploading || !source} type="submit" onClick={onSubmit} color='primary'>
+          <Button disabled={uploading || !source} type="submit" onClick={(e) => void onSubmit(e)} color='primary'>
             {uploading ? "Uploading..." : "Upload"}
           </Button>
           <Button disabled={!uploading} color="secondary" onClick={() => {

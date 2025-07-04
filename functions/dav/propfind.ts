@@ -30,7 +30,7 @@ type DavProperties = {
 
 function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
   // owncloud compatible checksum fields
-  let checksums = `<oc:checksum>${
+  const checksums = `<oc:checksum>${
     "checksums" in object
       ? [
           object.checksums.md5 ? `MD5:${encodeHex(object.checksums.md5)}` : "",
