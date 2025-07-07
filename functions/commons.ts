@@ -222,8 +222,8 @@ export function responseRedirect(url: string, noreferer = false): Response {
 /**
  * Return 405 Method Not Allowed response
  */
-export function responseMethodNotAllowed(): Response {
-  return new Response("Method not allowed", { status: 405 });
+export function responseMethodNotAllowed(msg = "", headers?: HeadersInit): Response {
+  return new Response(msg || "Method not allowed", { status: 405, headers });
 }
 
 /**
@@ -678,15 +678,15 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
   }
 
   if (env.KV) {
-    const data = await env.KV.get(KEY_GLOBAL_CONFIG);
-    if (data) {
-      try {
-        globalConfig = GlobalConfigSchema.parse(JSON.parse(data));
+    try {
+      const data = await env.KV.get(KEY_GLOBAL_CONFIG, "json");
+      if (data) {
+        globalConfig = GlobalConfigSchema.parse(data);
         globalConfigTs = now;
         return globalConfig;
-      } catch (e) {
-        console.log(`Failed to parse KV globalConfig: ${e}`);
       }
+    } catch (e) {
+      console.log(`Failed to parse KV globalConfig: ${e}`);
     }
   }
 

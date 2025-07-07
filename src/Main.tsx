@@ -20,10 +20,11 @@ import {
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
   isUrlFile,
   validateAndGetSafeUrl,
+  joinPathes,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
-  FileItem, Sort, ViewMode, ViewProps, downloadFile, isTextual, useConfig,
+  FileItem, Sort, ViewMode, ViewProps, downloadFile, getTransferFiles, isTextual, useConfig,
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
@@ -32,7 +33,7 @@ import MultiSelectToolbar from "./MultiSelectToolbar";
 import UploadDrawer, { UploadFab } from "./UploadDrawer";
 import ShareDialog from "./ShareDialog";
 import { Centered } from "./components";
-import { copyPaste, deleteFile } from "./app/transfer";
+import { copyPaste, deleteFile, prepareUploadFiles } from "./app/transfer";
 import { useTransferQueue, useUploadEnqueue } from "./app/transferQueue";
 import MimeIcon from "./MimeIcon";
 import EditorDialog from "./EditorDialog";
@@ -42,7 +43,7 @@ import UrlFileEditorDialog from "./UrlFileEditorDialog";
 
 
 function DropZone({ disabled, children, onDrop }:
-  { disabled: boolean, children: React.ReactNode; onDrop: (files: FileList) => void }) {
+  { disabled: boolean, children: React.ReactNode; onDrop: (files: Record<string, File>) => void }) {
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -57,7 +58,7 @@ function DropZone({ disabled, children, onDrop }:
       onDragEnter={(event) => {
         event.preventDefault();
         if (disabled) {
-          return
+          return;
         }
         setDragging(true);
       }}
@@ -69,9 +70,13 @@ function DropZone({ disabled, children, onDrop }:
       onDrop={(event) => {
         event.preventDefault();
         if (disabled) {
-          return
+          return;
         }
-        onDrop(event.dataTransfer.files);
+        getTransferFiles(event.dataTransfer.items).then(files => {
+          onDrop(files);
+        }).catch((e) => {
+          console.log(`failed to get files to upload: ${e}`);
+        });
         setDragging(false);
       }}
     >
@@ -436,8 +441,10 @@ export default function Main({
       ) : (
         <DropZone disabled={!permitWrite}
           onDrop={(files) => {
-            uploadEnqueue(...Array.from(files).map((file) => ({ file, basedir: cwd })));
-            setShowProgressDialog(true)
+            prepareUploadFiles(cwd, files, effectiveAuth).then(uploads => {
+              uploadEnqueue(...uploads);
+              setShowProgressDialog(true);
+            }, setError);
           }}
         >
           {viewElement}

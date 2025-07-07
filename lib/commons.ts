@@ -239,6 +239,12 @@ export const HEADER_SOURCE_URL = "X-Source-Url";
 export const HEADER_SOURCE_URL_OPTIONS = "X-Source-Url-Options";
 
 /**
+ * Custom flag header sent by server to respond to "MKCOL" request.
+ * It indicates that the target path already exists and is a dir.
+ */
+export const HEADER_DIR_EXISTS = "X-Dir-Exists";
+
+/**
  * Header to tell server the thumbnail id (sha256) of the uploaded file
  */
 export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
@@ -246,6 +252,8 @@ export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
 export const HEADER_AUTHORIZATION = "Authorization";
 
 export const HEADER_CONTENT_TYPE = "Content-Type";
+
+export const HEADER_LOCATION = "Location";
 
 export const HEADER_CONTENT_SECURITY_POLICY = "Content-Security-Policy";
 

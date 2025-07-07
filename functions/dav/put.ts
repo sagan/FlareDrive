@@ -14,6 +14,9 @@ import {
   THUMBNAIL_VARIABLE,
   UPLOAD_ID_VARIABLE,
   HEADER_NO_THUMBNAIL,
+  MIME_URL,
+  URL_VARIABLE,
+  HEADER_LOCATION,
   ThumbnailObject,
   humanReadableSize,
   mimeType,
@@ -21,9 +24,8 @@ import {
   str2int,
   dirname,
   isImage,
-  MIME_URL,
-  URL_VARIABLE,
   validateAndGetSafeUrl,
+  isDirectory,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -119,7 +121,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   if (!path.startsWith(KEY_PREFIX_PRIVATE)) {
     const parentPath = dirname(path);
     const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
-    if (parentDir === null) {
+    if (parentDir === null || !isDirectory(parentDir)) {
       return responseConflict();
     }
   }
@@ -138,7 +140,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   }
 
   if (request.headers.has(HEADER_SOURCE_URL)) {
-    const sourceUrl = request.headers.get(HEADER_SOURCE_URL);
+    let sourceUrl = request.headers.get(HEADER_SOURCE_URL);
     if (!sourceUrl) {
       return responseBadRequest();
     }
@@ -147,7 +149,18 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     if (request.headers.has(HEADER_SOURCE_URL_OPTIONS)) {
       sourceUrlOptions = JSON.parse(request.headers.get(HEADER_SOURCE_URL_OPTIONS)!);
     }
-    const sourceReponse = await fetch(sourceUrl, sourceUrlOptions);
+    let sourceReponse = await fetch(sourceUrl, sourceUrlOptions);
+    // Follow up to 3 redirects
+    for (let redirectCnt = 0; redirectCnt < 3; redirectCnt++) {
+      if (sourceReponse.status !== 301 && sourceReponse.status !== 302) {
+        break;
+      }
+      sourceUrl = validateAndGetSafeUrl(sourceReponse.headers.get(HEADER_LOCATION) || "");
+      if (!sourceUrl) {
+        return responseInternalServerError(`Source URL redirect without valid location header`);
+      }
+      sourceReponse = await fetch(sourceUrl, sourceUrlOptions);
+    }
     if (!sourceReponse.ok) {
       if (sourceReponse.status === 304) {
         return responseNotModified();

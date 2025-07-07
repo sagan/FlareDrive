@@ -105,6 +105,7 @@ export default function UploadDrawer({
           break;
         case "file":
           input.accept = "*/*";
+          // input.webkitdirectory = true; // if set, user must select a single dir.
           break;
       }
       input.multiple = true;

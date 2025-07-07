@@ -24,11 +24,11 @@ export const onRequestGet: FdCfFunc = async function (context) {
     stats = await fetchStatistics(sdk, env.CF_ACCOUNT_ID, now);
     await updateStatistics(env, stats);
   } else {
-    const data = await env.KV.get(KEY_STATISTICS);
+    const data = await env.KV.get(KEY_STATISTICS, "json");
     if (!data) {
       return responseInternalServerError("statistics data not ready yet");
     }
-    stats = StatisticsSchema.parse(JSON.parse(data));
+    stats = StatisticsSchema.parse(data);
   }
 
   return jsonResponse(stats);

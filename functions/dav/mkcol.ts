@@ -1,4 +1,4 @@
-import { KEY_PREFIX_PRIVATE, MIME_DIR, dirname } from "../../lib/commons";
+import { HEADER_DIR_EXISTS, KEY_PREFIX_PRIVATE, MIME_DIR, dirname, isDirectory } from "../../lib/commons";
 import { checkInvalidUserFileKey, responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
 import { upsertDbFile } from "../db";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -6,8 +6,8 @@ import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 export async function handleRequestMkcol({ bucket, context, path }: RequestHandlerParams) {
   // Check if the resource already exists
   const resource = await bucket.head(path);
-  if (resource !== null) {
-    return responseMethodNotAllowed();
+  if (resource) {
+    return responseMethodNotAllowed("", isDirectory(resource) ? { [HEADER_DIR_EXISTS]: "1" } : undefined);
   }
   const invalidPathResponse = await checkInvalidUserFileKey(path);
   if (invalidPathResponse) {

@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { v4 as uuidv4 } from 'uuid'
 import { processTransferTask } from "./transfer";
-import { useConfig } from "../commons";
+import { UploadFile, useConfig } from "../commons";
 
 /**
  * "Upload aborted" error.
@@ -57,7 +57,7 @@ export function useTransferQueue(): [tasks: TransferTask[],
 
 export function useUploadEnqueue() {
   const setTransferTasks = useContext(SetTransferQueueContext);
-  return (...requests: { basedir: string; file: File }[]) => {
+  return (...requests: UploadFile[]) => {
     const newTasks = requests.map(
       ({ basedir, file }) =>
       ({

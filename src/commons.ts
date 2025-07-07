@@ -312,3 +312,59 @@ export async function response2Html(res: Response): Promise<string> {
   }
   throw new Error("Unsupported response type for conversion to HTML");
 }
+
+/**
+ * Handle drag-drop files uploading.
+ * @returns Record of file relative path => File.
+ */
+export async function getTransferFiles(items: DataTransferItemList): Promise<Record<string, File>> {
+  const files: Record<string, File> = {};
+
+  const readAllEntries = async (directoryReader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> => {
+    const allEntries: FileSystemEntry[] = [];
+    let currentEntries: FileSystemEntry[];
+    do {
+      currentEntries = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+        directoryReader.readEntries(resolve, reject);
+      });
+      allEntries.push(...currentEntries);
+    } while (currentEntries.length > 0);
+
+    return allEntries;
+  };
+
+  const readEntry = async (entry: FileSystemEntry) => {
+    if (entry.isFile) {
+      const fileEntry = entry as FileSystemFileEntry;
+      await new Promise<void>((resolve, reject) => {
+        fileEntry.file((file) => {
+          // The path is usually like "/foo/bar.txt". We trim the leading slash.
+          const path = fileEntry.fullPath.startsWith("/") ? fileEntry.fullPath.slice(1) : fileEntry.fullPath;
+          files[path] = file;
+          resolve();
+        }, reject);
+      });
+    } else if (entry.isDirectory) {
+      const directoryEntry = entry as FileSystemDirectoryEntry;
+      const directoryReader = directoryEntry.createReader();
+      const entries = await readAllEntries(directoryReader);
+      // Use Promise.all to process directory contents concurrently
+      await Promise.all(entries.map(readEntry));
+    }
+  };
+
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry();
+    if (entry) {
+      promises.push(readEntry(entry));
+    }
+  }
+  await Promise.all(promises);
+  return files;
+}
+
+export type UploadFile = {
+  basedir: string;
+  file: File;
+};

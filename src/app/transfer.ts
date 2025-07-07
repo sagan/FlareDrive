@@ -32,8 +32,11 @@ import {
   str2int,
   cut,
   URL_VARIABLE,
+  joinPathes,
+  dirname,
+  HEADER_DIR_EXISTS,
 } from "../../lib/commons";
-import { FileItem } from "../commons";
+import { FileItem, UploadFile } from "../commons";
 import { TransferTask } from "./transferQueue";
 
 /**
@@ -368,11 +371,17 @@ export async function copyPaste(source: string, target: string, auth: string, mo
   }
 }
 
-export async function createFolder(folderKey: string, auth: string) {
+/**
+ * Mkdir
+ * @param folderKey
+ * @param auth
+ * @param ignoreExisting if true, it will ignore the "dir already exists" error sent by server.
+ */
+export async function createFolder(folderKey: string, auth: string, ignoreExisting = false) {
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
   const req = applyAuth(new Request(uploadUrl, { method: "MKCOL" }), auth);
   const res = await fetch(req);
-  if (!res.ok) {
+  if (!res.ok && (!ignoreExisting || res.status !== 405 || !res.headers.has(HEADER_DIR_EXISTS))) {
     throw new Error(`status=${res.status}`);
   }
 }
@@ -650,4 +659,27 @@ function createAndLoadVideo(url: string, timeout = 2000): Promise<HTMLVideoEleme
 
     video.load(); // Start loading the video data
   });
+}
+
+export async function prepareUploadFiles(
+  cwd: string,
+  files: Record<string, File>,
+  auth: string
+): Promise<UploadFile[]> {
+  const fileList: UploadFile[] = [];
+  const dirSet = new Set<string>();
+
+  for (const [path, file] of Object.entries(files)) {
+    const basedir = joinPathes(cwd, dirname(path));
+    if (basedir !== cwd) {
+      dirSet.add(basedir);
+    }
+    fileList.push({ basedir, file });
+  }
+  const dirsToCreate = Array.from(dirSet).sort();
+  // Limit concurrency to avoid overwhelming the browser or server.
+  const limit = pLimit(5);
+  const creationPromises = dirsToCreate.map((dir) => limit(() => createFolder(dir, auth, true)));
+  await Promise.all(creationPromises);
+  return fileList;
 }
