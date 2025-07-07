@@ -58,28 +58,18 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
   const key = path2Key(((params.path as string[]) || []).join("/"));
   const globalConfig = await getGlobalConfig(env);
   if (key && !SYSFILES.includes(basename(key))) {
-    let matched = false;
-    if (!matched) {
-      const prefix = testKeyHasPrefix(key, globalConfig.publicPrefix, true);
-      if (prefix) {
-        matched = true;
-      }
+    let prefix: string;
+    prefix = testKeyHasPrefix(key, globalConfig.publicPrefix, true);
+    if (prefix) {
+      return [true, prefix];
     }
-    if (!matched) {
-      const prefix = testKeyHasPrefix(key, globalConfig.publicDirPrefix, true);
-      if (prefix) {
-        matched = true;
-      }
+    prefix = testKeyHasPrefix(key, globalConfig.publicDirPrefix, true);
+    if (prefix) {
+      return [true, prefix];
     }
-    if (!matched) {
-      const prefix = testKeyHasPrefix(
-        key,
-        globalConfig.publicRwdirPrefix,
-        METHODS_READ_DIR.includes(context.request.method)
-      );
-      if (prefix) {
-        matched = true;
-      }
+    prefix = testKeyHasPrefix(key, globalConfig.publicRwdirPrefix, METHODS_READ_DIR.includes(context.request.method));
+    if (prefix) {
+      return [true, prefix];
     }
   }
   return [false, ""];

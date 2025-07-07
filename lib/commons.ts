@@ -317,7 +317,7 @@ export const INDEX_FILE = "index.html";
 
 /**
  * System files which only admin can manage / write / update:
- * [".noaccess"].
+ * [].
  */
 export const SYSFILES: readonly string[] = [];
 
