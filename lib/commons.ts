@@ -239,6 +239,11 @@ export const HEADER_SOURCE_URL = "X-Source-Url";
 export const HEADER_SOURCE_URL_OPTIONS = "X-Source-Url-Options";
 
 /**
+ * The "global" scope that indicates current user is the admin.
+ */
+export const SCOPE_GLOBAL = "/";
+
+/**
  * Custom flag header sent by server to respond to "MKCOL" request.
  * It indicates that the target path already exists and is a dir.
  */

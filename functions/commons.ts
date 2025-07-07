@@ -28,6 +28,7 @@ import {
   KEY_GLOBAL_CONFIG,
   HEADER_CONTENT_SECURITY_POLICY,
   CONTENT_SECURITY_POLICY_SANDBOX,
+  SCOPE_GLOBAL,
   sha256,
   hmacSha256Verify,
   key2Path,
@@ -282,6 +283,7 @@ export async function checkInvalidUserFileKey(key: string): Promise<Response | n
 /**
  * If authentication fails, return a failure response.
  * Otherwise return null, besides auth's valid scope, if any.
+ * Specially, return "/" scope if is basic authorized.
  * @param request
  * @param user
  * @param pass
@@ -307,6 +309,9 @@ export async function checkAuthFailure(
 
   if (auth) {
     authed = constantTimeCompare(auth, expectedAuth);
+    if (authed) {
+      scope = SCOPE_GLOBAL;
+    }
   } else if (token) {
     authed = await (async () => {
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));

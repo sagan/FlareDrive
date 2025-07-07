@@ -17,6 +17,7 @@ import {
   MIME_URL,
   URL_VARIABLE,
   HEADER_LOCATION,
+  SCOPE_GLOBAL,
   ThumbnailObject,
   humanReadableSize,
   mimeType,
@@ -35,6 +36,7 @@ import {
   responseBadRequest,
   responseConflict,
   responseCreated,
+  responseForbidden,
   responseInternalServerError,
   responseMethodNotAllowed,
   responseNoContent,
@@ -143,6 +145,9 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     let sourceUrl = request.headers.get(HEADER_SOURCE_URL);
     if (!sourceUrl) {
       return responseBadRequest();
+    }
+    if (scope !== SCOPE_GLOBAL) {
+      return responseForbidden();
     }
     let [contentType] = mimeType(request.headers.get(HEADER_CONTENT_TYPE));
     let sourceUrlOptions: RequestInit = {};
