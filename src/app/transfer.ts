@@ -677,9 +677,12 @@ export async function prepareUploadFiles(
     fileList.push({ basedir, file });
   }
   const dirsToCreate = Array.from(dirSet).sort();
-  // Limit concurrency to avoid overwhelming the browser or server.
-  const limit = pLimit(5);
-  const creationPromises = dirsToCreate.map((dir) => limit(() => createFolder(dir, auth, true)));
-  await Promise.all(creationPromises);
+  //   The concurrency way is buggy: the parent dir MUST be created before child dir, or server will return 409.
+  // const limit = pLimit(5);
+  // const creationPromises = dirsToCreate.map((dir) => limit(() => createFolder(dir, auth, true)));
+  // await Promise.all(creationPromises);
+  for (const dir of dirsToCreate) {
+    await createFolder(dir, auth, true);
+  }
   return fileList;
 }

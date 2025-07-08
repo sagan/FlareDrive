@@ -27,7 +27,7 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - Search files (requires Cloudflare D1 database)
 - Image/video/PDF thumbnails
 - WebDAV endpoint, compatible with rclone [webdav](https://rclone.org/webdav/) backend's `owncloud` vendor, support md5 hashes
-- Drag and drop upload
+- Drag and drop upload, or paste (Ctrl+V) files from clipboard to upload
 - Share & Publish files or folders temporarily or permanently. ("Publish" feature requires Cloudflare Workers KV)
 - Images lightbox
 - Online text / image files editor

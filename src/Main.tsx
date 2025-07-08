@@ -20,7 +20,6 @@ import {
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
   isUrlFile,
   validateAndGetSafeUrl,
-  joinPathes,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -162,6 +161,7 @@ export default function Main({
   permission,
   files,
   sharing,
+  setTip,
   setSharing,
   setShowProgressDialog,
   multiSelected,
@@ -177,10 +177,10 @@ export default function Main({
   files: FileItem[];
   sharing: string;
   multiSelected: string[];
+  setTip: React.Dispatch<React.SetStateAction<string>>;
   setCwd: (cwd: string) => void;
   setSharing: React.Dispatch<React.SetStateAction<string>>;
   setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>,
-
   setMultiSelected: React.Dispatch<React.SetStateAction<string[]>>;
   fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<unknown>>;
@@ -432,6 +432,48 @@ export default function Main({
     fetchFiles();
   };
 
+  const [preparingUploads, setPreparingUploads] = useState(false);
+
+  const doUpload = useCallback((files: Record<string, File>) => {
+    if (!effectiveAuth) {
+      return;
+    }
+    const cnt = Object.keys(files).length;
+    if (cnt == 0) {
+      return;
+    }
+    setTip(`Uploading ${cnt} files`);
+    prepareUploadFiles(cwd, files, effectiveAuth).then(uploads => {
+      uploadEnqueue(...uploads);
+      setShowProgressDialog(true);
+    }, setError);
+  }, [cwd, effectiveAuth, setError, setShowProgressDialog, setTip, uploadEnqueue]);
+
+  useEffect(() => {
+    const handle = (event: ClipboardEvent) => {
+      if (preparingUploads || !permitWrite) {
+        return;
+      }
+      setPreparingUploads(true);
+      // Get the items from the clipboard, event.clipboardData can be null
+      const items = event.clipboardData?.items;
+      if (!items) {
+        return;
+      }
+      setTip(`Preparing clipboard items for uploading`);
+      getTransferFiles(items).then(doUpload, err => {
+        setError(`Failed to get files from clipboard: ${err}`);
+      }).finally(() => {
+        setPreparingUploads(false);
+      })
+    }
+    window.addEventListener("paste", handle);
+    return () => {
+      window.removeEventListener("paste", handle);
+    }
+  }, [doUpload, permitWrite, preparingUploads, setError, setTip]);
+
+
   return (
     <>
       {loading ? (
@@ -439,14 +481,7 @@ export default function Main({
           <CircularProgress />
         </Centered>
       ) : (
-        <DropZone disabled={!permitWrite}
-          onDrop={(files) => {
-            prepareUploadFiles(cwd, files, effectiveAuth).then(uploads => {
-              uploadEnqueue(...uploads);
-              setShowProgressDialog(true);
-            }, setError);
-          }}
-        >
+        <DropZone disabled={!permitWrite} onDrop={doUpload}>
           {viewElement}
         </DropZone>
       )}

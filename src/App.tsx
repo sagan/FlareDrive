@@ -74,6 +74,7 @@ export default function App() {
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = React.useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [tip, setTip] = useState("");
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
@@ -338,7 +339,7 @@ export default function App() {
                     : <>
                       <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
                         sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
-                        permission={permission} files={files} setError={setError} isSearch={isSearch}
+                        permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}
                         multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
                       {!!readmeFile && <Paper elevation={3} sx={{ m: 1, p: 1 }}>
                         <Typography component={"h3"} sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -360,6 +361,13 @@ export default function App() {
               open={!!error}
               message={error ? `${error}` : null}
               onClose={() => setError(null)}
+            />
+            <Snackbar
+              autoHideDuration={5000}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              open={!!tip}
+              message={tip || null}
+              onClose={() => setTip("")}
             />
             <ProgressDialog
               open={showProgressDialog}

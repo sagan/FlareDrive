@@ -13,6 +13,7 @@ import {
   PublicSystemConfig,
 } from "../lib/commons";
 import React from "react";
+import mime from "../lib/mime";
 
 /**
  * GitHub rule:
@@ -358,6 +359,27 @@ export async function getTransferFiles(items: DataTransferItemList): Promise<Rec
     const entry = items[i].webkitGetAsEntry();
     if (entry) {
       promises.push(readEntry(entry));
+    } else if (items[i].kind === "file") {
+      // file is from clipboard (e.g. a screenshot). file.name is a placeholder like "image.png".
+      // Note: Chrome always set the name to "image.png", even if it's a image/jpeg file.
+      const file = items[i].getAsFile();
+      if (file) {
+        let filename: string;
+        let ext = mime.getExtension(file.type);
+        if (ext) {
+          ext = "." + ext;
+        }
+        if (file.type.startsWith("image/")) {
+          filename = `image-${Date.now()}${ext}`;
+        } else {
+          filename = `file-${Date.now()}${ext}`;
+        }
+        const renamedFile = new File([file], filename, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        files[filename] = renamedFile;
+      }
     }
   }
   await Promise.all(promises);
