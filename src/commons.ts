@@ -10,7 +10,7 @@ import {
   TXT_MIMES,
   Permission,
   mimeType,
-  PublicSystemConfig,
+  GlobalConfig,
 } from "../lib/commons";
 import React from "react";
 import mime from "../lib/mime";
@@ -180,7 +180,7 @@ export function generatePassword(length: number, digitOnly?: boolean) {
 
 export const ConfigContext = React.createContext<Config | null>(null);
 
-export const SystemConfigContext = React.createContext<PublicSystemConfig | null>(null);
+export const GlobalConfigContext = React.createContext<GlobalConfig | null>(null);
 
 /**
  * ConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
@@ -188,28 +188,25 @@ export const SystemConfigContext = React.createContext<PublicSystemConfig | null
 export const useConfig = () => React.useContext<Config | null>(ConfigContext)!;
 
 /**
- * SystemConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
+ * GlobalConfigContext's value get assigned in `<App />` to here it is assumed to be not null.
  */
-export const useSystemConfig = () => React.useContext<PublicSystemConfig | null>(SystemConfigContext)!;
+export const useGlobalConfig = () => React.useContext<GlobalConfig | null>(GlobalConfigContext)!;
 
 /**
  * Get permission of a dir / file key, along with matched prefix if any.
  */
-export function getFilePermission(
-  key: string,
-  systemConfig: PublicSystemConfig
-): [permission: Permission, prefix: string] {
-  for (const prefix of systemConfig.publicPrefix) {
+export function getFilePermission(key: string, globalConfig: GlobalConfig): [permission: Permission, prefix: string] {
+  for (const prefix of globalConfig.publicPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenFile, prefix];
     }
   }
-  for (const prefix of systemConfig.publicDirPrefix) {
+  for (const prefix of globalConfig.publicDirPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenDir, prefix];
     }
   }
-  for (const prefix of systemConfig.publicRwdirPrefix) {
+  for (const prefix of globalConfig.publicRwdirPrefix) {
     if (key === prefix || key.startsWith(prefix + "/")) {
       return [Permission.OpenRwDir, prefix];
     }
@@ -361,7 +358,7 @@ export async function getTransferFiles(items: DataTransferItemList): Promise<Rec
       promises.push(readEntry(entry));
     } else if (items[i].kind === "file") {
       // file is from clipboard (e.g. a screenshot). file.name is a placeholder like "image.png".
-      // Note: Chrome always set the name to "image.png", even if it's a image/jpeg file.
+      // Note: when right click "Copy image" in Chrome, it always convert the original image to png format.
       const file = items[i].getAsFile();
       if (file) {
         let filename: string;

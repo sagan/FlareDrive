@@ -11,22 +11,22 @@ import {
 import React, { useState } from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import ReindexerAdmin from './components/ReindexerAdmin';
-import SystemConfigAdmin from "./components/SystemConfigAdmin";
+import GlobalConfigAdmin from "./components/GlobalConfigAdmin";
 import StatisticsAdmin from "./components/StatisticsAdmin";
 import packageInfo from "../package.json";
-import { PublicSystemConfig } from "../lib/commons";
+import { GlobalConfig } from "../lib/commons";
 
 
 export default function AdminDialog({
   currentDir,
   open,
   onClose,
-  setSystemConfig,
+  setGlobalConfig,
 }: {
   currentDir: string;
   open: boolean;
   onClose: () => void;
-  setSystemConfig: React.Dispatch<React.SetStateAction<PublicSystemConfig>>
+  setGlobalConfig: React.Dispatch<React.SetStateAction<GlobalConfig>>
 }) {
   const [tab, setTab] = useState(0);
 
@@ -45,14 +45,14 @@ export default function AdminDialog({
         scrollButtons="auto"
         allowScrollButtonsMobile
       >
-        <Tab label="System Config" />
+        <Tab label="Global Config" />
         <Tab label="Reindexer" />
         <Tab label="Statistics" />
         <Tab label="About" />
       </Tabs>
       <DialogContent sx={{ p: 1 }}>
         <Box hidden={tab !== 0} sx={{ pt: 1 }}>
-          <SystemConfigAdmin setSystemConfig={setSystemConfig} />
+          <GlobalConfigAdmin setGlobalConfig={setGlobalConfig} />
         </Box>
         <Box hidden={tab !== 1} sx={{ pt: 1 }}>
           <ReindexerAdmin currentDir={currentDir} />

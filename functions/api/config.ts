@@ -3,7 +3,7 @@ import {
   checkAuthFailure,
   FdCfFunc,
   getGlobalConfig,
-  getPublicSystemConfig,
+  getPublicConfig,
   jsonResponse,
   putGlobalConfig,
   responseBadRequest,
@@ -11,9 +11,10 @@ import {
 } from "../commons";
 
 export const onRequestGet: FdCfFunc = async function (context) {
+  const { request, env } = context;
+  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   const globalConfig = await getGlobalConfig(context.env);
-  const publicSystemConfig = getPublicSystemConfig(globalConfig);
-  return jsonResponse(publicSystemConfig);
+  return jsonResponse(failResponse ? getPublicConfig(globalConfig) : globalConfig);
 };
 
 export const onRequestPost: FdCfFunc = async function (context) {
@@ -29,10 +30,10 @@ export const onRequestPost: FdCfFunc = async function (context) {
   let globalConfig: GlobalConfig;
   try {
     globalConfig = GlobalConfigSchema.parse(await request.json());
+    globalConfig.ok = true;
   } catch (e) {
     return responseBadRequest(`Invalid globalConfig: ${e}`);
   }
   await putGlobalConfig(env, globalConfig);
-  const publicSystemConfig = getPublicSystemConfig(globalConfig);
-  return jsonResponse(publicSystemConfig);
+  return jsonResponse(globalConfig);
 };

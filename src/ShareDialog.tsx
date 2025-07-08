@@ -35,7 +35,7 @@ import {
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
   Permission, humanReadableSize, isDirectory, validateAndGetSafeUrl,
 } from '../lib/commons';
-import { FileItem, generatePassword, getFilePermission, useConfig, useSystemConfig } from './commons';
+import { FileItem, generatePassword, getFilePermission, useConfig, useGlobalConfig } from './commons';
 import { createShare, deleteShare } from './app/share';
 import { CopyButton } from './components';
 
@@ -61,7 +61,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   shareKey: string;
   shareObject: ShareObject
 })) {
-  const systemConfig = useSystemConfig();
+  const globalConfig = useGlobalConfig();
   const { auth, expires } = useConfig();
   const [tab, setTab] = useState("shareKey" in otherProps ? 1 : 0);
   const fileKeyWithDirSlash = "shareKey" in otherProps ? otherProps.shareObject.key :
@@ -79,7 +79,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   const [linkTs, setLinkTs] = useState(+new Date);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
-  const [permission, prefix] = useMemo(() => getFilePermission(fileKey, systemConfig), [fileKey, systemConfig])
+  const [permission, prefix] = useMemo(() => getFilePermission(fileKey, globalConfig), [fileKey, globalConfig])
   const targetIsDir = shareObject.key.endsWith("/")
   const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({
     key: shareObject.key,
@@ -345,7 +345,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             }} />
         </Box>
         {!!auth && <Typography>
-          This {targetIsDir ? "dir" : "file"} is publicly accessible according to your system config.
+          This {targetIsDir ? "dir" : "file"} is publicly accessible according to your global config.
         </Typography>}
       </>}
       {!!auth && <>
@@ -357,7 +357,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               setLinkTtl(parseInt(e.target.value))
             }}>
               <option value={0}>Never</option>
-              {systemConfig.dev && <option value={60}>60 seconds</option>}
+              {globalConfig.dev && <option value={60}>60 seconds</option>}
               <option value={300}>5 minutes</option>
               <option value={3600}>1 hour</option>
               <option value={86400}>1 day</option>
@@ -512,7 +512,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             {status !== Status.Creating && <option value={-1}>No change</option>}
             <option value={0}>Never</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
-            {systemConfig.dev && <option value={62}>60 seconds</option>}
+            {globalConfig.dev && <option value={62}>60 seconds</option>}
             <option value={300}>5 minutes</option>
             <option value={3600}>1 hour</option>
             <option value={86400}>1 day</option>

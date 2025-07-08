@@ -42,7 +42,7 @@ import {
   corsHeaders,
   isImage,
   fileDepth,
-  PublicSystemConfig,
+  PublicConfig,
   GlobalConfig,
   GlobalConfigSchema,
   isHtml,
@@ -697,6 +697,7 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
 
   const fallbackData = {
     ok: true,
+    comment: "",
     dev: !!env.DEV,
     publicPrefix: env.PUBLIC_PREFIX
       ? env.PUBLIC_PREFIX.split(/\s*,\s*/)
@@ -719,7 +720,7 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
   return globalConfig;
 }
 
-export function getPublicSystemConfig(globalConfig: GlobalConfig): PublicSystemConfig {
+export function getPublicConfig(globalConfig: GlobalConfig): PublicConfig {
   const publicConfig = {
     ok: globalConfig.ok,
     dev: globalConfig.dev,

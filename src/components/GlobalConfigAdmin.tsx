@@ -1,32 +1,39 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import JSOX from "jsox";
 import { Box, Button, CircularProgress, TextField, Typography } from '@mui/material';
-import { PublicSystemConfig } from '../../lib/commons';
-import { useSystemConfig, useConfig } from '../commons';
+import { GlobalConfig, GlobalConfigSchema } from '../../lib/commons';
+import { useGlobalConfig, useConfig } from '../commons';
 import { updateGlobalConfig } from '../app/config';
 
-export default function SystemConfigAdmin({ setSystemConfig }: {
-  setSystemConfig: React.Dispatch<React.SetStateAction<PublicSystemConfig>>
+export default function GlobalConfigAdmin({ setGlobalConfig }: {
+  setGlobalConfig: React.Dispatch<React.SetStateAction<GlobalConfig>>
 }) {
-  const systemConfig = useSystemConfig();
+  const globalConfig = useGlobalConfig();
   const { auth } = useConfig();
 
   const [isEditing, setIsEditing] = useState(false);
   const [configText, setConfigText] = useState('');
+  const [commentText, setCommentText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const originalConfigText = useMemo(() => {
-    return systemConfig ? JSON.stringify(systemConfig, null, 2) : '';
-  }, [systemConfig]);
+  const [originalConfigText, originalCommentText] = useMemo(() => {
+    const comment = globalConfig?.comment || "";
+    const text = globalConfig ? JSON.stringify({ ...globalConfig, comment: undefined }, undefined, 2) : ''
+    return [text, comment];
+  }, [globalConfig]);
 
-  const isChanged = useMemo(() => configText !== originalConfigText, [configText, originalConfigText]);
+  const isChanged = useMemo(() => {
+    return configText !== originalConfigText || commentText !== originalCommentText;
+  }, [configText, originalConfigText, commentText, originalCommentText]);
 
   useEffect(() => {
     // This effect sets the initial value and updates the text
-    // if the canonical systemConfig changes from outside (e.g., after a save),
+    // if the canonical globalConfig changes from outside (e.g., after a save),
     // but only when not in edit mode to avoid overwriting user's changes.
     if (!isEditing) {
       setConfigText(originalConfigText);
+      setCommentText(originalCommentText);
     }
   }, [originalConfigText, isEditing]);
 
@@ -46,20 +53,27 @@ export default function SystemConfigAdmin({ setSystemConfig }: {
       return;
     }
 
-    let newConfig: PublicSystemConfig;
+    let newConfig: GlobalConfig;
     try {
-      newConfig = JSON.parse(configText);
+      newConfig = JSOX.parse(configText);
+      newConfig.comment = commentText;
     } catch (e) {
-      setError(`Invalid JSON format: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`Invalid JSON format: ${e}`);
+      return;
+    }
+    try {
+      GlobalConfigSchema.parse(newConfig);
+    } catch (e) {
+      setError(`Invalid config: ${e}`);
       return;
     }
 
     setIsSaving(true);
     setError(null);
     try {
-      const newSystemConfig = await updateGlobalConfig(auth, newConfig);
-      setSystemConfig(newSystemConfig);
-      setIsEditing(false)
+      const newGlobalConfig = await updateGlobalConfig(auth, newConfig);
+      setGlobalConfig(newGlobalConfig);
+      setIsEditing(false);
     } catch (e) {
       setError(`Failed to save config: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -70,7 +84,7 @@ export default function SystemConfigAdmin({ setSystemConfig }: {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        System Configuration
+        Global Configuration
       </Typography>
       <TextField
         label="Configuration JSON"
@@ -79,6 +93,17 @@ export default function SystemConfigAdmin({ setSystemConfig }: {
         rows={15}
         value={configText}
         onChange={(e) => setConfigText(e.target.value)}
+        variant="outlined"
+        fullWidth
+        sx={{ mt: 2, '& .MuiInputBase-input': { fontFamily: 'monospace' } }}
+      />
+      <TextField
+        label="Comment (admin visible)"
+        multiline
+        disabled={!isEditing}
+        rows={5}
+        value={commentText}
+        onChange={(e) => setCommentText(e.target.value)}
         variant="outlined"
         fullWidth
         sx={{ mt: 2, '& .MuiInputBase-input': { fontFamily: 'monospace' } }}

@@ -951,44 +951,51 @@ function validatePrefix(prefix: string): boolean {
 
 const INVALID_PREFIX_MESSAGE = `prefix must NOT be empty or start or end with whitespace or "/" char`;
 
-// The zod schema of PublicSystemConfig. All fields default to "zero" values.
-export const PublicSystemConfigSchema = z.object({
-  /**
-   * inticates that server status is ok.
-   */
-  ok: z.boolean().default(false),
-  /**
-   * dev mode
-   */
-  dev: z.boolean().default(false),
-  /**
-   * Public prefix list. Each one in list is guaranteed to be not empty
-   * and do not start or end with white space or "/".
-   */
-  publicPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
-  /**
-   * Public dir prefix list. Each one in list is guaranteed to be not empty
-   * and do not start or end with white space or "/".
-   */
-  publicDirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
-  /**
-   * Public writable dir prefix list. Each one in list is guaranteed to be not empty
-   * and do not start or end with white space or "/".
-   */
-  publicRwdirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
-});
+// The zod schema of PublicConfig. All fields default to "zero" values.
+export const PublicConfigSchema = z
+  .object({
+    /**
+     * inticates that server status is ok.
+     */
+    ok: z.boolean().default(false),
+    /**
+     * dev mode
+     */
+    dev: z.boolean().default(false),
+    /**
+     * Public prefix list. Each one in list is guaranteed to be not empty
+     * and do not start or end with white space or "/".
+     */
+    publicPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
+    /**
+     * Public dir prefix list. Each one in list is guaranteed to be not empty
+     * and do not start or end with white space or "/".
+     */
+    publicDirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
+    /**
+     * Public writable dir prefix list. Each one in list is guaranteed to be not empty
+     * and do not start or end with white space or "/".
+     */
+    publicRwdirPrefix: z.array(z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE })).default([]),
+  })
+  .strict();
 
 /**
- * The public (client visible) system config.
- * Configurable at runtime by setting Cloudflare Workers "Variables and Secrets".
+ * The public visible parts of global config.
  */
-export type PublicSystemConfig = z.infer<typeof PublicSystemConfigSchema>;
+export type PublicConfig = z.infer<typeof PublicConfigSchema>;
 
-export const GlobalConfigSchema = PublicSystemConfigSchema.extend({}).strict();
+export const GlobalConfigSchema = PublicConfigSchema.extend({
+  /**
+   * config comment.
+   */
+  comment: z.string().default(""),
+}).strict();
 
 /**
- * For now, GlobalConfig is same as PublicSystemConfig.
- * It may contain some server-side only (not visible to client) configurations in the future.
+ * Extended version of PublicConfig.
+ * Add some privileged (admin only visible) configurations,
+ * which will be set to empty values if current user is not admin.
  */
 export type GlobalConfig = z.infer<typeof GlobalConfigSchema>;
 

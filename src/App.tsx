@@ -17,10 +17,10 @@ import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE, HEADER_RANGE,
+  CONFIG_API, HEADER_AUTHORIZATION,
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
-  CONFIG_API,
-  PublicSystemConfig,
-  PublicSystemConfigSchema,
+  GlobalConfigSchema,
+  GlobalConfig,
   basename,
   fileUrl,
 } from "../lib/commons";
@@ -28,7 +28,7 @@ import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
   FileItem, isThumbnailPossible, ViewMode, Config, ConfigContext, getFilePermission,
   cwd2Search,
-  SystemConfigContext,
+  GlobalConfigContext,
   response2Html,
 } from "./commons";
 import Header from "./Header";
@@ -114,11 +114,18 @@ export default function App() {
     return () => clearInterval(iv);
   }, [])
 
-  const [systemConfig, setSystemConfig] = useState<PublicSystemConfig>(PublicSystemConfigSchema.parse({}));
+  const [globalConfig, setGlobalConfig] = useState<GlobalConfig>(GlobalConfigSchema.parse({}));
 
   useEffect(() => {
-    void fetch(CONFIG_API).then(res => res.json<PublicSystemConfig>()).then(setSystemConfig);
-  }, [])
+    if (!auth) {
+      setGlobalConfig(GlobalConfigSchema.parse({}));
+    }
+    void fetch(CONFIG_API, {
+      headers: {
+        ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
+      },
+    }).then(res => res.json<GlobalConfig>()).then(setGlobalConfig);
+  }, [auth]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -138,7 +145,7 @@ export default function App() {
     }
   }
 
-  const [permission, prefix] = useMemo(() => getFilePermission(cwd, systemConfig), [cwd, systemConfig]);
+  const [permission, prefix] = useMemo(() => getFilePermission(cwd, globalConfig), [cwd, globalConfig]);
   const [isSearch, searchKeyword, searchOptions] = useMemo(() => cwd2Search(cwd), [cwd]);
   const [search, setSearch] = useState(searchKeyword);
   const currentDir = isSearch ? (searchOptions.baseDir || "") : cwd;
@@ -302,13 +309,13 @@ export default function App() {
   }, [fetchReadme, readmeFile]);
 
   return (
-    <SystemConfigContext.Provider value={systemConfig}>
+    <GlobalConfigContext.Provider value={globalConfig}>
       <ConfigContext.Provider value={config}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           {globalStyles}
           <TransferQueueProvider>
-            <Stack sx={{ height: readmeFile ? "unset" : "100%" }}>
+            <Stack sx={{ height: "100%" }}>
               <Header permission={permission}
                 onSignOut={() => {
                   setAuth("");
@@ -336,7 +343,7 @@ export default function App() {
                     search={search} shares={shares} loading={loading} />
                   : (isSearch && !searchKeyword)
                     ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
-                    : <>
+                    : <Box sx={{ overflow: "auto", flex: 1 }}>
                       <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
                         sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                         permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}
@@ -353,7 +360,7 @@ export default function App() {
                             : <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
                         }
                       </Paper>}
-                    </>
+                    </Box>
               }
             </Stack>
             <Snackbar
@@ -377,7 +384,7 @@ export default function App() {
               currentDir={currentDir}
               open={showAdminDialog}
               onClose={() => setShowAdminDialog(false)}
-              setSystemConfig={setSystemConfig}
+              setGlobalConfig={setGlobalConfig}
             />
             {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
               onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
@@ -387,6 +394,6 @@ export default function App() {
           </TransferQueueProvider>
         </ThemeProvider>
       </ConfigContext.Provider>
-    </SystemConfigContext.Provider>
+    </GlobalConfigContext.Provider>
   );
 }

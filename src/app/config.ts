@@ -4,15 +4,14 @@ import {
   HEADER_CONTENT_TYPE,
   MIME_JSON,
   GlobalConfig,
-  PublicSystemConfig,
-  PublicSystemConfigSchema,
+  GlobalConfigSchema,
 } from "../../lib/commons";
 
 /**
  * Update global config.
- * @returns updated (client-visible) public system config
+ * @returns updated global config
  */
-export async function updateGlobalConfig(auth: string, config: GlobalConfig): Promise<PublicSystemConfig> {
+export async function updateGlobalConfig(auth: string, config: GlobalConfig): Promise<GlobalConfig> {
   const res = await fetch(CONFIG_API, {
     method: "POST",
     headers: {
@@ -24,6 +23,6 @@ export async function updateGlobalConfig(auth: string, config: GlobalConfig): Pr
   if (!res.ok) {
     throw new Error(`Status ${res.status}: ${await res.text()}`);
   }
-  const systemConfig = PublicSystemConfigSchema.parse(await res.json());
-  return systemConfig;
+  const globalConfig = GlobalConfigSchema.parse(await res.json());
+  return globalConfig;
 }

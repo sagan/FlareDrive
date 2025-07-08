@@ -19,6 +19,7 @@ export default [
       "functions/.wrangler/",
       "public/",
       "scripts/",
+      "types/",
       "graphql/generated/",
       "lib/sha256.ts",
       "workers/forwarder.js",
