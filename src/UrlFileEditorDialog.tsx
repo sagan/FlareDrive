@@ -19,6 +19,7 @@ import { putFile } from './app/transfer';
 
 export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUpload, ...otherProps }: {
   url?: string;
+  comment?: string;
   filekey?: string;
   cwd?: string;
   open: boolean;
@@ -29,6 +30,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
   const { auth } = useConfig();
   const [name, setName] = useState(otherProps.filekey ? basename(otherProps.filekey) : generatePassword(6));
   const [url, setUrl] = useState(otherProps.url || "");
+  const [comment, setComment] = useState(otherProps.comment || "");
   const [filekey, setFilekey] = useState(otherProps.filekey || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -58,7 +60,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
     setError(null);
     setSaving(true);
     try {
-      await putFile({ key, create: !filekey, auth, contentType: MIME_URL, url: fileurl });
+      await putFile({ key, create: !filekey, auth, contentType: MIME_URL, url: fileurl, comment });
       setFilekey(key);
       setUrl(fileurl);
     } catch (e) {
@@ -68,7 +70,7 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
     if (onUpload) {
       onUpload();
     }
-  }, [filekey, cwd, name, url, onUpload, auth]);
+  }, [filekey, cwd, name, url, onUpload, auth, comment]);
 
 
   return <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
@@ -139,9 +141,22 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
               </>
             }} />
         </Box>
+        <Box sx={{ mt: 1 }}>
+          <TextField
+            label="Comment"
+            multiline
+            disabled={saving || readonly}
+            rows={5}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            variant="outlined"
+            fullWidth
+          />
+        </Box>
         {!!error && <Typography>{error.toString()}</Typography>}
         <Box sx={{ mt: 1 }}>
-          <Button disabled={saving || !url || !name || (!!otherProps.filekey && otherProps.url === url)}
+          <Button disabled={saving || !url || !name ||
+            (!!otherProps.filekey && otherProps.url === url && otherProps.comment === comment)}
             type="submit" onClick={(e) => void onSubmit(e)} color='primary'>
             {saving ? "Saving..." : "Save"}
           </Button>

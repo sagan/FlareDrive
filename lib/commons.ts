@@ -45,6 +45,11 @@ export const THUMBNAIL_VARIABLE = "thumbnail";
 export const URL_VARIABLE = "url";
 
 /**
+ * Comment variable. R2 file customMetadata.
+ */
+export const COMMENT_VARIABLE = "comment";
+
+/**
  * For thumbnail api: set to to the thumbnail file digest.
  */
 export const THUMBNAIL_DIGEST_VARIABLE = "thumbnailDigest";
@@ -80,6 +85,11 @@ export const FULL_CONTROL_VARIABLE = "fullControl";
  * Convert .md or other type input file to and output in html format
  */
 export const HTML_VARIABLE = "html";
+
+/**
+ * Request a JSON format output
+ */
+export const JSON_VARIABLE = "json";
 
 /**
  * Output in raw format.
@@ -119,14 +129,16 @@ export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
- * [raw, html, token, ts, url, thumbnail*... (except thumbnailDigest)]
+ * [raw, html, json, token, ts, url, comment, thumbnail*... (except thumbnailDigest)]
  */
 export const NOSIGN_VARIABLES: readonly string[] = [
   RAW_VARIABLE,
   HTML_VARIABLE,
+  JSON_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
   URL_VARIABLE,
+  COMMENT_VARIABLE,
   THUMBNAIL_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
   THUMBNAIL_CONTENT_TYPE,

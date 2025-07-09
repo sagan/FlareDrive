@@ -11,7 +11,6 @@ import CreateIcon from '@mui/icons-material/Create';
 import LinkIcon from '@mui/icons-material/Link';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import AddIcon from '@mui/icons-material/Add';
-import { Permission } from "../lib/commons";
 import { putFile, createFolder } from "./app/transfer";
 import { useUploadEnqueue } from "./app/transferQueue";
 import CloudDownloadDialog from "./CloudDownloadDialog";
@@ -45,8 +44,12 @@ function IconCaptionButton({
   );
 }
 
-export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
-  function uploadFab({ onClick }, ref) {
+export const UploadFab = forwardRef<HTMLButtonElement, {
+  onClick: () => void,
+  uploadingTasksCnt: number,
+  uploadingTasksUnfinishedCnt: number,
+}>(
+  function uploadFab({ onClick, uploadingTasksCnt, uploadingTasksUnfinishedCnt }, ref) {
     return (
       <Fab
         ref={ref}
@@ -57,22 +60,28 @@ export const UploadFab = forwardRef<HTMLButtonElement, { onClick: () => void }>(
         sx={{ position: "fixed", right: 16, bottom: 16, color: "white" }}
         onClick={onClick}
       >
-        <UploadIcon fontSize="large" />
+        {uploadingTasksCnt === 0 ? <UploadIcon fontSize="large" /> :
+          <Typography sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>{uploadingTasksUnfinishedCnt}</Typography>
+        }
       </Fab>
     );
   }
 );
 
 export default function UploadDrawer({
+  setShowProgressDialog,
+  uploadingTasksCnt,
+  uploadingTasksUnfinishedCnt,
   open,
-  permission,
   setOpen,
   cwd,
   onStartUpload,
   onUpload,
   setError,
 }: {
-  permission: Permission;
+  setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>,
+  uploadingTasksCnt: number,
+  uploadingTasksUnfinishedCnt: number,
   open: boolean;
   setOpen: (open: boolean) => void;
   cwd: string;
@@ -183,6 +192,11 @@ export default function UploadDrawer({
         onClose={() => setOpen(false)}
         PaperProps={{ sx: { borderRadius: "16px 16px 0 0" } }}
       >
+        {uploadingTasksCnt > 0 && <Typography variant="h6" sx={{ textAlign: "center" }}>
+          Uploading tasks: {uploadingTasksUnfinishedCnt}&nbsp;/&nbsp;
+          Done tasks: {uploadingTasksCnt - uploadingTasksUnfinishedCnt}&nbsp;
+          <Button variant="outlined" color="primary" onClick={() => setShowProgressDialog(true)}>View</Button>
+        </Typography>}
         <Card sx={{ padding: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={3}>

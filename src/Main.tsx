@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, Button, CircularProgress, Link, Typography, } from "@mui/material";
+import { Box, Button, CircularProgress, Link, Paper, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
 import Lightbox, {
@@ -47,6 +47,7 @@ function DropZone({ disabled, children, onDrop }:
 
   return (
     <Box
+      id="drop-zone"
       sx={{
         flexGrow: 1,
         overflowY: "auto",
@@ -153,6 +154,10 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
 }
 
 export default function Main({
+  readmeError,
+  readmeStatus,
+  readmeFile,
+  readmeContents,
   isSearch,
   cwd,
   setCwd,
@@ -169,6 +174,10 @@ export default function Main({
   fetchFiles,
   setError,
 }: {
+  readmeError: unknown;
+  readmeStatus: "" | "loading" | "ok" | "error";
+  readmeFile: string;
+  readmeContents: string;
   isSearch: boolean;
   cwd: string;
   loading: boolean;
@@ -208,6 +217,9 @@ export default function Main({
     }
   }, [cwd, fetchFiles, lastUploadKey, transferQueue]);
 
+  const uploadingTasksCnt = transferQueue.length;
+  const uploadingTasksUnfinishedCnt = transferQueue.filter(a => ["pending", "in-progress", "failed"].includes(a.status)).length;
+
   const filteredFiles = useMemo(
     () =>
       (filter ? files.filter((file) => (file.name || file.key).toLowerCase().includes(filter.toLowerCase())) : files)
@@ -220,9 +232,9 @@ export default function Main({
     [files, filter, sort]
   );
 
-  const handleMultiSelect = useCallback((key: string, fromContextMenu = false) => {
+  const handleMultiSelect = useCallback((key: string, source?: "" | "context" | "click") => {
     setMultiSelected((multiSelected) => {
-      if (multiSelected.length == 0 || multiSelected.length == 1 && fromContextMenu) {
+      if (multiSelected.length == 0 || multiSelected.length == 1 && source === "context") {
         return [key];
       } else if (multiSelected.includes(key)) {
         const newSelected = multiSelected.filter((k) => k !== key);
@@ -231,6 +243,43 @@ export default function Main({
       return [...multiSelected, key];
     });
   }, [setMultiSelected]);
+
+  const handleShiftSelect = useCallback((key: string) => {
+    setMultiSelected(multiSelected => {
+      if (multiSelected.length === 0) {
+        return [key];
+      }
+      const lastSelected = multiSelected[multiSelected.length - 1];
+      const lastSelectedIndex = filteredFiles.findIndex(file => file.key === lastSelected);
+      const currentSelectedIndex = filteredFiles.findIndex(file => file.key === key);
+
+      if (lastSelectedIndex === -1 || currentSelectedIndex === -1) {
+        return [...multiSelected, key];
+      }
+
+      const start = Math.min(lastSelectedIndex, currentSelectedIndex);
+      const end = Math.max(lastSelectedIndex, currentSelectedIndex);
+
+      const newSelectedKeys: string[] = [];
+      for (let i = start; i <= end; i++) {
+        const file = filteredFiles[i];
+        if (file && !file.system && !multiSelected.includes(file.key)) {
+          newSelectedKeys.push(file.key);
+        }
+      }
+
+      // Use a Set to remove duplicates while preserving order as much as possible
+      const combinedKeys = [...new Set([...multiSelected, ...newSelectedKeys, key])];
+
+      // Filter out any keys that are no longer within the start and end indices
+      const result = combinedKeys.filter(key => {
+        return (start <= filteredFiles.findIndex(file => file.key === key)
+          && filteredFiles.findIndex(file => file.key === key) <= end)
+          || multiSelected.includes(key);
+      });
+      return result;
+    })
+  }, [setMultiSelected, filteredFiles]);
 
   const [slideIndex, setSlideIndex] = useState(-1);
 
@@ -276,12 +325,15 @@ export default function Main({
       (slides[slides.length - 1] as any)._file = file
     }
     return { slides, slideIndexes };
-  }, [auth, authSearchParams, expires, files, fullControl])
+  }, [auth, authSearchParams, expires, files, fullControl]);
 
-  const toggleLightboxControls = useCallback(() => setHideLightboxControls((state) => !state), [])
+  const toggleLightboxControls = useCallback(() => setHideLightboxControls((state) => !state), []);
 
-  const onClick = useCallback((file: FileItem) => {
-    if (multiSelected.length > 0) {
+  const onClick = useCallback((file: FileItem, event?: React.MouseEvent) => {
+    if (event?.shiftKey && multiSelected.length > 0 && !file.system) {
+      // Shift key pressed
+      handleShiftSelect(file.key);
+    } else if (multiSelected.length > 0) {
       if (file.system) {
         return;
       }
@@ -297,14 +349,14 @@ export default function Main({
         expires,
       }));
     }
-  }, [multiSelected.length, slideIndexes, handleMultiSelect, setCwd, auth, expires]);
+  }, [multiSelected.length, slideIndexes, handleMultiSelect, setCwd, auth, expires, handleShiftSelect]);
 
   const onContextMenu = useCallback((file: FileItem) => {
     if (file.system) {
       return
     }
-    handleMultiSelect(file.key, true);
-  }, [handleMultiSelect])
+    handleMultiSelect(file.key, "context");
+  }, [handleMultiSelect]);
 
   //  Record<string, SlideCallback>
   const lightboxCallbacks: SlidesExtendedCallbacks = {
@@ -326,7 +378,7 @@ export default function Main({
       setSlideIndex(-1)
       setSharing("")
     }
-  }
+  };
 
   const viewProps: ViewProps = {
     isSearch,
@@ -336,15 +388,27 @@ export default function Main({
     onContextMenu,
     multiSelected,
     emptyMessage: <Centered>No files or folders</Centered>,
-  }
-  const viewElement =
-    viewMode === ViewMode.Details ? <FileDetailsList {...viewProps} />
+  };
+  const viewElement = <Box sx={{ overflow: "auto", flex: 1 }}>
+    {viewMode === ViewMode.Details ? <FileDetailsList {...viewProps} />
       : viewMode === ViewMode.Album ? <FileAlbum {...viewProps} />
-        : <FileGrid {...viewProps} />; // Default
-
+        : <FileGrid {...viewProps} />}
+    {!!readmeFile && <Paper elevation={3} sx={{ m: 1, p: 1 }}>
+      <Typography component={"h3"} sx={{ display: "flex", justifyContent: "space-between" }}>
+        <span>{readmeFile}</span>
+        <CircularProgress sx={{ visibility: readmeStatus === "loading" ? "visible" : "hidden" }}
+          size={16} />
+      </Typography>
+      {
+        readmeStatus === "error"
+          ? <Typography>Failed to load: {`${readmeError}`}</Typography>
+          : <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
+      }
+    </Paper>}
+  </Box>;
   const sharingFile = useMemo(() => {
     return sharing ? (sharing === cwd ? getDirObj(cwd) : files.find(f => f.key === sharing)) : undefined
-  }, [sharing, cwd, files])
+  }, [sharing, cwd, files]);
 
 
   const fileViewerProps = {
@@ -355,9 +419,9 @@ export default function Main({
       setDisplayedPdf(null)
       setEditingImage(null)
     },
-  }
+  };
 
-  const permitWrite = !isSearch && (!!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir))
+  const permitWrite = !isSearch && (!!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir));
 
   const onRename = async () => {
     const oldName = basename(multiSelected[0]);
@@ -461,11 +525,17 @@ export default function Main({
         return;
       }
       setTip(`Preparing clipboard items for uploading`);
-      getTransferFiles(items).then(doUpload, err => {
+      getTransferFiles(items).then(files => {
+        if (Object.keys(files).length === 0) {
+          setTip(`Clipboard contains no files`);
+          return;
+        }
+        doUpload(files);
+      }, err => {
         setError(`Failed to get files from clipboard: ${err}`);
       }).finally(() => {
         setPreparingUploads(false);
-      })
+      });
     }
     window.addEventListener("paste", handle);
     return () => {
@@ -485,8 +555,10 @@ export default function Main({
           {viewElement}
         </DropZone>
       )}
-      {permitWrite && multiSelected.length == 0 && <UploadFab onClick={() => setShowUploadDrawer(true)} />}
-      <UploadDrawer open={showUploadDrawer} permission={permission} setError={setError}
+      {permitWrite && multiSelected.length == 0 && <UploadFab uploadingTasksCnt={uploadingTasksCnt}
+        uploadingTasksUnfinishedCnt={uploadingTasksUnfinishedCnt} onClick={() => setShowUploadDrawer(true)} />}
+      <UploadDrawer open={showUploadDrawer} setError={setError} setShowProgressDialog={setShowProgressDialog}
+        uploadingTasksCnt={uploadingTasksCnt} uploadingTasksUnfinishedCnt={uploadingTasksUnfinishedCnt}
         onStartUpload={() => setShowProgressDialog(true)}
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
@@ -520,6 +592,14 @@ export default function Main({
           })
           setMultiSelected(selects)
         }}
+        onInvertSelection={() => {
+          setMultiSelected(multiSelected => {
+            if (multiSelected.length === 0) {
+              return files.filter(file => !file.system).map(file => file.key);
+            }
+            return files.filter(file => !file.system && !multiSelected.includes(file.key)).map(file => file.key);
+          });
+        }}
         onShare={setSharing}
         onClose={() => setMultiSelected([])}
         onRename={() => void onRename()}
@@ -533,6 +613,7 @@ export default function Main({
       {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
       {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
       {editingUrl !== null && <UrlFileEditorDialog filekey={editingUrl.key} url={editingUrl.customMetadata?.url}
+        comment={editingUrl.customMetadata?.comment}
         open={true} readonly={!permitWrite} close={() => setEditingUrl(null)} onUpload={fetchFiles} />}
       <Lightbox
         on={lightboxCallbacks}

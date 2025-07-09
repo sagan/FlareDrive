@@ -280,6 +280,18 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
                 </>
             }} />
           </Box>}
+          {!!otherProps.file.customMetadata?.comment && <Box sx={{ mt: 1 }}>
+            <TextField disabled label={`Comment`} fullWidth value={otherProps.file.customMetadata.comment} InputProps={{
+              endAdornment: <IconButton
+                disabled={false}
+                onClick={() => void navigator.clipboard.writeText(otherProps.file.customMetadata?.comment || "")}
+                title={`Copy`}
+                edge="end"
+              >
+                <ContentCopyIcon />
+              </IconButton>
+            }} />
+          </Box>}
           {!!otherProps.file.checksums.md5 && <Box sx={{ mt: 1 }}>
             <TextField disabled label={`MD5`} fullWidth value={otherProps.file.checksums.md5} InputProps={{
               endAdornment:

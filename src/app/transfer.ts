@@ -23,6 +23,8 @@ import {
   UPLOAD_ID_VARIABLE,
   HEADER_RETRY_AFTER,
   HEADER_DESTINATION,
+  HEADER_DIR_EXISTS,
+  COMMENT_VARIABLE,
   appendQueryStringToUrl,
   isBasicAuthHeader,
   ThumbnailObject,
@@ -34,7 +36,6 @@ import {
   URL_VARIABLE,
   joinPathes,
   dirname,
-  HEADER_DIR_EXISTS,
 } from "../../lib/commons";
 import { FileItem, UploadFile } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -112,6 +113,7 @@ export async function fetchPath(
       const lastModified = response.querySelector("getlastmodified")?.textContent;
       const thumbnail = response.getElementsByTagNameNS("flaredrive", "thumbnail")[0]?.textContent;
       const url = response.getElementsByTagNameNS("flaredrive", "url")[0]?.textContent;
+      const comment = response.getElementsByTagNameNS("flaredrive", "comment")[0]?.textContent;
       const checksums = response.getElementsByTagName("oc:checksum")[0]?.textContent || "";
 
       return {
@@ -119,7 +121,7 @@ export async function fetchPath(
         size: size ? Number(size) : 0,
         uploaded: new Date(lastModified || 0),
         httpMetadata: { contentType: contentType || "" },
-        customMetadata: { thumbnail, url },
+        customMetadata: { thumbnail, url, comment },
         checksums: checksums
           .split(" ")
           .filter((a) => a)
@@ -412,6 +414,7 @@ export async function putFile({
   body,
   contentType,
   url,
+  comment,
 }: {
   key: string;
   auth: string;
@@ -419,10 +422,14 @@ export async function putFile({
   body?: BodyInit;
   contentType?: string;
   url?: string;
+  comment?: string;
 }) {
   const searchParams = new URLSearchParams();
   if (url) {
     searchParams.set(URL_VARIABLE, url);
+  }
+  if (comment) {
+    searchParams.set(COMMENT_VARIABLE, comment);
   }
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}${searchParams.size > 0 ? "?" + searchParams.toString() : ""}`;
   const req = applyAuth(

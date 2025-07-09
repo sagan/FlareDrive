@@ -24,15 +24,15 @@ export default function FileGrid({
 }: ViewProps) {
   const { expires, authSearchParams, fullControl } = useConfig();
   if (files.length === 0) {
-    return emptyMessage
+    return emptyMessage;
   }
 
   return <Grid container sx={{ paddingBottom: "48px" }}>
     {files.map((file) => {
-      const IconComponent = file.icon
-      let title = ""
+      const IconComponent = file.icon;
+      let title = "";
       if (isUrlFile(file)) {
-        title = validateAndGetSafeUrl(file.customMetadata?.url || "") || ""
+        title = validateAndGetSafeUrl(file.customMetadata?.url || "") || "";
       }
       if (isSearch) {
         title += (title ? "\n" : "") + `Key: ${file.key}`;
@@ -43,7 +43,7 @@ export default function FileGrid({
           selected={multiSelected.includes(file.key)}
           onClick={(e) => {
             e.preventDefault();
-            onClick(file)
+            onClick(file, e);
           }}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -90,5 +90,5 @@ export default function FileGrid({
         </ListItemButton>
       </Grid>
     })}
-  </Grid>
+  </Grid>;
 }

@@ -16,6 +16,7 @@ import {
   HEADER_NO_THUMBNAIL,
   MIME_URL,
   URL_VARIABLE,
+  COMMENT_VARIABLE,
   HEADER_LOCATION,
   SCOPE_GLOBAL,
   ThumbnailObject,
@@ -129,7 +130,14 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
   }
 
   const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
-  let customMetadata: Record<string, string> | undefined = thumbnail ? { thumbnail } : undefined;
+  const comment = searchParams.get(COMMENT_VARIABLE);
+  let customMetadata: Record<string, string> | undefined =
+    comment || thumbnail
+      ? {
+          ...(comment && { comment }),
+          ...(thumbnail && { thumbnail }),
+        }
+      : undefined;
 
   const oldObject = await bucket.head(path);
 

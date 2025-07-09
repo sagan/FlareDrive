@@ -6,6 +6,7 @@ import {
   HTML_VARIABLE,
   INDEX_FILE,
   RAW_VARIABLE,
+  JSON_VARIABLE,
   type ShareObject,
   path2Key,
   trimPrefix,
@@ -114,6 +115,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
   const requestMeta = !!str2int(searchParams.get(META_VARIABLE));
+  const requestJson = !!str2int(searchParams.get(JSON_VARIABLE));
 
   if (requestMeta) {
     const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
@@ -213,6 +215,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
       return a.key.split("/").pop()!.localeCompare(b.key.split("/").pop()!);
     });
 
+    if (requestJson) {
+      return jsonResponse({ description: data.desc || "", files });
+    }
     return htmlResponse(
       indexPage(context.env.SITENAME, data.desc || "", sharekey + (relpath ? "/" + relpath : ""), !relpath, files)
     );
@@ -290,6 +295,7 @@ function indexPage(
       const dateDisplay = item.uploaded.toLocaleString(); // Human-readable date
       const mimeDisplay = encodeHtml(item.httpMetadata?.contentType || "");
       const md5Display = !isDir && item.checksums?.md5 ? encodeHex(item.checksums.md5) : "";
+      const commentDisplay = encodeHtml(item.customMetadata?.comment || "");
 
       return `
         <tr>
@@ -300,6 +306,7 @@ function indexPage(
           <td class="detailsColumn" data-value="${+item.uploaded}">${dateDisplay}</td>
           <td class="detailsColumn" data-value="${mimeDisplay}">${mimeDisplay}</td>
           <td class="detailsColumn" data-value="${md5Display}">${md5Display}</td>
+          <td class="commentColumn">${commentDisplay}</td>
         </tr>`;
     })
     .join("\n");
@@ -411,6 +418,11 @@ window.addEventListener('DOMContentLoaded', onLoad);
     white-space: nowrap;
   }
 
+  .commentColumn {
+    padding-inline-start: 2em;
+    text-align: start;
+  }
+
   td, th {
     padding: 5px;
   }
@@ -471,6 +483,9 @@ ${parentDirLinkHtml}
       </th>
       <th id="md5ColumnHeader" class="detailsColumn" tabindex=0 role="button">
         MD5
+      </th>
+      <th id="commentColumnHeader" class="commentColumn" tabindex=0 role="button">
+        Comment
       </th>
     </tr>
   </thead>

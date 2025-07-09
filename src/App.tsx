@@ -343,24 +343,12 @@ export default function App() {
                     search={search} shares={shares} loading={loading} />
                   : (isSearch && !searchKeyword)
                     ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
-                    : <Box sx={{ overflow: "auto", flex: 1 }}>
-                      <Main cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
-                        sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
-                        permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}
-                        multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
-                      {!!readmeFile && <Paper elevation={3} sx={{ m: 1, p: 1 }}>
-                        <Typography component={"h3"} sx={{ display: "flex", justifyContent: "space-between" }}>
-                          <span>{readmeFile}</span>
-                          <CircularProgress sx={{ visibility: readmeStatus === "loading" ? "visible" : "hidden" }}
-                            size={16} />
-                        </Typography>
-                        {
-                          readmeStatus === "error"
-                            ? <Typography>Failed to load: {`${readmeError}`}</Typography>
-                            : <Box dangerouslySetInnerHTML={{ __html: readmeContents }} />
-                        }
-                      </Paper>}
-                    </Box>
+                    : <Main readmeError={readmeError} readmeStatus={readmeStatus}
+                      readmeContents={readmeContents} readmeFile={readmeFile}
+                      cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
+                      sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
+                      permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}
+                      multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
               }
             </Stack>
             <Snackbar
@@ -371,7 +359,7 @@ export default function App() {
             />
             <Snackbar
               autoHideDuration={5000}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
               open={!!tip}
               message={tip || null}
               onClose={() => setTip("")}

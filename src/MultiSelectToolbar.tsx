@@ -24,6 +24,7 @@ export default function MultiSelectToolbar({
   onMove,
   onDelete,
   onSelectAll,
+  onInvertSelection,
   onShare,
 }: {
   isSearch: boolean;
@@ -41,6 +42,7 @@ export default function MultiSelectToolbar({
   onMove: () => void;
   onDelete: () => void;
   onSelectAll: () => void;
+  onInvertSelection: () => void;
   onShare: (key: string) => void;
 }) {
   const { auth } = useConfig();
@@ -90,7 +92,7 @@ export default function MultiSelectToolbar({
             title={`Open ${linkIsDir ? "folder" : "file"} location`}
             onClick={(e) => {
               if (e.ctrlKey || e.metaKey) {
-                return
+                return;
               }
               e.preventDefault();
               onOpenDir(dirname(multiSelected[0]));
@@ -123,25 +125,29 @@ export default function MultiSelectToolbar({
             onClose={() => setAnchorEl(null)}
           >
             {multiSelected.length === 1 && <MenuItem disabled={!writable} onClick={() => {
-              setAnchorEl(null)
-              onRename()
+              setAnchorEl(null);
+              onRename();
             }}>Rename</MenuItem>}
             {multiSelected.length === 1 && !linkIsDir && <MenuItem disabled={!writable} onClick={() => {
-              setAnchorEl(null)
-              onDuplicate()
+              setAnchorEl(null);
+              onDuplicate();
             }}>Create Copy</MenuItem>}
             <MenuItem disabled={!writable} onClick={() => {
-              setAnchorEl(null)
-              onMove()
+              setAnchorEl(null);
+              onMove();
             }}>Move</MenuItem>
             <MenuItem disabled={!writable} onClick={() => {
-              setAnchorEl(null)
-              onDelete()
+              setAnchorEl(null);
+              onDelete();
             }}>Delete</MenuItem>
             <MenuItem onClick={() => {
-              setAnchorEl(null)
-              onSelectAll()
+              setAnchorEl(null);
+              onSelectAll();
             }}>Select all</MenuItem>
+            <MenuItem onClick={() => {
+              setAnchorEl(null);
+              onInvertSelection();
+            }}>Invert selection</MenuItem>
           </Menu>
         )}
       </Toolbar>

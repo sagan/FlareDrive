@@ -51,12 +51,12 @@ export default function FileAlbum({
       }
       return <Grid item xs="auto" key={f.key}
         onContextMenu={(e) => {
-          e.preventDefault()
+          e.preventDefault();
           onContextMenu(f);
         }}
         onClick={(e) => {
           e.preventDefault();
-          onClick(f);
+          onClick(f, e);
         }} >
         <Box className={`file-album-item ${multiSelected.includes(f.key) ? "selected" : ""}`}
           sx={{ width: THUMBNAIL_SIZE + 4, height: THUMBNAIL_SIZE + 28 }}>

@@ -90,7 +90,7 @@ export interface FileItem {
   size: number;
   uploaded: Date;
   httpMetadata: { contentType: string };
-  customMetadata?: { thumbnail?: string; url?: string };
+  customMetadata?: { thumbnail?: string; url?: string; comment?: string };
   checksums: {
     md5?: string;
     sha1?: string;
@@ -102,7 +102,7 @@ export interface ViewProps {
   isSearch: boolean;
   auth: string | null;
   files: FileItem[];
-  onClick: (file: FileItem) => void;
+  onClick: (file: FileItem, e?: React.MouseEvent) => void;
   onContextMenu: (file: FileItem) => void;
   multiSelected: string[];
   emptyMessage?: React.ReactNode;

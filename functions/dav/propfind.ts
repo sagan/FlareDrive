@@ -25,6 +25,7 @@ type DavProperties = {
   resourcetype: string;
   "fd:thumbnail": string | undefined;
   "fd:url": string | undefined;
+  "fd:comment": string | undefined;
   "oc:checksums": string | undefined;
 };
 
@@ -52,6 +53,7 @@ function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
     resourcetype: isDirectory(object) ? "<collection />" : "",
     "fd:thumbnail": object.customMetadata?.thumbnail,
     "fd:url": object.customMetadata?.url,
+    "fd:comment": object.customMetadata?.comment,
     "oc:checksums": checksums,
   };
 }

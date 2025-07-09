@@ -4,6 +4,7 @@ import {
   HEADER_DESTINATION,
   HEADER_OVERWRITE,
   KEY_PREFIX_PRIVATE,
+  SCOPE_GLOBAL,
   SYSFILES,
   WEBDAV_ENDPOINT,
   basename,
@@ -49,7 +50,10 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
   if (invalidPathResponse) {
     return invalidPathResponse;
   }
-  if ((scope && !destination.startsWith(scope + "/")) || (!authed && SYSFILES.includes(basename(destination)))) {
+  if (
+    (scope && scope !== SCOPE_GLOBAL && !destination.startsWith(scope + "/")) ||
+    (!authed && SYSFILES.includes(basename(destination)))
+  ) {
     return responseForbidden();
   }
 

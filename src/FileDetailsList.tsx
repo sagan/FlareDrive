@@ -61,8 +61,8 @@ export default function FileDetailsList({
                 hover
                 key={file.key}
                 selected={multiSelected.includes(file.key)}
-                onClick={() => {
-                  onClick(file);
+                onClick={(e) => {
+                  onClick(file, e);
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
