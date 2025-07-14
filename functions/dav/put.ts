@@ -71,6 +71,7 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
 }
 
 export async function handleRequestPut({ context, bucket, path, request, scope }: RequestHandlerParams) {
+  const { env } = context;
   const invalidPathResponse = await checkInvalidUserFileKey(path);
   if (invalidPathResponse) {
     return invalidPathResponse;
@@ -100,13 +101,20 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
       httpMetadata: request.headers,
     });
     if (object.customMetadata?.thumbnail !== digest) {
-      await bucket.put(path, object.body, {
+      const updatedR2Obj = await bucket.put(path, object.body, {
         httpMetadata: object.httpMetadata,
         customMetadata: Object.assign({}, object.customMetadata, { thumbnail: digest }),
       });
       if (object.customMetadata?.thumbnail) {
         // delete old thumbnail
         await bucket.delete(`${KEY_PREFIX_THUMBNAIL}${object.customMetadata.thumbnail}`);
+      }
+      if (env.DB) {
+        try {
+          await upsertDbFile(env.DB, updatedR2Obj);
+        } catch (e) {
+          /* empty */
+        }
       }
     }
     return jsonResponse<ThumbnailObject>({ digest });

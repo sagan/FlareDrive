@@ -48,7 +48,7 @@ import {
   isHtml,
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
-import { dbFile2R2Object, queryDbFiles } from "./db";
+import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
 
 export type Env = {
   /**
@@ -180,7 +180,7 @@ export function responseNoContent(): Response {
  */
 export function responseCreated(body?: object | string): Response {
   if (typeof body === "object") {
-    return jsonResponse(body, 201);
+    return jsonResponse(body, { status: 201 });
   }
   return new Response(body || "", { status: 201 });
 }
@@ -233,12 +233,25 @@ export function responseMethodNotAllowed(msg = "", headers?: HeadersInit): Respo
  * @param status
  * @returns
  */
-export function jsonResponse<T = unknown>(obj: T, status = 200) {
+export function jsonResponse<T = unknown>(
+  obj: T,
+  {
+    status = 200,
+    cors = false,
+  }: {
+    status?: number;
+    cors?: boolean;
+  } = {}
+) {
+  const headers = new Headers({ [HEADER_CONTENT_TYPE]: "application/json" });
+  if (cors) {
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      headers.set(key, value);
+    }
+  }
   return new Response(JSON.stringify(obj), {
     status,
-    headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
-    },
+    headers,
   });
 }
 
@@ -412,11 +425,13 @@ export async function generateFileThumbnail({
   images,
   bucket,
   key,
+  db,
   force = false,
   thumbSize = THUMBNAIL_SIZE,
 }: {
   images: ImagesBinding;
   bucket: R2Bucket;
+  db?: D1Database;
   key: string;
   force?: boolean;
   thumbSize?: number;
@@ -455,13 +470,20 @@ export async function generateFileThumbnail({
   }
   // The only way to modify object metadata is to re-upload the object and set the metadata.
   await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponseHeaders });
-  await bucket.put(key, fileContents.stream(), {
+  const updatedR2Obj = await bucket.put(key, fileContents.stream(), {
     httpMetadata: file.httpMetadata,
     customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),
   });
   if (thumbFile) {
     // delete old thumbnail file
     await bucket.delete(thumbFile.key);
+  }
+  if (db) {
+    try {
+      await upsertDbFile(db, updatedR2Obj);
+    } catch (e) {
+      /* empty */
+    }
   }
   return 0;
 }
@@ -476,6 +498,7 @@ export async function generateFileThumbnailWithWorker({
   expires,
   workerUrl,
   workerToken,
+  db,
   force = false,
   thumbSize = THUMBNAIL_SIZE,
 }: {
@@ -487,6 +510,7 @@ export async function generateFileThumbnailWithWorker({
   expires: number;
   workerUrl: string;
   workerToken: string;
+  db?: D1Database;
   force?: boolean;
   thumbSize?: number;
 }): Promise<number> {
@@ -545,13 +569,20 @@ export async function generateFileThumbnailWithWorker({
   }
   // The only way to modify object metadata is to re-upload the object and set the metadata.
   await bucket.put(KEY_PREFIX_THUMBNAIL + thumbContentsDigest, thumbContents, { httpMetadata: thumbResponseHeaders });
-  await bucket.put(key, file.body, {
+  const updatedR2Obj = await bucket.put(key, file.body, {
     httpMetadata: file.httpMetadata,
     customMetadata: Object.assign({}, file.customMetadata, { thumbnail: thumbContentsDigest }),
   });
   if (thumbFile) {
     // delete old thumbnail file
     await bucket.delete(thumbFile.key);
+  }
+  if (db) {
+    try {
+      await upsertDbFile(db, updatedR2Obj);
+    } catch (e) {
+      /* empty */
+    }
   }
   return 0;
 }

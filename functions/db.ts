@@ -177,9 +177,63 @@ export function dbFile2R2Object(file: File): R2Object {
     size: file.size,
     httpMetadata: { contentType: file.mime },
     customMetadata: file.customMetadata,
-    checksums: {
+    checksums: new CustomR2Checksums({
       md5: file.md5 ? decodeHex(file.md5).buffer : file.size === 0 ? EMPTY_MD5_RAW.buffer : undefined,
-    },
+    }),
     uploaded: file.uploaded,
   } as unknown as R2Object;
+}
+
+/**
+ * @class CustomR2Checksums
+ * @description Implements the R2Checksums interface. It stores checksums as ArrayBuffers
+ * and provides a method to get their hexadecimal string representation.
+ */
+class CustomR2Checksums implements R2Checksums {
+  public readonly md5?: ArrayBuffer;
+  public readonly sha1?: ArrayBuffer;
+  public readonly sha256?: ArrayBuffer;
+  public readonly sha384?: ArrayBuffer;
+  public readonly sha512?: ArrayBuffer;
+
+  /**
+   * @constructor
+   * @param {Partial<R2Checksums>} checksums - An object containing the checksums as ArrayBuffers.
+   */
+  constructor(checksums: Partial<R2Checksums>) {
+    this.md5 = checksums.md5;
+    this.sha1 = checksums.sha1;
+    this.sha256 = checksums.sha256;
+    this.sha384 = checksums.sha384;
+    this.sha512 = checksums.sha512;
+  }
+
+  /**
+   * @method toJSON
+   * @description Converts the stored ArrayBuffer checksums into a JSON-serializable object
+   * where each checksum is a hexadecimal string.
+   * @returns {R2StringChecksums} The object with string-based checksums.
+   */
+  public toJSON(): R2StringChecksums {
+    const json: R2StringChecksums = {};
+    if (this.md5) json.md5 = this.arrayBufferToHex(this.md5);
+    if (this.sha1) json.sha1 = this.arrayBufferToHex(this.sha1);
+    if (this.sha256) json.sha256 = this.arrayBufferToHex(this.sha256);
+    if (this.sha384) json.sha384 = this.arrayBufferToHex(this.sha384);
+    if (this.sha512) json.sha512 = this.arrayBufferToHex(this.sha512);
+    return json;
+  }
+
+  /**
+   * @private
+   * @method arrayBufferToHex
+   * @description Helper function to convert an ArrayBuffer to a hexadecimal string.
+   * @param {ArrayBuffer} buffer - The buffer to convert.
+   * @returns {string} The hexadecimal string representation of the buffer.
+   */
+  private arrayBufferToHex(buffer: ArrayBuffer): string {
+    return Array.from(new Uint8Array(buffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
 }

@@ -9,7 +9,6 @@ export default [
   {
     ignores: [
       "index.js",
-      "vite.config.js",
       "eslint.config.js",
       "dist/",
       ".local/",

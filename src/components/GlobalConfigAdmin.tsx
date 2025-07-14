@@ -35,7 +35,7 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
       setConfigText(originalConfigText);
       setCommentText(originalCommentText);
     }
-  }, [originalConfigText, isEditing]);
+  }, [originalConfigText, isEditing, originalCommentText]);
 
   const handleEdit = () => {
     setIsEditing(true);

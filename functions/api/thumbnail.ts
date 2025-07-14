@@ -87,9 +87,9 @@ export const onRequestHead: FdCfFunc = async function (context) {
  * @param context
  */
 export const onRequestPost: FdCfFunc = async function (context) {
-  const bucket = context.env.BUCKET;
-  const env = context.env;
-  const request = context.request;
+  const { env, request } = context;
+  const bucket = env.BUCKET;
+  const db = env.DB;
   const url = new URL(request.url);
   const searchParams = url.searchParams;
 
@@ -118,6 +118,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
         bucket,
         key,
         force,
+        db,
       });
     } else if (env.WORKER_URL && env.WORKER_TOKEN) {
       result = await generateFileThumbnailWithWorker({
@@ -130,6 +131,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
         originIsBucket: !!env.BUCKET_URL,
         workerUrl: env.WORKER_URL,
         workerToken: env.WORKER_TOKEN,
+        db,
       });
     } else {
       result = -1;

@@ -1,15 +1,17 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import { fileURLToPath } from "url";
+// import { fileURLToPath } from "url";
 import fs from "fs/promises";
 import path from "path";
 import { favicons } from "favicons";
+import { DEFAULT_SITENAME } from "./lib/constants";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// const __dirname = path.dirname(fileURLToPath(import.meta.url));
+console.log("vite run", __dirname);
 
 // override these with ".env" / ".env.local" dotenv file or environment variables.
-const DefaultPublicVariables = {
-  SITENAME: "FlareDrive",
+const DefaultPublicVariables: Record<string, string> = {
+  SITENAME: DEFAULT_SITENAME,
   SHORT_SITENAME: "", // Optional, if not present, app will use SITENAME instead.
   JS_URL: "",
   CSS_URL: "",
@@ -25,7 +27,7 @@ const backend = {
 };
 
 // Generate wrangler.json config file (deployed as Workers)
-async function generateWranglerConfig(env) {
+async function generateWranglerConfig(env: Record<string, string>) {
   const templateFile = path.join(__dirname, "wrangler.example.json");
   const file = path.join(__dirname, "wrangler.json");
 
@@ -51,15 +53,15 @@ async function generateWranglerConfig(env) {
 /**
  * Generate favicon.ico, manifest.json and other files dynamically.
  */
-async function generateAssets(variables) {
+async function generateAssets(variables: Record<string, string>) {
   const manifest = JSON.parse(await fs.readFile(path.join(__dirname, "assets/manifest.json"), { encoding: "utf8" }));
 
-  let source = "";
+  let source: string | Buffer;
   if (!process.env.FAVICON_URL) {
     source = path.join(__dirname, "assets/favicon.png");
   } else if (process.env.FAVICON_URL.startsWith("http://") || process.env.FAVICON_URL.startsWith("https://")) {
     console.log("fetching favicon", process.env.FAVICON_URL);
-    let res = await fetch(process.env.FAVICON_URL);
+    const res = await fetch(process.env.FAVICON_URL);
     source = Buffer.from(await res.arrayBuffer());
   } else {
     source = path.join(__dirname, process.env.FAVICON_URL);
@@ -67,12 +69,12 @@ async function generateAssets(variables) {
 
   const response = await favicons(source, {});
   // console.log(response.images) // Array of { name: string, contents: <buffer> }
-  const faviconFiles = {
+  const faviconFiles: Record<string, string> = {
     "favicon.ico": "favicon.ico",
     "favicon-32x32.png": "assets/favicon.png",
     "android-chrome-192x192.png": "assets/favicon-192x192.png",
   };
-  for (let file of response.images) {
+  for (const file of response.images) {
     if (!faviconFiles[file.name]) {
       continue;
     }
@@ -84,7 +86,15 @@ async function generateAssets(variables) {
 }
 
 export default defineConfig(async ({ command, mode }) => {
-  const env = { ...process.env, ...loadEnv(mode, __dirname, "") };
+  const env: Record<string, string> = {};
+  // The type of proccess.env is `{[key: string]: string | undefined}`,
+  // So we cann't use `const env = {...process.env, ...loadEnv(mode, __dirname, "")}`, which realy sucks.
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value) {
+      env[key] = value;
+    }
+  }
+  Object.assign(env, loadEnv(mode, __dirname, ""));
 
   // Cloudflare Pages runtime has CF_PAGES=1 set.
   // Dynamic wrangler config file generation is only used in Cloudflare Workers mode.
@@ -97,13 +107,15 @@ export default defineConfig(async ({ command, mode }) => {
         fs.access(path.join(__dirname, "wrangler.toml")),
       ]);
       wranglerConfigExists = true;
-    } catch (e) {}
+    } catch (e) {
+      /* empty */
+    }
     if (!wranglerConfigExists) {
       await generateWranglerConfig(env);
     }
   }
 
-  const publicVariables = Object.keys(DefaultPublicVariables).reduce((v, key) => {
+  const publicVariables = Object.keys(DefaultPublicVariables).reduce<Record<string, string>>((v, key) => {
     if (env[key] !== undefined) {
       v[key] = env[key];
     } else {
@@ -117,14 +129,18 @@ export default defineConfig(async ({ command, mode }) => {
       // vite use ".env.local", but CF wrangler backend use .dev.vars in dev mode.
       // https://developers.cloudflare.com/workers/configuration/environment-variables/
       await fs.copyFile(path.join(__dirname, ".env.local"), path.join(__dirname, ".dev.vars"));
-    } catch (e) {}
+    } catch (e) {
+      /* empty */
+    }
   }
 
   let assetExists = false;
   try {
     await fs.access(path.join(__dirname, "public/assets/manifest.json"));
     assetExists = true;
-  } catch (e) {}
+  } catch (e) {
+    /* empty */
+  }
   if (!assetExists || command === "build") {
     await generateAssets(publicVariables);
   }
@@ -146,7 +162,7 @@ export default defineConfig(async ({ command, mode }) => {
     // Note the vite projet is for Cloudflare pages project (JavaScript SPA),
     // which is fullly static and runned in build time so any changes in env must be re-build to take effect.
     // For functions (functions/), env is dynamic and can be changed at any time.
-    define: Object.keys(publicVariables).reduce((dv, key) => {
+    define: Object.keys(publicVariables).reduce<Record<string, string>>((dv, key) => {
       dv[`import.meta.env.${key}`] = JSON.stringify(publicVariables[key]);
       return dv;
     }, {}),

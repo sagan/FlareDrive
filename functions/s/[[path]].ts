@@ -1,5 +1,6 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
+import { DEFAULT_SITENAME } from "../../lib/constants";
 import {
   META_VARIABLE,
   HEADER_REFERER,
@@ -190,14 +191,17 @@ export const onRequestGet: FdCfFunc = async function (context) {
       onlyIf: request.headers,
       range: request.headers,
     });
+    const cors = !!data.cors;
     if (indexHtmlObj) {
-      return outputR2Object({ obj: indexHtmlObj, cors: !!data.cors });
+      return outputR2Object({ obj: indexHtmlObj, cors });
     }
+    const sitename = context.env.SITENAME || DEFAULT_SITENAME;
+    const description = data.desc || "";
     if (data.noindex) {
       if (relpath) {
         return responseNotFound();
       } else {
-        return htmlResponse(noindexPage(context.env.SITENAME, data.desc || "", sharekey));
+        return htmlResponse(noindexPage(sitename, description, sharekey));
       }
     }
     const files = await findChildren({
@@ -216,11 +220,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
     });
 
     if (requestJson) {
-      return jsonResponse({ description: data.desc || "", files });
+      return jsonResponse({ sitename, description, files }, { cors });
     }
-    return htmlResponse(
-      indexPage(context.env.SITENAME, data.desc || "", sharekey + (relpath ? "/" + relpath : ""), !relpath, files)
-    );
+    return htmlResponse(indexPage(sitename, description, sharekey + (relpath ? "/" + relpath : ""), !relpath, files));
   } else if (url.pathname.endsWith("/")) {
     // target is file, but the request path ends with "/"
     return responseNotFound();
@@ -241,8 +243,8 @@ export const onRequestHead: FdCfFunc = async function (context) {
   });
 };
 
-function noindexPage(sitename: string | undefined, desc: string, dir: string): string {
-  const title = sitename ? `${dir} - ${sitename}` : `${dir}`;
+function noindexPage(sitename: string, desc: string, dir: string): string {
+  const title = `${dir} - ${sitename}`;
   // from Chrome file:// url dir index page
   return `<!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -263,14 +265,8 @@ function noindexPage(sitename: string | undefined, desc: string, dir: string): s
 `;
 }
 
-function indexPage(
-  sitename: string | undefined,
-  desc: string,
-  dir: string,
-  isRoot: boolean,
-  items: R2Object[]
-): string {
-  const title = sitename ? `${dir} - ${sitename}` : `${dir}`;
+function indexPage(sitename: string, desc: string, dir: string, isRoot: boolean, items: R2Object[]): string {
+  const title = `${dir} - ${sitename}`;
   // from Chrome file:// url dir index page
 
   const parentDirLinkHtml = !isRoot
@@ -292,7 +288,7 @@ function indexPage(
           : encodeURIComponent(name) + (isDir ? "/" : ""); // Relative href
       const displayName = encodeHtml(name) + (isDir ? "/" : "");
       const sizeDisplay = !isDir ? humanReadableSize(item.size) : "";
-      const dateDisplay = item.uploaded.toLocaleString(); // Human-readable date
+      const dateDisplay = item.uploaded.toISOString().slice(0, 19) + "Z";
       const mimeDisplay = encodeHtml(item.httpMetadata?.contentType || "");
       const md5Display = !isDir && item.checksums?.md5 ? encodeHex(item.checksums.md5) : "";
       const commentDisplay = encodeHtml(item.customMetadata?.comment || "");
@@ -464,7 +460,7 @@ window.addEventListener('DOMContentLoaded', onLoad);
 </head>
 
 <body>
-<h1>Index of ${encodeHtml(dir)}</h1>
+<h1>Index of ${encodeHtml(dir)} (<a href="?json=1">JSON</a>)</h1>
 ${desc ? `<div>${encodeHtml(desc)}</div>` : ""}
 ${parentDirLinkHtml}
 
