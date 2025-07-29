@@ -1,15 +1,12 @@
 import { ThemeProvider } from "@emotion/react";
+import { useBlocker } from 'react-router-dom';
 import {
-  Box,
   createTheme,
   CssBaseline,
   GlobalStyles,
-  Paper,
   Snackbar,
   Stack,
-  Typography,
 } from "@mui/material";
-import CircularProgress from '@mui/material/CircularProgress';
 import NProgress from "nprogress"
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
@@ -307,6 +304,28 @@ export default function App() {
       ac.abort();
     }
   }, [fetchReadme, readmeFile]);
+
+  // Block navigation if the modal is open.
+  const blocker = useBlocker(() => showAdminDialog || showProgressDialog ||
+    showGenerateThumbnailDialog || showSignInDialog);
+  // When the blocker is triggered, close the modal instead of navigating.
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (showAdminDialog) {
+        setShowAdminDialog(false);
+      } else if (showProgressDialog) {
+        setShowProgressDialog(false);
+      } else if (showGenerateThumbnailDialog) {
+        setShowGenerateThumbnailDialog(false);
+      } else if (showSignInDialog) {
+        if (requireSignIn) {
+          return;
+        }
+        setShowSignInDialog(false);
+      }
+      blocker.reset();
+    }
+  }, [blocker, requireSignIn, showAdminDialog, showGenerateThumbnailDialog, showProgressDialog, showSignInDialog]);
 
   return (
     <GlobalConfigContext.Provider value={globalConfig}>

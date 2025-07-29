@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useBlocker } from 'react-router-dom';
 import { Box, Button, CircularProgress, Link, Paper, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
@@ -20,6 +21,7 @@ import {
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
   isUrlFile,
   validateAndGetSafeUrl,
+  isAudio,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -146,9 +148,15 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       }}>{slide.description}</Link>
     </Typography>
     <Box>
-      {!file.customMetadata?.thumbnail
-        ? <MimeIcon contentType={file.httpMetadata.contentType} sx={{ width: thumbSize, height: thumbSize }} />
-        : <img src={slide.thumbnail} width={thumbSize} height={thumbSize} />}
+      {isAudio(file) ? <>
+        <MimeIcon contentType={file.httpMetadata.contentType} sx={{ width: 54, height: 54 }} />
+        <audio controls src={viewSrc} key={currentIndex} />
+      </> : <>
+        {!file.customMetadata?.thumbnail
+          ? <MimeIcon contentType={file.httpMetadata.contentType} sx={{ width: thumbSize, height: thumbSize }} />
+          : <img src={slide.thumbnail} width={thumbSize} height={thumbSize} />}
+      </>
+      }
     </Box>
   </Box >
 }
@@ -365,7 +373,7 @@ export default function Main({
     edit: (file) => {
       if (file.httpMetadata.contentType === MIME_PDF) {
         setDisplayedPdf(file.key)
-      } else if (isUrlFile(file) && file.size === 0) {
+      } else if (isUrlFile(file) && (file.customMetadata?.url || file.size === 0)) {
         setEditingUrl(file);
       } else if (isTextual(file)) {
         setEditing(file.key)
@@ -544,6 +552,31 @@ export default function Main({
   }, [doUpload, permitWrite, preparingUploads, setError, setTip]);
 
 
+  // Block navigation if the modal is open.
+  const blocker = useBlocker(() => showUploadDrawer || !!sharing || slideIndex >= 0 ||
+    !!editing || !!displayedPdf || !!editingImage || !!editingUrl);
+  // When the blocker is triggered, close the modal instead of navigating.
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (showUploadDrawer) {
+        setShowUploadDrawer(false);
+      } else if (sharing) {
+        setSharing("");
+      } else if (slideIndex >= 0) {
+        setSlideIndex(-1);
+      } else if (editing) {
+        setEditing(null);
+      } else if (displayedPdf) {
+        setDisplayedPdf(null);
+      } else if (editingImage) {
+        setEditingImage(null);
+      } else if (editingUrl) {
+        setEditingUrl(null);
+      }
+      blocker.reset();
+    }
+  }, [blocker, displayedPdf, editing, editingImage, editingUrl, setSharing, sharing, showUploadDrawer, slideIndex]);
+
   return (
     <>
       {loading ? (
@@ -574,12 +607,13 @@ export default function Main({
           return [fileUrl({
             key,
             auth,
+            isDir,
+            raw: true,
             origin: location.origin,
             expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
             scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
             token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
             fullControl: auth ? undefined : fullControl,
-            isDir,
           }), isDir];
         }}
         onSelectAll={() => {

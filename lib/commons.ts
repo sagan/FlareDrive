@@ -916,6 +916,13 @@ export function isImage(object: R2ObjectAlike): boolean {
 }
 
 /**
+ * Return whether the R2Object is a audio file
+ */
+export function isAudio(object: R2ObjectAlike): boolean {
+  return object.httpMetadata?.contentType?.startsWith("audio/") || false;
+}
+
+/**
  * Return whether an R2Object or alike is a dir
  */
 export function isDirectory(object: R2ObjectAlike): boolean {

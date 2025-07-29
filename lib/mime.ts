@@ -26,7 +26,10 @@ export function parseUrlFile(contents: string, filename = ""): string {
 }
 
 /**
- * Generate contents of Windows .url file from a url
+ * Generate contents of "url" file from a url.
+ * If filename has ".webloc" extension, generate Mac OS ".webloc" file contents;
+ * If filename has ".url" extension or is empty, generate Windows ".url" file contents.
+ * Otherwise return empty string.
  */
 export function generateUrlFile(url: string, filename = ""): string {
   const ext = extname(filename);

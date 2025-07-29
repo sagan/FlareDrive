@@ -12,9 +12,10 @@ import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
 import RestoreIcon from '@mui/icons-material/Restore';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import { MIME_URL, basename, validateAndGetSafeUrl } from '../lib/commons';
+import { MIME_URL, basename, extname, validateAndGetSafeUrl } from '../lib/commons';
 import { generatePassword, useConfig } from './commons';
 import { putFile } from './app/transfer';
+import { generateUrlFile } from '../lib/mime';
 
 
 export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUpload, ...otherProps }: {
@@ -60,7 +61,19 @@ export default function UrlFileEditorDialog({ cwd, open, readonly, close, onUplo
     setError(null);
     setSaving(true);
     try {
-      await putFile({ key, create: !filekey, auth, contentType: MIME_URL, url: fileurl, comment });
+      let body: BodyInit | undefined;
+      if (extname(key)) {
+        body = generateUrlFile(fileurl, key);
+      }
+      await putFile({
+        key,
+        auth,
+        comment,
+        body,
+        contentType: MIME_URL,
+        url: fileurl,
+        create: !filekey,
+      });
       setFilekey(key);
       setUrl(fileurl);
     } catch (e) {
