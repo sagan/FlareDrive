@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useBlocker } from 'react-router-dom';
 import { Box, Button, CircularProgress, Link, Paper, Typography, } from "@mui/material";
 import DownloadIcon from '@mui/icons-material/Download';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
@@ -25,7 +24,8 @@ import {
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
-  FileItem, Sort, ViewMode, ViewProps, downloadFile, getTransferFiles, isTextual, useConfig,
+  EditingItem,
+  FileItem, FileViewerProps, Sort, ViewMode, ViewProps, downloadFile, getTransferFiles, isTextual, useConfig,
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
@@ -41,7 +41,6 @@ import EditorDialog from "./EditorDialog";
 import PdfDialog from "./PdfDialog";
 import ImageEditorDialog from "./ImageEditorDialog";
 import UrlFileEditorDialog from "./UrlFileEditorDialog";
-
 
 function DropZone({ disabled, children, onDrop }:
   { disabled: boolean, children: React.ReactNode; onDrop: (files: Record<string, File>) => void }) {
@@ -174,6 +173,10 @@ export default function Main({
   permission,
   files,
   sharing,
+  editing,
+  slideIndex,
+  setEditing,
+  setSlideIndex,
   setTip,
   setSharing,
   setShowProgressDialog,
@@ -194,6 +197,10 @@ export default function Main({
   files: FileItem[];
   sharing: string;
   multiSelected: string[];
+  editing: EditingItem | null;
+  slideIndex: number;
+  setEditing: React.Dispatch<React.SetStateAction<EditingItem | null>>;
+  setSlideIndex: React.Dispatch<React.SetStateAction<number>>;
   setTip: React.Dispatch<React.SetStateAction<string>>;
   setCwd: (cwd: string) => void;
   setSharing: React.Dispatch<React.SetStateAction<string>>;
@@ -205,10 +212,10 @@ export default function Main({
   const { auth, effectiveAuth, authSearchParams, sort, viewMode, expires, fullControl } = useConfig()
   const [showUploadDrawer, setShowUploadDrawer] = useState(false);
   const [lastUploadKey, setLastUploadKey] = useState<string | null>(null);
-  const [editing, setEditing] = useState<string | null>(null); // text editing file key
-  const [displayedPdf, setDisplayedPdf] = useState<string | null>(null);
-  const [editingImage, setEditingImage] = useState<string | null>(null);
-  const [editingUrl, setEditingUrl] = useState<FileItem | null>(null);
+  // const [editing, setEditing] = useState<string | null>(null); // text editing file key
+  // const [displayedPdf, setDisplayedPdf] = useState<string | null>(null);
+  // const [editingImage, setEditingImage] = useState<string | null>(null);
+  // const [editingUrl, setEditingUrl] = useState<FileItem | null>(null);
   const [transferQueue] = useTransferQueue();
   const uploadEnqueue = useUploadEnqueue();
 
@@ -289,22 +296,20 @@ export default function Main({
     })
   }, [setMultiSelected, filteredFiles]);
 
-  const [slideIndex, setSlideIndex] = useState(-1);
-
   // Hide lightbox controls on tap.
   // https://github.com/igordanchenko/yet-another-react-lightbox/issues/78
   const [hideLightboxControls, setHideLightboxControls] = React.useState(false);
 
   const { slides, slideIndexes } = useMemo(() => {
-    const slides: SlideImage[] = []
-    const slideIndexes: Record<string, number> = {}
+    const slides: SlideImage[] = [];
+    const slideIndexes: Record<string, number> = {};
     for (const file of files) {
       if (isDirectory(file)) {
-        continue
+        continue;
       }
-      const name = basename(file.key)
-      const size = humanReadableSize(file.size)
-      slideIndexes[file.key] = slides.length
+      const name = basename(file.key);
+      const size = humanReadableSize(file.size);
+      slideIndexes[file.key] = slides.length;
       slides.push({
         src: fileUrl({
           key: file.key,
@@ -330,7 +335,7 @@ export default function Main({
         description: `${name} (${size})`,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (slides[slides.length - 1] as any)._file = file
+      (slides[slides.length - 1] as any)._file = file;
     }
     return { slides, slideIndexes };
   }, [auth, authSearchParams, expires, files, fullControl]);
@@ -357,11 +362,11 @@ export default function Main({
         expires,
       }));
     }
-  }, [multiSelected.length, slideIndexes, handleMultiSelect, setCwd, auth, expires, handleShiftSelect]);
+  }, [multiSelected.length, slideIndexes, handleShiftSelect, handleMultiSelect, setCwd, setSlideIndex, auth, expires]);
 
   const onContextMenu = useCallback((file: FileItem) => {
     if (file.system) {
-      return
+      return;
     }
     handleMultiSelect(file.key, "context");
   }, [handleMultiSelect]);
@@ -372,19 +377,19 @@ export default function Main({
     // custom callbacks:
     edit: (file) => {
       if (file.httpMetadata.contentType === MIME_PDF) {
-        setDisplayedPdf(file.key)
+        setEditing({ file, key: file.key, kind: "pdf" });
       } else if (isUrlFile(file) && (file.customMetadata?.url || file.size === 0)) {
-        setEditingUrl(file);
+        setEditing({ file, key: file.key, kind: "url" });
       } else if (isTextual(file)) {
-        setEditing(file.key)
+        setEditing({ file, key: file.key, kind: "text" });
       } else if (isImage(file)) {
-        setEditingImage(file.key)
+        setEditing({ file, key: file.key, kind: "image" });
       } else {
         setError(`View of ${file.httpMetadata.contentType} type file is not supported`)
         return
       }
-      setSlideIndex(-1)
-      setSharing("")
+      setSlideIndex(-1);
+      setSharing("");
     }
   };
 
@@ -418,18 +423,35 @@ export default function Main({
     return sharing ? (sharing === cwd ? getDirObj(cwd) : files.find(f => f.key === sharing)) : undefined
   }, [sharing, cwd, files]);
 
-
-  const fileViewerProps = {
-    open: true,
-    setError,
-    close: () => {
-      setEditing(null)
-      setDisplayedPdf(null)
-      setEditingImage(null)
-    },
-  };
-
   const permitWrite = !isSearch && (!!auth || (effectiveAuth ? fullControl : permission == Permission.OpenRwDir));
+
+  const renderEditingDialog = useCallback(() => {
+    if (!editing) {
+      return null;
+    }
+    const fileViewerProps: FileViewerProps = {
+      filekey: editing.key,
+      open: true,
+      setError,
+      close: () => {
+        setEditing(null);
+      },
+    };
+    switch (editing.kind) {
+      case "pdf":
+        return <PdfDialog  {...fileViewerProps} />;
+      case "image":
+        return <ImageEditorDialog {...fileViewerProps} />;
+      case "url":
+        return <UrlFileEditorDialog  {...fileViewerProps}
+          url={editing.file?.customMetadata?.url || ""}
+          comment={editing.file?.customMetadata?.comment || ""}
+          open={true} readonly={!permitWrite}
+          close={() => setEditing(null)} onUpload={fetchFiles} />;
+      default:
+        return <EditorDialog  {...fileViewerProps} />;
+    }
+  }, [editing, setError, setEditing, permitWrite, fetchFiles]);
 
   const onRename = async () => {
     const oldName = basename(multiSelected[0]);
@@ -441,21 +463,21 @@ export default function Main({
       await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, effectiveAuth, true);
       fetchFiles();
     } catch (e) {
-      setError(e)
+      setError(e);
     }
   };
 
   const onDuplicate = async () => {
     const newkey = prompt(`Create a copy of "${multiSelected[0]}" at path`,
-      getDuplicateName(multiSelected[0], files))
+      getDuplicateName(multiSelected[0], files));
     if (!newkey) {
-      return
+      return;
     }
     try {
       await copyPaste(multiSelected[0], newkey, effectiveAuth, false);
       fetchFiles();
     } catch (e) {
-      setError(e)
+      setError(e);
     }
   };
 
@@ -479,7 +501,7 @@ export default function Main({
       try {
         await copyPaste(src, dst, effectiveAuth, true);
       } catch (e) {
-        setError(e)
+        setError(e);
       }
     }
     fetchFiles();
@@ -498,7 +520,7 @@ export default function Main({
       try {
         await deleteFile(key, effectiveAuth)
       } catch (e) {
-        setError(e)
+        setError(e);
       }
     }
     fetchFiles();
@@ -551,32 +573,6 @@ export default function Main({
     }
   }, [doUpload, permitWrite, preparingUploads, setError, setTip]);
 
-
-  // Block navigation if the modal is open.
-  const blocker = useBlocker(() => showUploadDrawer || !!sharing || slideIndex >= 0 ||
-    !!editing || !!displayedPdf || !!editingImage || !!editingUrl);
-  // When the blocker is triggered, close the modal instead of navigating.
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      if (showUploadDrawer) {
-        setShowUploadDrawer(false);
-      } else if (sharing) {
-        setSharing("");
-      } else if (slideIndex >= 0) {
-        setSlideIndex(-1);
-      } else if (editing) {
-        setEditing(null);
-      } else if (displayedPdf) {
-        setDisplayedPdf(null);
-      } else if (editingImage) {
-        setEditingImage(null);
-      } else if (editingUrl) {
-        setEditingUrl(null);
-      }
-      blocker.reset();
-    }
-  }, [blocker, displayedPdf, editing, editingImage, editingUrl, setSharing, sharing, showUploadDrawer, slideIndex]);
-
   return (
     <>
       {loading ? (
@@ -596,7 +592,7 @@ export default function Main({
         setOpen={setShowUploadDrawer} cwd={cwd} onUpload={(created) => {
           fetchFiles();
           if (created) {
-            setEditing(created)
+            setEditing({ key: created, kind: "text" });
           }
         }} />
       <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected} isSearch={isSearch}
@@ -643,12 +639,7 @@ export default function Main({
       />
       {!!sharingFile && <ShareDialog setSlideIndex={setSlideIndex} setError={setError} file={sharingFile} open={true}
         onClose={() => setSharing("")} onEdit={() => lightboxCallbacks.edit(sharingFile)} />}
-      {editing !== null && <EditorDialog filekey={editing} {...fileViewerProps} />}
-      {displayedPdf !== null && <PdfDialog filekey={displayedPdf} {...fileViewerProps} />}
-      {editingImage !== null && <ImageEditorDialog filekey={editingImage} {...fileViewerProps} />}
-      {editingUrl !== null && <UrlFileEditorDialog filekey={editingUrl.key} url={editingUrl.customMetadata?.url}
-        comment={editingUrl.customMetadata?.comment}
-        open={true} readonly={!permitWrite} close={() => setEditingUrl(null)} onUpload={fetchFiles} />}
+      {renderEditingDialog()}
       <Lightbox
         on={lightboxCallbacks}
         className={hideLightboxControls ? "yarl__hide-controls" : undefined}
@@ -674,22 +665,22 @@ export default function Main({
 }
 
 function getDuplicateName(filekey: string, files: FileItem[]): string {
-  const dir = dirname(filekey)
+  const dir = dirname(filekey);
   const filename = basename(filekey);
-  const ext = extname(filename)
-  let base = filename.slice(0, filename.length - ext.length)
-  let i = 1
-  const match = base.match(/^(.*) \((\d+)\)$/)
+  const ext = extname(filename);
+  let base = filename.slice(0, filename.length - ext.length);
+  let i = 1;
+  const match = base.match(/^(.*) \((\d+)\)$/);
   if (match) {
-    base = match[1]
-    i = str2int(match[2]) + 1
+    base = match[1];
+    i = str2int(match[2]) + 1;
   }
   while (true) {
     const newkey = `${dir ? dir + "/" : ""}${base} (${i})${ext}`
     if (!files.find(a => a.key === newkey)) {
-      return newkey
+      return newkey;
     }
-    i++
+    i++;
   }
 }
 
@@ -700,5 +691,5 @@ function getDirObj(key: string): FileItem {
     uploaded: new Date(0),
     checksums: {},
     httpMetadata: { contentType: MIME_DIR },
-  }
+  };
 }

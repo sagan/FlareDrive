@@ -27,6 +27,8 @@ import {
   cwd2Search,
   GlobalConfigContext,
   response2Html,
+  EditingType,
+  EditingItem,
 } from "./commons";
 import Header from "./Header";
 import Main from "./Main";
@@ -76,6 +78,8 @@ export default function App() {
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [sharing, setSharing] = useState(""); // sharing file key
+  const [editing, setEditing] = useState<EditingItem | null>(null);
+  const [slideIndex, setSlideIndex] = useState(-1);
   const [ts, setTs] = useState(Date.now());
 
   const [auth, setAuth] = useLocalStorage<string>(AUTH_VARIABLE, "");
@@ -84,7 +88,7 @@ export default function App() {
   const [editorPrompt, setEditorPrompt] = useLocalStorage<number>(EDITOR_PROMPT_VARIABLE, 1)
   const [editorReadOnly, setEditorReadOnly] = useLocalStorage<number>(EDITOR_READ_ONLY_VARIABLE, 0)
   const [expires, setExpires] = useState(() => nextDayEndTimestamp());
-  const [requireSignIn, setRequireSignIn] = useState(false)
+  const [requireSignIn, setRequireSignIn] = useState(false);
 
   const authSearchParams = useMemo(() => {
     const authSearchParams = new URLSearchParams();
@@ -307,7 +311,7 @@ export default function App() {
 
   // Block navigation if the modal is open.
   const blocker = useBlocker(() => showAdminDialog || showProgressDialog ||
-    showGenerateThumbnailDialog || showSignInDialog);
+    showGenerateThumbnailDialog || showSignInDialog || !!sharing || !!editing || slideIndex >= 0);
   // When the blocker is triggered, close the modal instead of navigating.
   useEffect(() => {
     if (blocker.state === 'blocked') {
@@ -317,15 +321,24 @@ export default function App() {
         setShowProgressDialog(false);
       } else if (showGenerateThumbnailDialog) {
         setShowGenerateThumbnailDialog(false);
+      } else if (slideIndex >= 0) {
+        setSlideIndex(-1);
+      } else if (editing) {
+        setEditing(null);
+      } else if (sharing) {
+        setSharing("");
       } else if (showSignInDialog) {
         if (requireSignIn) {
           return;
         }
         setShowSignInDialog(false);
+      } else {
+        return;
       }
       blocker.reset();
     }
-  }, [blocker, requireSignIn, showAdminDialog, showGenerateThumbnailDialog, showProgressDialog, showSignInDialog]);
+  }, [blocker, editing, requireSignIn, sharing, showAdminDialog, showGenerateThumbnailDialog,
+    showProgressDialog, showSignInDialog, slideIndex]);
 
   return (
     <GlobalConfigContext.Provider value={globalConfig}>
@@ -364,6 +377,7 @@ export default function App() {
                     ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
                     : <Main readmeError={readmeError} readmeStatus={readmeStatus}
                       readmeContents={readmeContents} readmeFile={readmeFile}
+                      editing={editing} setEditing={setEditing} slideIndex={slideIndex} setSlideIndex={setSlideIndex}
                       cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
                       sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                       permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}

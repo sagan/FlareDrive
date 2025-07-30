@@ -387,3 +387,9 @@ export type UploadFile = {
   basedir: string;
   file: File;
 };
+
+export type EditingItem = {
+  key: string;
+  kind: "text" | "image" | "pdf" | "url";
+  file?: FileItem;
+};
