@@ -1044,3 +1044,16 @@ export function validateAndGetSafeUrl(url: string) {
     return "";
   }
 }
+
+// Return a new file name based on provided name:
+// If name is in "foo (1)" style, return "foo (2)"
+// Otherwise (the name is in "foo" style), return "foo (1)".
+export function newFileName(name: string): string {
+  const match = name.match(/^(.*?)( \((\d+)\))?$/);
+  if (!match) {
+    return `${name} (1)`;
+  }
+  const [, baseName, , indexStr] = match;
+  const index = indexStr ? parseInt(indexStr, 10) + 1 : 1;
+  return `${baseName} (${index})`;
+}

@@ -9,7 +9,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ShareIcon from '@mui/icons-material/Share';
 import SearchIcon from '@mui/icons-material/Search';
 import { KEY_PART_SEARCH, dirname, dirUrlPath, fileUrl } from "../lib/commons";
-import { useConfig } from "./commons";
+import { downloadFile, useConfig } from "./commons";
 
 
 export default function MultiSelectToolbar({
@@ -26,6 +26,7 @@ export default function MultiSelectToolbar({
   onSelectAll,
   onInvertSelection,
   onShare,
+  onDownloadAsZip,
 }: {
   isSearch: boolean;
   writable: boolean;
@@ -44,15 +45,13 @@ export default function MultiSelectToolbar({
   onSelectAll: () => void;
   onInvertSelection: () => void;
   onShare: (key: string) => void;
+  onDownloadAsZip: () => void;
 }) {
   const { auth } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const [link, linkIsDir] = multiSelected.length === 1 ? getLink(multiSelected[0]) : ["", false];
   const dirLink = multiSelected.length === 1 ? fileUrl({ key: dirname(multiSelected[0]), isDir: true }) : "";
-  const allLinks = useMemo(() => {
-    return multiSelected.map(getLink).filter(link => !link[1]).map(link => link[0]);
-  }, [getLink, multiSelected]);
 
   return (
     <Slide direction="up" in={multiSelected.length > 0}>
@@ -80,20 +79,14 @@ export default function MultiSelectToolbar({
         <IconButton
           color="primary"
           href={link && !linkIsDir ? link : ""}
-          disabled={allLinks.length === 0}
           onClick={(e) => {
             e.preventDefault();
-            if (multiSelected.length > 1) {
-              if (!confirm(`Downlod ${allLinks.length} files? (Note: dir won't be downloaded)`)) {
-                return;
-              }
+            if (link && !linkIsDir) {
+              downloadFile(link);
+              return;
             }
-            for (const link of allLinks) {
-              const a = document.createElement("a");
-              a.href = link;
-              a.download = (new URL(link).pathname).split("/").pop()!;
-              a.click();
-            }
+            setAnchorEl(null);
+            onDownloadAsZip();
           }}
         >
           <DownloadIcon />

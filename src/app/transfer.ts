@@ -59,7 +59,8 @@ function applyAuth(req: Request, auth: string): Request {
 
 export async function fetchPath(
   path: string,
-  auth: string
+  auth: string,
+  signal?: AbortSignal
 ): Promise<{
   authed: boolean;
   auth: string;
@@ -75,7 +76,7 @@ export async function fetchPath(
     }),
     auth
   );
-  const res = await fetch(req);
+  const res = await fetch(req, { signal });
 
   if (!res.ok) {
     if (res.status == 404) {

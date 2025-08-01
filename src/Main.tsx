@@ -125,17 +125,17 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
         if (e.ctrlKey || e.metaKey) {
           return;
         }
-        e.stopPropagation()
-        e.preventDefault()
-        downloadFile(src)
+        e.stopPropagation();
+        e.preventDefault();
+        downloadFile(src);
       }}>
         Download
       </Button>
       {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) || file.httpMetadata.contentType === MIME_PDF) && <Button
         variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
           e.stopPropagation();
-          e.preventDefault()
-          edit(file)
+          e.preventDefault();
+          edit(file);
         }}>
         Open
       </Button>
@@ -143,7 +143,7 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
       <Link href={viewSrc} onClick={e => {
-        e.stopPropagation()
+        e.stopPropagation();
       }}>{slide.description}</Link>
     </Typography>
     <Box>
@@ -175,6 +175,7 @@ export default function Main({
   sharing,
   editing,
   slideIndex,
+  onDownloadAsZip,
   setEditing,
   setSlideIndex,
   setTip,
@@ -199,6 +200,7 @@ export default function Main({
   multiSelected: string[];
   editing: EditingItem | null;
   slideIndex: number;
+  onDownloadAsZip: () => void;
   setEditing: React.Dispatch<React.SetStateAction<EditingItem | null>>;
   setSlideIndex: React.Dispatch<React.SetStateAction<number>>;
   setTip: React.Dispatch<React.SetStateAction<string>>;
@@ -597,6 +599,7 @@ export default function Main({
         }} />
       <MultiSelectToolbar writable={permitWrite} multiSelected={multiSelected} isSearch={isSearch}
         onOpenDir={(key: string) => setCwd(key)}
+        onDownloadAsZip={onDownloadAsZip}
         getLink={(key: string) => {
           const file = files.find(f => f.key === key);
           const isDir = !!file && isDirectory(file)

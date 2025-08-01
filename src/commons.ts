@@ -128,10 +128,16 @@ export function isTextual(file: FileItem): boolean {
   return mime.startsWith("text/") || TXT_MIMES.includes(mime);
 }
 
-export function downloadFile(url: string) {
+export function downloadFile(url: string, filename = "") {
   const a = document.createElement("a");
   a.href = url;
-  a.download = "";
+  if (!filename) {
+    const urlObj = new URL(url);
+    if (urlObj.protocol != "blob:") {
+      filename = urlObj.pathname.split("/").pop()!;
+    }
+  }
+  a.download = filename;
   a.click();
 }
 

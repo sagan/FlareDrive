@@ -26,6 +26,7 @@ export default function Header({
   setShowProgressDialog,
   setShowAdminDialog,
   fetchFiles,
+  onDownloadAsZip,
   onShare,
 }: {
   cwd: string;
@@ -44,6 +45,7 @@ export default function Header({
   setShowProgressDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowAdminDialog: React.Dispatch<React.SetStateAction<boolean>>;
   fetchFiles: () => void;
+  onDownloadAsZip?: () => void;
   onShare?: () => void;
 }) {
   const { auth, effectiveAuth, fullControl } = useConfig();
@@ -147,7 +149,15 @@ export default function Header({
             onShare()
           }}
         >
-          Share & Publish
+          Share & Publish dir
+        </MenuItem>}
+        {!!onDownloadAsZip && <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            onDownloadAsZip();
+          }}
+        >
+          Download dir
         </MenuItem>}
         {!!auth && <MenuItem onClick={() => {
           setAnchorEl(null);

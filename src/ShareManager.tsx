@@ -13,16 +13,17 @@ import { getShare } from "./app/share";
 import ShareDialog from "./ShareDialog";
 import { useConfig } from "./commons";
 
-export default function ShareManager({ search, shares, loading, fetchFiles, setError }: {
+export default function ShareManager({ search, shares, loading, shareObject, setShareObject, fetchFiles, setError }: {
   search: string;
   shares: string[];
   loading: boolean;
-  fetchFiles: () => void
+  shareObject: ShareObject | null;
+  setShareObject: React.Dispatch<React.SetStateAction<ShareObject | null>>;
+  fetchFiles: () => void;
   setError: React.Dispatch<React.SetStateAction<unknown>>;
 }) {
-  const { auth } = useConfig()
-  const [shareObject, setShareObject] = useState<ShareObject | null>(null)
-  const [shareKey, setShareKey] = useState("")
+  const { auth } = useConfig();
+  const [shareKey, setShareKey] = useState("");
 
   const filteredShares = useMemo(
     () =>

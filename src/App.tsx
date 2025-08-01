@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import NProgress from "nprogress"
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useLocation, useNavigate, useSearchParams, To } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
@@ -20,6 +20,7 @@ import {
   GlobalConfig,
   basename,
   fileUrl,
+  ShareObject,
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
@@ -27,7 +28,6 @@ import {
   cwd2Search,
   GlobalConfigContext,
   response2Html,
-  EditingType,
   EditingItem,
 } from "./commons";
 import Header from "./Header";
@@ -43,6 +43,7 @@ import { PathBreadcrumb } from "./components";
 import GenerateThumbnailsDialog from "./GenerateThumbnailsDialog";
 import SignInDialog from "./SignInDialog";
 import { searchFiles } from "./app/search";
+import DownloadDialog from "./DownloadDialog";
 
 const systemFolders: FileItem[] = [
   {
@@ -72,12 +73,14 @@ export default function App() {
   const [showAdminDialog, setShowAdminDialog] = React.useState(false);
   const [showGenerateThumbnailDialog, setShowGenerateThumbnailDialog] = useState(false);
   const [showSignInDialog, setShowSignInDialog] = React.useState(false);
+  const [downloadAsZipFiles, setDownloadAsZipFiles] = React.useState<FileItem[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [tip, setTip] = useState("");
   const [files, setFiles] = useState<FileItem[]>([]);
   const [shares, setShares] = useState<string[]>([]);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [sharing, setSharing] = useState(""); // sharing file key
+  const [shareObject, setShareObject] = useState<ShareObject | null>(null);
   const [editing, setEditing] = useState<EditingItem | null>(null);
   const [slideIndex, setSlideIndex] = useState(-1);
   const [ts, setTs] = useState(Date.now());
@@ -249,9 +252,6 @@ export default function App() {
 
   useEffect(() => fetchFiles(), [cwd, auth, ts, fetchFiles]);
 
-  /**
- * Readme file key.
- */
   const readmeFile = useMemo(() => {
     if (isSearch) {
       return "";
@@ -266,6 +266,15 @@ export default function App() {
   const [readmeStatus, setReadmeStatus] = useState<"" | "loading" | "ok" | "error">("");
   const [readmeError, setReadmeError] = useState<unknown>(null);
   const [readmeContents, setReadmeContents] = useState(""); // readme contents (html);
+
+  const onDownloadAsZip = useCallback(() => {
+    const selectedFiles = multiSelected.length > 0
+      ? files.filter(file => multiSelected.includes(file.key)) : files.filter(f => !f.system);
+    if (selectedFiles.length == 0) {
+      return;
+    }
+    setDownloadAsZipFiles(selectedFiles);
+  }, [files, multiSelected]);
 
   const fetchReadme = useCallback(async (signal?: AbortSignal) => {
     const key = readmeFile;
@@ -310,8 +319,8 @@ export default function App() {
   }, [fetchReadme, readmeFile]);
 
   // Block navigation if the modal is open.
-  const blocker = useBlocker(() => showAdminDialog || showProgressDialog ||
-    showGenerateThumbnailDialog || showSignInDialog || !!sharing || !!editing || slideIndex >= 0);
+  const blocker = useBlocker(() => showAdminDialog || showProgressDialog || showGenerateThumbnailDialog ||
+    showSignInDialog || !!sharing || !!shareObject || !!editing || downloadAsZipFiles.length > 0 || slideIndex >= 0);
   // When the blocker is triggered, close the modal instead of navigating.
   useEffect(() => {
     if (blocker.state === 'blocked') {
@@ -321,24 +330,28 @@ export default function App() {
         setShowProgressDialog(false);
       } else if (showGenerateThumbnailDialog) {
         setShowGenerateThumbnailDialog(false);
-      } else if (slideIndex >= 0) {
-        setSlideIndex(-1);
       } else if (editing) {
         setEditing(null);
       } else if (sharing) {
         setSharing("");
+      } else if (shareObject) {
+        setShareObject(null);
       } else if (showSignInDialog) {
         if (requireSignIn) {
           return;
         }
         setShowSignInDialog(false);
+      } else if (downloadAsZipFiles.length > 0) {
+        setDownloadAsZipFiles([]);
+      } else if (slideIndex >= 0) {
+        setSlideIndex(-1);
       } else {
         return;
       }
       blocker.reset();
     }
-  }, [blocker, editing, requireSignIn, sharing, showAdminDialog, showGenerateThumbnailDialog,
-    showProgressDialog, showSignInDialog, slideIndex]);
+  }, [blocker, downloadAsZipFiles.length, editing, requireSignIn, shareObject, sharing, showAdminDialog,
+    showGenerateThumbnailDialog, showProgressDialog, showSignInDialog, slideIndex]);
 
   return (
     <GlobalConfigContext.Provider value={globalConfig}>
@@ -357,26 +370,27 @@ export default function App() {
                 isSearch={isSearch}
                 searchOptions={searchOptions}
                 setCwd={setCwd}
+                onDownloadAsZip={multiSelected.length === 0 && cwd != SHARES_FOLDER_KEY ? onDownloadAsZip : undefined}
                 onSignnIn={() => setShowSignInDialog(true)} search={search} fetchFiles={fetchFiles}
                 setSearch={setSearch} setViewMode={setViewMode}
                 sort={sort} setSort={setSort}
                 onGenerateThumbnails={() => setShowGenerateThumbnailDialog(true)}
                 setShowProgressDialog={setShowProgressDialog}
                 setShowAdminDialog={setShowAdminDialog}
-                onShare={(multiSelected.length > 0 ? multiSelected.length === 1 : cwd && cwd != SHARES_FOLDER_KEY)
-                  ? () => setSharing(multiSelected[0] || cwd) : undefined}
+                onShare={multiSelected.length === 0 && !!cwd && cwd != SHARES_FOLDER_KEY ?
+                  () => setSharing(cwd) : undefined}
               />
               <PathBreadcrumb prefix={prefix} permission={permission}
                 path={currentDir} searchKeyword={searchKeyword}
                 isSearch={isSearch} searchOptions={searchOptions} setCwd={setCwd} setSearch={setSearch} />
               {
                 cwd == SHARES_FOLDER_KEY
-                  ? <ShareManager setError={setError} fetchFiles={fetchFiles}
-                    search={search} shares={shares} loading={loading} />
+                  ? <ShareManager setError={setError} fetchFiles={fetchFiles} shareObject={shareObject}
+                    setShareObject={setShareObject} search={search} shares={shares} loading={loading} />
                   : (isSearch && !searchKeyword)
                     ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
                     : <Main readmeError={readmeError} readmeStatus={readmeStatus}
-                      readmeContents={readmeContents} readmeFile={readmeFile}
+                      readmeContents={readmeContents} readmeFile={readmeFile} onDownloadAsZip={onDownloadAsZip}
                       editing={editing} setEditing={setEditing} slideIndex={slideIndex} setSlideIndex={setSlideIndex}
                       cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
                       sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
@@ -410,6 +424,8 @@ export default function App() {
             {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}
               onClose={() => setShowGenerateThumbnailDialog(false)} onDone={fetchFiles} files={thumbnailableFiles}>
             </GenerateThumbnailsDialog>}
+            {downloadAsZipFiles.length > 0 && <DownloadDialog open={true} files={downloadAsZipFiles}
+              onClose={() => setDownloadAsZipFiles([])} />}
             {(requireSignIn || showSignInDialog) && <SignInDialog open={true}
               onClose={requireSignIn ? undefined : () => setShowSignInDialog(false)} onSignIn={onSignIn} />}
           </TransferQueueProvider>
