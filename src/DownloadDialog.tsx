@@ -7,10 +7,14 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import {
+  EXPIRES_VARIABLE,
+  SCOPE_VARIABLE,
+  TOKEN_VARIABLE,
   fileUrl,
   humanReadableSize,
   isDirectory,
   basename,
+  str2int,
 } from "../lib/commons";
 import { downloadFile, FileItem, useConfig } from "./commons";
 import { fetchPath } from "./app/transfer";
@@ -42,7 +46,7 @@ type State = {
 type Action =
   | { type: "START" }
   | { type: "CANCEL" }
-  | { type: "RESET" }
+  | { type: "RESET"; payload: FileItem[] }
   | { type: "SUCCESS" }
   | { type: "FAIL"; payload: string }
   | { type: "ADD_LOG"; payload: string }
@@ -64,7 +68,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...initialState,
         status: Status.Downloading,
-        log: ["Starting download...\n"],
+        log: [...state.log, "Starting download...\n"],
         abortController: new AbortController(),
       };
     case "CANCEL":
@@ -76,7 +80,12 @@ function reducer(state: State, action: Action): State {
         abortController: null,
       };
     case "RESET":
-      return initialState;
+      return {
+        ...initialState,
+        log: action.payload.map(
+          file => `${isDirectory(file) ? "📁" : "📄"} ${file.key}\n`
+        )
+      };
     case "SUCCESS":
       return {
         ...state,
@@ -125,13 +134,13 @@ export default function DownloadDialog({ files, open, onClose }: {
   files: FileItem[];
   onClose: () => void;
 }) {
-  const { auth, expires } = useConfig();
+  const { auth, effectiveAuth, authSearchParams, expires } = useConfig();
   const [state, dispatch] = useReducer(reducer, initialState);
   const { status, log, abortController, overallProgress, fileProgress } = state;
   const normalFiles = useMemo(() => files.filter(f => !isDirectory(f)), [files]);
 
   useEffect(() => {
-    dispatch({ type: "RESET" });
+    dispatch({ type: "RESET", payload: files });
   }, [files, open]);
 
 
@@ -178,7 +187,7 @@ export default function DownloadDialog({ files, open, onClose }: {
         return;
       }
       added.add(dir.key);
-      const fetchedFiles = await limit(() => fetchPath(dir.key, auth, signal));
+      const fetchedFiles = await limit(() => fetchPath(dir.key, effectiveAuth, signal));
       const items = fetchedFiles.items || [];
       dispatch({ type: "SET_TOTAL", payload: items.length });
 
@@ -199,7 +208,14 @@ export default function DownloadDialog({ files, open, onClose }: {
           added.add(item.key);
           dispatch({ type: "ADD_LOG", payload: `Queueing file: ${itemName}\n` });
           const progress = await limit(() => {
-            const downloadUrl = fileUrl({ auth, expires, key: item.key, raw: true });
+            const downloadUrl = fileUrl({
+              auth,
+              key: item.key,
+              raw: true,
+              expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+              scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+              token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+            });
             return addFileToZip(zip, item, downloadUrl, signal);
           });
           dispatch({ type: "UPDATE_OVERALL_PROGRESS", payload: progress });
@@ -239,7 +255,14 @@ export default function DownloadDialog({ files, open, onClose }: {
             added.add(file.key);
             // Wrap top-level file downloads in the limiter as well
             const progress = await limit(() => {
-              const downloadUrl = fileUrl({ auth, expires, key: file.key, raw: true });
+              const downloadUrl = fileUrl({
+                auth,
+                key: file.key,
+                raw: true,
+                expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+                scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+                token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+              });
               return addFileToZip(zip, file, downloadUrl, signal);
             });
             dispatch({ type: "UPDATE_OVERALL_PROGRESS", payload: progress });
@@ -286,7 +309,15 @@ export default function DownloadDialog({ files, open, onClose }: {
       return;
     }
     for (const file of normalFiles) {
-      const link = fileUrl({ key: file.key, auth, expires, raw: true, origin: location.origin });
+      const link = fileUrl({
+        auth,
+        key: file.key,
+        raw: true,
+        origin: location.origin,
+        expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+        scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+        token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+      });
       downloadFile(link);
       dispatch({ type: "ADD_LOG", payload: `download ${file.key}\n` });
     }

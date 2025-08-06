@@ -79,66 +79,66 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   const [linkTs, setLinkTs] = useState(+new Date);
   const [linkFullControl, setLinkFullControl] = useState(false);
 
-  const [permission, prefix] = useMemo(() => getFilePermission(fileKey, globalConfig), [fileKey, globalConfig])
-  const targetIsDir = shareObject.key.endsWith("/")
+  const [permission, prefix] = useMemo(() => getFilePermission(fileKey, globalConfig), [fileKey, globalConfig]);
+  const targetIsDir = shareObject.key.endsWith("/");
   const targetLink = targetIsDir ? dirUrlPath(shareObject.key) : fileUrl({
     key: shareObject.key,
     auth,
     expires
-  })
-  const targetParentLink = dirUrlPath(dirname(shareObject.key))
-  const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "")
+  });
+  const targetParentLink = dirUrlPath(dirname(shareObject.key));
+  const link = location.origin + SHARE_ENDPOINT + shareKey + (targetIsDir ? "/" : "");
   const shareKeyError = !shareKey ? "Share name can not be empty" :
     (shareKey !== shareKey.trim() ? "Share name can not start or end with spaces" :
-      (shareKey.match(/\//) ? `Share name can not contain "/"` : ""))
-  const invalid = !!shareKeyError
+      (shareKey.match(/\//) ? `Share name can not contain "/"` : ""));
+  const invalid = !!shareKeyError;
 
   const navigate = useNavigate();
 
   const doDeleteShare = useCallback(async () => {
     if (!confirm(`Delete share "${shareKey}" (target file: "${shareObject.key}")?`)) {
-      return
+      return;
     }
-    const key = shareKey
-    setStatus(Status.Sharing)
+    const key = shareKey;
+    setStatus(Status.Sharing);
     try {
-      await deleteShare(key, auth)
-      setStatus(Status.Creating)
+      await deleteShare(key, auth);
+      setStatus(Status.Creating);
       if (postDelete) {
-        postDelete(key)
+        postDelete(key);
       }
     } catch (e) {
-      setStatus(Status.Editing)
+      setStatus(Status.Editing);
     }
-  }, [shareKey, shareObject.key, auth, postDelete])
+  }, [shareKey, shareObject.key, auth, postDelete]);
 
   const doShare = useCallback(async () => {
-    const previousStatus = status
-    setStatus(Status.Sharing)
+    const previousStatus = status;
+    setStatus(Status.Sharing);
     const newShareObject: ShareObject = {
       ...shareObject,
       ...(ttl >= 0 ? { expiration: ttl ? Math.round(+new Date / 1000) + ttl : 0 } : {}),
       ...(shareObject.refererMode ? {
         refererList: refer2list(referer),
       } : {})
-    }
+    };
     try {
-      await createShare(shareKey, newShareObject, auth)
-      setStatus(Status.Editing)
-      setShareObject(newShareObject)
+      await createShare(shareKey, newShareObject, auth);
+      setStatus(Status.Editing);
+      setShareObject(newShareObject);
     } catch (e) {
-      setError(`${e}`)
-      setStatus(previousStatus)
+      setError(`${e}`);
+      setStatus(previousStatus);
     }
   }, [status, shareObject, ttl, referer, shareKey, auth, setError]);
 
   const isOpen = permission == Permission.OpenRwDir || permission == Permission.OpenDir ||
-    (!targetIsDir && permission === Permission.OpenFile)
+    (!targetIsDir && permission === Permission.OpenFile);
   const linkOpenUrl = useMemo(() => fileUrl({
     origin: location.origin,
     key: fileKey,
     isDir: targetIsDir,
-  }), [fileKey, targetIsDir])
+  }), [fileKey, targetIsDir]);
 
   const linkUrl = useMemo(() => fileUrl({
     origin: location.origin,
@@ -148,7 +148,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     fullControl: linkFullControl,
     scope: targetIsDir ? fileKeyWithDirSlash : undefined,
     isDir: targetIsDir,
-  }), [fileKey, auth, linkTtl, linkTs, linkFullControl, targetIsDir, fileKeyWithDirSlash])
+  }), [fileKey, auth, linkTtl, linkTs, linkFullControl, targetIsDir, fileKeyWithDirSlash]);
 
 
   function nativeShare() {
@@ -164,25 +164,20 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
           return;
         }
         e.preventDefault();
-        onClose();
-        if (setSlideIndex) {
-          setSlideIndex(-1);
-        }
         navigate(targetParentLink);
       }}><FolderOpenIcon /></IconButton>
       <Button title="Open share target" color='secondary' href={targetLink} onClick={(e) => {
         if (!targetIsDir || e.ctrlKey || e.metaKey) {
-          return
+          return;
         }
         e.preventDefault();
-        onClose();
         navigate(targetLink);
       }}>{shareObject.key}</Button>
     </DialogTitle>
     <Tabs value={tab} onChange={(_, newTab) => {
-      setTab(newTab)
+      setTab(newTab);
       if (newTab === 0) {
-        setLinkTs(+new Date)
+        setLinkTs(+new Date);
       }
     }} sx={{ width: "100%" }} >
       <Tab label="Share" />
@@ -535,16 +530,6 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             <option value={86400 * THIRTEEN_MONTHS_DAYS}>1 year</option>
           </NativeSelect>
         </FormControl>
-        <FormControlLabel label="Enable CORS" control={
-          <Checkbox checked={!!shareObject.cors} onChange={e => {
-            setShareObject({ ...shareObject, cors: +e.target.checked })
-          }} />} />
-        {targetIsDir &&
-          <FormControlLabel label="Disable dir index" control={
-            <Checkbox checked={shareObject.noindex || false} onChange={e => {
-              setShareObject({ ...shareObject, noindex: e.target.checked })
-            }} />} />
-        }
         <FormControl sx={{ m: 1, minWidth: 120 }}>
           <InputLabel variant="standard" htmlFor="referer-mode">Referer limit</InputLabel>
           <NativeSelect
@@ -558,15 +543,40 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             <option value={ShareRefererMode.BlackListMode}>Blacklist</option>
           </NativeSelect>
         </FormControl>
+        {targetIsDir &&
+          <FormControlLabel label="Disable dir index" control={
+            <Checkbox checked={shareObject.noindex || false} onChange={e => {
+              setShareObject({ ...shareObject, noindex: e.target.checked });
+            }} />} />
+        }
+        <FormControlLabel label="Enable CORS" control={
+          <Checkbox checked={!!shareObject.cors} onChange={e => {
+            setShareObject({ ...shareObject, cors: +e.target.checked });
+          }} />} />
+        <FormControlLabel label="Full html" sx={{ color: "red" }}
+          title="Render html in full mode instead of sandbox mode. Warning: malicious html files could do XSS attack"
+          control={
+            <Checkbox checked={!!shareObject.fullHtml} onChange={e => {
+              setShareObject({ ...shareObject, fullHtml: !!e.target.checked });
+            }} />} />
       </Box>
-      {!!shareObject.refererMode && <div>
-        <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
-          helperText={<>
-            One <a href="https://github.com/clearlylocal/browser-extension-url-match">url pattern</a> per line.
-            Enter a empty line with a trailing &quot;\n&quot; to include &quot;no referer&quot; or direct access.
-          </>} value={referer} onChange={e => setReferer(e.target.value)}
-        />
-      </div>}
+      {!!shareObject.refererMode && <>
+        <Box>
+          <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
+            helperText={<>
+              One <a href="https://github.com/clearlylocal/browser-extension-url-match">url pattern</a> per line.
+            </>} value={referer} onChange={e => setReferer(e.target.value)}
+          />
+        </Box>
+        <Box>
+          <FormControlLabel label="Apply to empty referer"
+            title="Apply referer limit to to direct request (no or empty referer)"
+            control={
+              <Checkbox checked={!!shareObject.refererModeEmpty} onChange={e => {
+                setShareObject({ ...shareObject, refererModeEmpty: !!e.target.checked });
+              }} />} />
+        </Box>
+      </>}
       {status === Status.Editing && <Typography>
         Shared link: <a href={link}>{new URL(link).pathname}</a>
         {!!shareObject.expiration &&
@@ -600,18 +610,14 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
 
 function refer2list(referer?: string): string[] {
   if (!referer) {
-    return []
+    return [];
   }
-  return [... new Set(referer.split(/\r?\n/))].sort()
+  return [... new Set(referer.trim().split(/\r?\n/))].map(v => v.trim()).filter(v => v).sort();
 }
 
 function list2Referer(list?: string[]): string {
   if (!list) {
-    return ""
+    return "";
   }
-  // special case
-  if (list.length === 1 && list[0] === "") {
-    return "\n"
-  }
-  return list.join("\n")
+  return list.join("\n");
 }

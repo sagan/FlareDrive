@@ -599,6 +599,9 @@ export function writeR2ObjectHeaders(obj: R2Object, headers: Headers) {
 /**
  * Get http response from R2Object
  * @param html bool If true, convert output to html if possible (when obj is certain some type like markdown)
+ * @param fullHtml bool If true, output full html page, otherwise use sandboxed html.
+ * @param raw bool If true, return raw object body without any processing.
+ * Note: it will not redirect to url if obj is a url file.
  * @param download bool If true, send "Content-Disposition: attachment" header.
  * @param cors bool If true, send CORS Allow All headers
  */
@@ -606,12 +609,14 @@ export async function outputR2Object({
   obj,
   download,
   html,
+  fullHtml,
   raw,
   cors,
 }: {
   obj: R2Object | R2ObjectBody;
   download?: boolean;
   html?: boolean;
+  fullHtml?: boolean;
   raw?: boolean;
   cors?: boolean;
 }): Promise<Response> {
@@ -641,12 +646,14 @@ export async function outputR2Object({
     const htmlOutput = await marked.parse(body);
     const sanitizedHtml = sanitizeHtml(htmlOutput);
     headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
-    headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
+    if (!fullHtml) {
+      headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
+    }
     headers.delete(HEADER_CONTENT_LENGTH);
     return new Response(sanitizedHtml, { headers });
   }
   // headers.set("Cache-Control", "max-age=31536000");
-  if (isHtml(obj)) {
+  if (isHtml(obj) && !fullHtml) {
     headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
   }
   return new Response(obj.body, { headers });

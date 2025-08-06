@@ -9,7 +9,10 @@ import {
 import HomeIcon from "@mui/icons-material/Home";
 import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
-import { EXPIRES_VARIABLE, SCOPE_VARIABLE, Permission, dirUrlPath, fileUrl, str2int } from "../lib/commons";
+import {
+  EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE,
+  Permission, dirUrlPath, fileUrl, str2int,
+} from "../lib/commons";
 import { PreventDefaultEventCb, search2Cwd, SearchOptions, useConfig } from "./commons";
 
 const permissionDescriptions: Record<Permission, string> = {
@@ -51,12 +54,12 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
   setCwd: (newCwd: string) => void;
   setSearch: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { auth, authSearchParams, expires, fullControl } = useConfig()
+  const { auth, authSearchParams, fullControl } = useConfig()
   const parts = path ? path.replace(/\/$/, "").split("/") : [];
 
   const cwdHref = dirUrlPath(path);
 
-  const scope = authSearchParams?.get(SCOPE_VARIABLE) || ""
+  const scope = authSearchParams?.get(SCOPE_VARIABLE) || "";
 
   return (
     <Breadcrumbs className="breadcrumbs" separator="›" sx={{ padding: 1 }}>
@@ -76,10 +79,9 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
         const url = fileUrl({
           key,
           isDir: true,
-          auth,
-          expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+          expires: auth ? undefined : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
           scope: auth ? "" : scope,
-          token: auth ? "" : scope,
+          token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
           fullControl: auth ? undefined : fullControl,
         })
         return !isSearch && index === parts.length - 1 ? (

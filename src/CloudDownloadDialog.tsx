@@ -19,7 +19,7 @@ import Box from '@mui/material/Box';
 import { Button, TextField } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
 import ClearIcon from '@mui/icons-material/Clear';
-import { basename, extname, fileUrl, humanReadableSize } from '../lib/commons';
+import { INDEX_FILE, basename, extname, fileUrl, humanReadableSize } from '../lib/commons';
 import { FileItem, generatePassword, useConfig } from './commons';
 import { uploadFromUrl } from './app/transfer';
 import { useNavigate } from 'react-router-dom';
@@ -39,25 +39,25 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
     file: FileItem | null, sourceUrl: string,
     dir: string, saveName: string
   }[]>([])
-  const [asyncMode, setAsyncMode] = useState(false)
+  const [asyncMode, setAsyncMode] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [ac, setAc] = useState<AbortController | null>(null)
+  const [ac, setAc] = useState<AbortController | null>(null);
 
   const autoName = useMemo(() => {
     try {
       const url = new URL(source)
       if (url.pathname.endsWith("/")) {
-        return "index.html"
+        return INDEX_FILE;
       }
-      let name = basename(decodeURI(url.pathname).trim())
-      const ext = extname(name)
+      let name = basename(decodeURI(url.pathname).trim());
+      const ext = extname(name);
       if (!ext) {
-        name += ".html"
+        name += ".html";
       }
-      return name
+      return name;
     } catch (e) { /* empty */ }
-    return ""
+    return "";
   }, [source])
 
   const ext = extname(autoName) || ".bin";

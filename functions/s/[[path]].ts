@@ -20,6 +20,7 @@ import {
   isDirectory,
   isUrlFile,
   validateAndGetSafeUrl,
+  removeZeroFields,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -65,7 +66,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   if (failResponse) {
     return failResponse;
   }
-  const shareObject = await request.json<ShareObject>();
+  const shareObject = removeZeroFields(await request.json<ShareObject>());
   if (!shareObject.key) {
     return responseBadRequest();
   }
@@ -145,14 +146,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
     }
   }
   if (data.refererMode) {
-    let referList = data.refererList || [];
+    const referList = data.refererList || [];
     const referer = request.headers.get(HEADER_REFERER) || "";
-    const i = referList.indexOf("");
-    if (i != -1) {
-      referList = referList.splice(i, 1);
-    }
-    const referMatch =
-      (i != -1 && (!referer || referer.startsWith(url.origin + "/"))) || matchPatternsWithUrl(referList, referer);
+    const referMatch = referer ? matchPatternsWithUrl(referList, referer) : !!data.refererModeEmpty;
     let block = false;
     switch (data.refererMode) {
       case ShareRefererMode.WhitelistMode:
@@ -182,6 +178,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
   if (!obj) {
     return responseNotFound();
   }
+  const fullHtml = !!data.fullHtml;
+  const cors = !!data.cors;
+
   if (isDirectory(obj)) {
     if (!url.pathname.endsWith("/")) {
       url.pathname += "/";
@@ -191,9 +190,9 @@ export const onRequestGet: FdCfFunc = async function (context) {
       onlyIf: request.headers,
       range: request.headers,
     });
-    const cors = !!data.cors;
+
     if (indexHtmlObj) {
-      return outputR2Object({ obj: indexHtmlObj, cors });
+      return outputR2Object({ obj: indexHtmlObj, cors, fullHtml });
     }
     const sitename = context.env.SITENAME || DEFAULT_SITENAME;
     const description = data.desc || "";
@@ -229,9 +228,10 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
   return outputR2Object({
     obj,
+    fullHtml,
+    cors,
     html: !!str2int(searchParams.get(HTML_VARIABLE)),
     raw: !!str2int(searchParams.get(RAW_VARIABLE)),
-    cors: !!data.cors,
   });
 };
 
@@ -509,6 +509,14 @@ function encodeHtml(str: string): string {
   });
 }
 
+/**
+ * Match patterns with a URL.
+ * @param patterns Array of patterns to match against the URL.
+ * @param url The URL to match against the patterns.
+ * @returns true if the URL matches any of the patterns, false otherwise.
+ *
+ * Uses `browser-extension-url-match` to handle the pattern matching.
+ */
 function matchPatternsWithUrl(patterns: string[], url: string): boolean {
   const matcher = matchPattern(patterns);
   if (!matcher.valid) {

@@ -8,16 +8,22 @@ import {
   TableRow,
   Paper,
   ListItemIcon,
+  Link,
 } from "@mui/material";
 import MimeIcon from "./MimeIcon";
 import {
+  EXPIRES_VARIABLE,
+  SCOPE_VARIABLE,
+  TOKEN_VARIABLE,
   basename,
+  fileUrl,
   humanReadableSize,
   isDirectory,
   isUrlFile,
+  str2int,
   validateAndGetSafeUrl,
 } from "../lib/commons";
-import { ViewProps } from "./commons";
+import { useConfig, ViewProps } from "./commons";
 
 export default function FileDetailsList({
   isSearch,
@@ -27,6 +33,7 @@ export default function FileDetailsList({
   multiSelected,
   emptyMessage,
 }: ViewProps) {
+  const { auth, authSearchParams, fullControl } = useConfig();
   if (files.length === 0) {
     return emptyMessage;
   }
@@ -47,21 +54,23 @@ export default function FileDetailsList({
           {files.map((file) => {
             const IconComponent = file.icon;
             const name = file.name || basename(file.key);
-            let title = ""
+            let title = "";
             if (isUrlFile(file)) {
-              title = validateAndGetSafeUrl(file.customMetadata?.url || "") || ""
+              title = validateAndGetSafeUrl(file.customMetadata?.url || "") || "";
             }
             if (isSearch) {
               title += (title ? "\n" : "") + `Key: ${file.key}`;
             } else {
               title += (title ? "\n" : "") + name;
             }
+            const nameElement = <>{name}{isSearch ? ` (${file.key})` : ""}</>;
             return (
               <TableRow
                 hover
                 key={file.key}
                 selected={multiSelected.includes(file.key)}
-                onClick={(e) => {
+                onClickCapture={(e) => {
+                  e.preventDefault();
                   onClick(file, e);
                 }}
                 onContextMenu={(e) => {
@@ -90,7 +99,16 @@ export default function FileDetailsList({
                     maxWidth: { xs: 150, sm: 200, md: 300, lg: 400 },
                   }}
                 >
-                  {name}{isSearch ? ` (${file.key})` : ""}
+                  {isDirectory(file)
+                    ? <Link color="inherit" underline="none" href={fileUrl({
+                      key: file.key,
+                      isDir: true,
+                      expires: auth ? undefined : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+                      scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+                      token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+                      fullControl: auth ? undefined : fullControl,
+                    })}>{nameElement}</Link>
+                    : nameElement}
                 </TableCell>
                 <TableCell align="right">
                   {!isDirectory(file) ? humanReadableSize(file.size) : "—"}

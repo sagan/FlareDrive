@@ -397,7 +397,6 @@ export default function Main({
 
   const viewProps: ViewProps = {
     isSearch,
-    auth,
     files: filteredFiles,
     onClick,
     onContextMenu,

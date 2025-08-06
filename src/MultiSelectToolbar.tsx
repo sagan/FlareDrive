@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import Badge from '@mui/material/Badge';
 import { IconButton, Menu, MenuItem, Slide, Toolbar } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -89,7 +90,9 @@ export default function MultiSelectToolbar({
             onDownloadAsZip();
           }}
         >
-          <DownloadIcon />
+          {(link && !linkIsDir) ? <DownloadIcon /> : <Badge badgeContent={multiSelected.length} color="primary">
+            <DownloadIcon />
+          </Badge>}
         </IconButton>
         {
           isSearch ? <IconButton color="primary" disabled={multiSelected.length !== 1} href={dirLink}

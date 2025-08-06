@@ -100,7 +100,6 @@ export interface FileItem {
 
 export interface ViewProps {
   isSearch: boolean;
-  auth: string | null;
   files: FileItem[];
   onClick: (file: FileItem, e?: React.MouseEvent) => void;
   onContextMenu: (file: FileItem) => void;

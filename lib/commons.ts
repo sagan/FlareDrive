@@ -392,6 +392,11 @@ export interface ShareObject {
   refererMode?: ShareRefererMode;
 
   /**
+   * Apply referer restriction to direct request (no or empty referer) also.
+   */
+  refererModeEmpty?: boolean;
+
+  /**
    * "username:password" format auth credentials.
    */
   auth?: string;
@@ -405,6 +410,12 @@ export interface ShareObject {
    * optional, disable directory index page.
    */
   noindex?: boolean;
+
+  /**
+   * optional, full html mode. render .html files in full mode instead of sandbox mode.
+   * Note: enabling it could introduce XSS vulnerabilities.
+   */
+  fullHtml?: boolean;
 
   /**
    * CORS policy. 0 or undefined - disable. 1 - enable.
@@ -1056,4 +1067,72 @@ export function newFileName(name: string): string {
   const [, baseName, , indexStr] = match;
   const index = indexStr ? parseInt(indexStr, 10) + 1 : 1;
   return `${baseName} (${index})`;
+}
+
+/**
+ * Checks if a value is "zero-like".
+ * This includes null, undefined, false, 0, empty strings,
+ * @param value The value to check.
+ * @returns True if the value is "zero-like", otherwise false.
+ */
+export function isZeroValue(value: unknown): boolean {
+  // Standard falsy values, plus the number 0 and boolean false
+  if (value === null || value === undefined || value === "" || value === 0 || value === false) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Recursively removes fields from an object that have "zero-like" values.
+ * It handles nested objects and arrays. The function is type-safe and
+ * does not mutate the original object.
+ *
+ * "Zero-like" values are: 0, "", false, null, undefined.
+ *
+ * @template T The type of the object.
+ * @param {T} obj The object to process.
+ * @returns {T} A new object with zero-like fields removed. The return
+ * type is T for ergonomic reasons, although technically some
+ * optional properties may have been removed. Accessing a removed
+ * property will result in `undefined`, which is consistent with
+ * its optional nature.
+ */
+export function removeZeroFields<T extends object>(obj: T): T {
+  // Return primitives and null as-is. This is the recursion base case
+  // for values inside arrays or objects.
+  if (typeof obj !== "object" || obj === null) {
+    return obj;
+  }
+
+  // Handle arrays: recursively process each item.
+  // This creates a new array containing only non-zero items.
+  if (Array.isArray(obj)) {
+    return (
+      obj
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((item) => removeZeroFields(item as any)) // Recursively clean each item
+        .filter((item) => !isZeroValue(item)) as T
+    ); // Filter out any items that became "zero"
+  }
+
+  // Handle objects: build a new object, including only non-zero values.
+  // We use `reduce` to construct the new object.
+  return Object.keys(obj).reduce((acc, key) => {
+    const k = key as keyof T;
+    let value = obj[k]; // Get the original value
+
+    // If the value is an object (and not null), recurse.
+    if (typeof value === "object" && value !== null) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      value = removeZeroFields(value as any);
+    }
+
+    // Only add the key to the new object if its final value is not "zero-like".
+    if (!isZeroValue(value)) {
+      acc[k] = value;
+    }
+
+    return acc;
+  }, {} as T); // Start with an empty object of type T
 }

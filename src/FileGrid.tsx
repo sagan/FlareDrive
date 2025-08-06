@@ -15,14 +15,13 @@ import { ViewProps, useConfig } from "./commons";
 
 export default function FileGrid({
   isSearch,
-  auth,
   files,
   onClick,
   onContextMenu,
   multiSelected,
   emptyMessage,
 }: ViewProps) {
-  const { expires, authSearchParams, fullControl } = useConfig();
+  const { auth, expires, authSearchParams, fullControl } = useConfig();
   if (files.length === 0) {
     return emptyMessage;
   }
@@ -40,6 +39,14 @@ export default function FileGrid({
       return <Grid item key={file.key} xs={12} sm={6} md={4} lg={3} xl={2}>
         <ListItemButton
           title={title}
+          href={isDirectory(file) ? fileUrl({
+            key: file.key,
+            isDir: true,
+            expires: auth ? undefined : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+            scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+            token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+            fullControl: auth ? undefined : fullControl,
+          }) : ""}
           selected={multiSelected.includes(file.key)}
           onClick={(e) => {
             e.preventDefault();

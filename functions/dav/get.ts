@@ -1,7 +1,6 @@
 import {
   DOWNLOAD_VARIABLE,
   HTML_VARIABLE,
-  INDEX_FILE,
   KEY_PREFIX_THUMBNAIL,
   META_VARIABLE,
   THUMBNAIL_COLOR_VARIABLE,
@@ -11,7 +10,6 @@ import {
   THUMBNAIL_VARIABLE,
   RAW_VARIABLE,
   str2int,
-  isDirectory,
 } from "../../lib/commons";
 import { jsonResponse, outputR2Object, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
@@ -70,15 +68,6 @@ export async function handleRequestGet({ bucket, path, request, authed }: Reques
 
   if (requestMeta) {
     return jsonResponse(obj);
-  }
-  if (isDirectory(obj)) {
-    const indexHtmlObj = await bucket.get(path + "/" + INDEX_FILE, {
-      onlyIf: request.headers,
-      range: request.headers,
-    });
-    if (indexHtmlObj) {
-      obj = indexHtmlObj;
-    }
   }
   return outputR2Object({
     obj,

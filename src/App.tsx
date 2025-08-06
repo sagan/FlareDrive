@@ -1,5 +1,4 @@
 import { ThemeProvider } from "@emotion/react";
-import { useBlocker } from 'react-router-dom';
 import {
   createTheme,
   CssBaseline,
@@ -318,40 +317,19 @@ export default function App() {
     }
   }, [fetchReadme, readmeFile]);
 
-  // Block navigation if the modal is open.
-  const blocker = useBlocker(() => showAdminDialog || showProgressDialog || showGenerateThumbnailDialog ||
-    showSignInDialog || !!sharing || !!shareObject || !!editing || downloadAsZipFiles.length > 0 || slideIndex >= 0);
-  // When the blocker is triggered, close the modal instead of navigating.
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      if (showAdminDialog) {
-        setShowAdminDialog(false);
-      } else if (showProgressDialog) {
-        setShowProgressDialog(false);
-      } else if (showGenerateThumbnailDialog) {
-        setShowGenerateThumbnailDialog(false);
-      } else if (editing) {
-        setEditing(null);
-      } else if (sharing) {
-        setSharing("");
-      } else if (shareObject) {
-        setShareObject(null);
-      } else if (showSignInDialog) {
-        if (requireSignIn) {
-          return;
-        }
-        setShowSignInDialog(false);
-      } else if (downloadAsZipFiles.length > 0) {
-        setDownloadAsZipFiles([]);
-      } else if (slideIndex >= 0) {
-        setSlideIndex(-1);
-      } else {
-        return;
-      }
-      blocker.reset();
+    setSlideIndex(-1);
+    setShowAdminDialog(false);
+    setShowProgressDialog(false);
+    setShowGenerateThumbnailDialog(false);
+    setEditing(null);
+    setSharing("");
+    setShareObject(null);
+    setDownloadAsZipFiles([]);
+    if (!requireSignIn) {
+      setShowSignInDialog(false);
     }
-  }, [blocker, downloadAsZipFiles.length, editing, requireSignIn, shareObject, sharing, showAdminDialog,
-    showGenerateThumbnailDialog, showProgressDialog, showSignInDialog, slideIndex]);
+  }, [location, requireSignIn]);
 
   return (
     <GlobalConfigContext.Provider value={globalConfig}>
