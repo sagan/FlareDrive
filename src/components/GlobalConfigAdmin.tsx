@@ -19,7 +19,11 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
 
   const [originalConfigText, originalCommentText] = useMemo(() => {
     const comment = globalConfig?.comment || "";
-    const text = globalConfig ? JSON.stringify({ ...globalConfig, comment: undefined }, undefined, 2) : ''
+    const text = globalConfig ? JSON.stringify({
+      ...globalConfig,
+      comment: undefined,
+      buildConfig: undefined,
+    }, undefined, 2) : ''
     return [text, comment];
   }, [globalConfig]);
 
@@ -129,6 +133,30 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
             <li><code>publicDirPrefix</code>: An array of path prefixes. Directories under these paths are publicly listable. This implies files are also readable.</li>
             <li><code>publicRwdirPrefix</code>: An array of path prefixes. Directories under these paths are publicly writable (upload/modify/delete). This implies directory listing and file reading.</li>
             <li>Each one of the above lists must not be empty and do not start or end with white space or &quot;/&quot;.</li>
+            <li><code>mappings</code>: Record&lt;string,string&gt;. Map path prefix to share name. E.g. <code>foo/bar</code> =&gt; <code>tmp</code>, then <code>/foo/bar</code> url is equal with <code>/s/tmp</code> url. Require prefixes in build time wrangler <a href="https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first">run_worker_first</a> config.</li>
+          </ul>
+        </Typography>
+      </Box>
+      <Typography variant="h5" gutterBottom>
+        Build time config
+      </Typography>
+      <TextField
+        label="Build config"
+        multiline
+        disabled={true}
+        rows={5}
+        value={JSON.stringify(globalConfig.buildConfig || {}, null, 2)}
+        variant="outlined"
+        fullWidth
+        sx={{ mt: 2, '& .MuiInputBase-input': { fontFamily: 'monospace' } }}
+      />
+      <Box sx={{ mt: 2, color: 'text.secondary' }}>
+        <Typography variant="caption" component="div">
+          <strong>To modify build-time configuration:</strong>
+          <ul>
+            <li><code>run_worker_first</code>: Use <code>RUN_WORKER_FIRST</code> env (JSON string).
+              E.g. <code>[&quot;/foo/*&quot;]</code>.
+            </li>
           </ul>
         </Typography>
       </Box>

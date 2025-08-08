@@ -46,12 +46,8 @@ export const onRequest: FdCfFunc = async function (context) {
     scope = _scope;
   }
 
-  const [bucket, path] = parseBucketPath(context);
-  if (!bucket) {
-    return responseNotFound();
-  }
-
+  const path = parseBucketPath(context);
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
-  return handler({ context, bucket, path, request: context.request, scope, authed: !authFailResponse });
+  return handler({ context, path, request: context.request, scope, authed: !authFailResponse, bucket: env.BUCKET });
 };

@@ -34,6 +34,8 @@ import {
   responseForbidden,
   responseRedirect,
   outputR2Object,
+  FdCfFuncContextEnv,
+  FdCfFuncContextRequest,
 } from "../commons";
 
 const SHARE_KEY_PREFIX = "s_";
@@ -107,9 +109,27 @@ export const onRequestDelete: FdCfFunc = async function (context) {
   return responseNoContent();
 };
 
-// GET: request a shared file meta or contents
 export const onRequestGet: FdCfFunc = async function (context) {
   const { request, env, params } = context;
+  return handleGetShare({ request, env, path: (params.path as string[]).join("/") });
+};
+
+// GET: request a shared file meta or contents
+export const handleGetShare = async function ({
+  request,
+  env,
+  path,
+}: {
+  /**
+   * E.g. "foo/bar.txt"
+   */
+  path: string;
+  /**
+   * Original request
+   */
+  request: FdCfFuncContextRequest;
+  env: FdCfFuncContextEnv;
+}) {
   if (!env.KV) {
     return responseNotFound();
   }
@@ -125,7 +145,8 @@ export const onRequestGet: FdCfFunc = async function (context) {
       return failResponse;
     }
   }
-  const pathParams = params.path as string[];
+  // const pathParams = params.path as string[];
+  const pathParams = path.split("/");
   if (requestMeta ? pathParams?.length != 1 : pathParams?.length < 1) {
     return responseBadRequest();
   }
@@ -140,7 +161,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   }
   if (data.auth) {
     const [user, pass] = cut(data.auth, ":");
-    const [failRespose] = await checkAuthFailure(context.request, user, pass, `Share/${sharekey}`);
+    const [failRespose] = await checkAuthFailure(request, user, pass, `Share/${sharekey}`);
     if (failRespose) {
       return failRespose;
     }
@@ -194,7 +215,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
     if (indexHtmlObj) {
       return outputR2Object({ obj: indexHtmlObj, cors, fullHtml });
     }
-    const sitename = context.env.SITENAME || DEFAULT_SITENAME;
+    const sitename = env.SITENAME || DEFAULT_SITENAME;
     const description = data.desc || "";
     if (data.noindex) {
       if (relpath) {
@@ -204,10 +225,10 @@ export const onRequestGet: FdCfFunc = async function (context) {
       }
     }
     const files = await findChildren({
-      bucket: context.env.BUCKET,
+      bucket: env.BUCKET,
       path: filekey,
       depth: "1",
-      db: context.env.DB,
+      db: env.DB,
     });
     // Pre-sort files: directories first, then by name
     files.sort((a, b) => {

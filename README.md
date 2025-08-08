@@ -42,7 +42,7 @@ Before starting, you should make sure that
 - R2 service is activated (requires payment method added to CF account) and at least one bucket is created
 - (optional but recommended) KV & D1 instances are created.
 
-This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV / D1) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard.
+This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV / D1) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard, but lacks with some features.
 
 ## Deployment to Cloudflare Workers (recommended)
 

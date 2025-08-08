@@ -979,7 +979,18 @@ function validatePrefix(prefix: string): boolean {
   return !!normalizedPrefix && normalizedPrefix === prefix;
 }
 
+/**
+ * Return true if shareName is a non-empty string, doesn't start or end with whitespace, and doesn't contain "/".
+ * @param shareName
+ * @returns
+ */
+function validateShareName(shareName: string): boolean {
+  const normalized = shareName.trim();
+  return !!shareName && normalized === shareName && !shareName.includes("/");
+}
+
 const INVALID_PREFIX_MESSAGE = `prefix must NOT be empty or start or end with whitespace or "/" char`;
+const INVALID_SHARE_NAME_MESSAGE = `shareName must NOT be empty or start or end with whitespace or contain "/" char`;
 
 // The zod schema of PublicConfig. All fields default to "zero" values.
 export const PublicConfigSchema = z
@@ -1020,6 +1031,23 @@ export const GlobalConfigSchema = PublicConfigSchema.extend({
    * config comment.
    */
   comment: z.string().default(""),
+
+  /**
+   * Mapping path prefix to share.
+   * E.g. if "foo/bar" => "tmp", then visiting "/foo/bar/" equals with "/s/tmp/" .
+   * Require prefixes be configured in wrangler "run_worker_first" array.
+   */
+  mappings: z
+    .record(
+      z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE }),
+      z.string().refine(validateShareName, { message: INVALID_SHARE_NAME_MESSAGE })
+    )
+    .default({}),
+
+  /**
+   * build-time config
+   */
+  buildConfig: z.any().default(null),
 }).strict();
 
 /**

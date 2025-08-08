@@ -49,6 +49,8 @@ import {
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
+// build_config.json is generated / updated at build time
+import buildConfig from "../build_config.json";
 
 export type Env = {
   /**
@@ -128,6 +130,10 @@ export type FdCfFuncContext = EventContext<
   string, // params key type
   Record<string, unknown> // data type
 >;
+
+export type FdCfFuncContextRequest = FdCfFuncContext["request"];
+
+export type FdCfFuncContextEnv = FdCfFuncContext["env"];
 
 export type FdCfFunc = (context: FdCfFuncContext) => Response | Promise<Response>;
 
@@ -704,7 +710,7 @@ export async function putGlobalConfig(env: Env, data: GlobalConfig) {
   }
   await env.KV.put(KEY_GLOBAL_CONFIG, JSON.stringify(data));
   globalConfigTs = Date.now();
-  globalConfig = data;
+  globalConfig = { ...data, buildConfig };
 }
 
 /**
@@ -725,6 +731,7 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
       const data = await env.KV.get(KEY_GLOBAL_CONFIG, "json");
       if (data) {
         globalConfig = GlobalConfigSchema.parse(data);
+        globalConfig.buildConfig = buildConfig;
         globalConfigTs = now;
         return globalConfig;
       }
@@ -734,9 +741,11 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
   }
 
   const fallbackData = {
+    buildConfig,
     ok: true,
     comment: "",
     dev: !!env.DEV,
+    mappings: {},
     publicPrefix: env.PUBLIC_PREFIX
       ? env.PUBLIC_PREFIX.split(/\s*,\s*/)
           .map((prefix) => trimPrefixSuffix(prefix, "/"))

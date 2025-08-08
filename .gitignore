@@ -34,3 +34,4 @@ yarn-error.log*
 
 /dist_worker
 /graphql/generated
+/build_config.json

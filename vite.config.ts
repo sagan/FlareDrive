@@ -45,6 +45,20 @@ async function generateWranglerConfig(env: Record<string, string>) {
     config.d1_databases = [{ binding: "DB", database_name: "flaredrive", database_id: env.DATABASE_ID }];
     config.vars.DATABASE_ID = env.DATABASE_ID;
   }
+  if (env.RUN_WORKER_FIRST) {
+    const runWorkerFirst = JSON.parse(env.RUN_WORKER_FIRST);
+    if (runWorkerFirst === true) {
+      config.assets.run_worker_first = true;
+    } else if (Array.isArray(runWorkerFirst)) {
+      if (runWorkerFirst.includes("/*")) {
+        config.assets.run_worker_first = true;
+      } else {
+        config.assets.run_worker_first.push(...runWorkerFirst);
+      }
+    } else {
+      throw new Error(`invalid RUN_WORKER_FIRST value: must be either "true" or a string of JSON array`);
+    }
+  }
   const contents = JSON.stringify(config, null, 2);
   console.log("generate wrangler.json", contents);
   await fs.writeFile(file, contents);
@@ -144,6 +158,20 @@ export default defineConfig(async ({ command, mode }) => {
   if (!assetExists || command === "build") {
     await generateAssets(publicVariables);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let builConfig: any = null;
+  try {
+    builConfig = JSON.parse(await fs.readFile(path.join(__dirname, "wrangler.json"), { encoding: "utf8" }));
+  } catch (e) {
+    /* empty */
+  }
+  await fs.writeFile(
+    path.join(__dirname, "build_config.json"),
+    JSON.stringify({
+      run_worker_first: builConfig?.assets?.run_worker_first || null,
+    })
+  );
 
   return {
     server: {

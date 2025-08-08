@@ -30,6 +30,7 @@ export const onRequestPost: FdCfFunc = async function (context) {
   let globalConfig: GlobalConfig;
   try {
     globalConfig = GlobalConfigSchema.parse(await request.json());
+    delete globalConfig["buildConfig"];
     globalConfig.ok = true;
   } catch (e) {
     return responseBadRequest(`Invalid globalConfig: ${e}`);
