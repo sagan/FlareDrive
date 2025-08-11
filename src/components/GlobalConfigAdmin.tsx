@@ -134,6 +134,7 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
             <li><code>publicRwdirPrefix</code>: An array of path prefixes. Directories under these paths are publicly writable (upload/modify/delete). This implies directory listing and file reading.</li>
             <li>Each one of the above lists must not be empty and do not start or end with white space or &quot;/&quot;.</li>
             <li><code>mappings</code>: Record&lt;string,string&gt;. Map path prefix to share name. E.g. <code>foo/bar</code> =&gt; <code>tmp</code>, then <code>/foo/bar</code> url is equal with <code>/s/tmp</code> url. Require prefixes in build time wrangler <a href="https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first">run_worker_first</a> config.</li>
+            <li><code>hardShareExpiration</code>: If set to true, the share KV object will be automatically deleted after expiration.</li>
           </ul>
         </Typography>
       </Box>

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { sha256 as sha256Internal, hmac_sha256 } from "./sha256";
 
+/**
+ * The unix timestamp (milliseconds) of "past" time:
+ * "2000-01-01T00:00:00.000Z"
+ */
+export const PAST_TIMESTAMP = 946684800000;
+
 export const WEBDAV_ENDPOINT = "/dav/";
 export const SHARE_ENDPOINT = "/s/";
 export const THUMBNAIL_API = "/api/thumbnail";
@@ -129,12 +135,13 @@ export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
 
 /**
  * These query string variables do not participate in signing:
- * [raw, html, json, token, ts, url, comment, thumbnail*... (except thumbnailDigest)]
+ * [raw, html, json, meta, token, ts, url, comment, thumbnail*... (except thumbnailDigest)]
  */
 export const NOSIGN_VARIABLES: readonly string[] = [
   RAW_VARIABLE,
   HTML_VARIABLE,
   JSON_VARIABLE,
+  META_VARIABLE,
   TOKEN_VARIABLE,
   TS_VARIABLE,
   URL_VARIABLE,
@@ -374,9 +381,10 @@ export interface ShareObject {
    */
   key: string;
   /**
-   * optional. share expires unix timestamp (seconds)
-   * It's set as KV key expiration option. However, the KV API has no way to get this value after set.
-   * So we also store it as a data field.
+   * optional. share expires unix timestamp (miliseconds).
+   * Negative or zero value means no expiration.
+   * Note: in <= v0.1.7 versions it was seconds.
+   * If "hardShareExpiration" global config is true, it's also set as KV key expiration option.
    */
   expiration?: number;
 
@@ -405,6 +413,11 @@ export interface ShareObject {
    * Optional share description
    */
   desc?: string;
+
+  /**
+   * Optional share comment (only visible to admin)
+   */
+  comment?: string;
 
   /**
    * optional, disable directory index page.
@@ -1043,6 +1056,11 @@ export const GlobalConfigSchema = PublicConfigSchema.extend({
       z.string().refine(validateShareName, { message: INVALID_SHARE_NAME_MESSAGE })
     )
     .default({}),
+
+  /**
+   * If set to true, the share KV object will be automatically deleted after expiration.
+   */
+  hardShareExpiration: z.boolean().default(false),
 
   /**
    * build-time config

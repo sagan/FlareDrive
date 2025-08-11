@@ -31,7 +31,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
-  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS,
+  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, PAST_TIMESTAMP,
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
   Permission, humanReadableSize, isDirectory, validateAndGetSafeUrl,
 } from '../lib/commons';
@@ -74,6 +74,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   const [referer, setReferer] = useState("shareKey" in otherProps ?
     list2Referer(otherProps.shareObject.refererList) : "");
   const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating);
+  // share ttl in seconds. zero or negative value has special meaning.
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1);
   const [linkTtl, setLinkTtl] = useState(86400);
   const [linkTs, setLinkTs] = useState(+new Date);
@@ -117,7 +118,14 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     setStatus(Status.Sharing);
     const newShareObject: ShareObject = {
       ...shareObject,
-      ...(ttl >= 0 ? { expiration: ttl ? Math.round(+new Date / 1000) + ttl : 0 } : {}),
+      ...((ttl >= 0 || ttl == -2) ?
+        {
+          expiration: ttl == -2
+            ? PAST_TIMESTAMP
+            : ttl > 0
+              ? Date.now() + ttl * 1000
+              : 0
+        } : {}),
       ...(shareObject.refererMode ? {
         refererList: refer2list(referer),
       } : {})
@@ -150,6 +158,12 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     isDir: targetIsDir,
   }), [fileKey, auth, linkTtl, linkTs, linkFullControl, targetIsDir, fileKeyWithDirSlash]);
 
+  const shareObjectExpired = useMemo(() => {
+    if (shareObject.expiration && shareObject.expiration < Date.now()) {
+      return true;
+    }
+    return false;
+  }, [shareObject]);
 
   function nativeShare() {
     void navigator.share({ url: isOpen ? linkOpenUrl : linkUrl, title: name });
@@ -462,9 +476,9 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               </>
           }} />
       </Box>
-      <Box>
+      <Box sx={{ mt: 1 }}>
         <TextField disabled={status === Status.Sharing} fullWidth
-          helperText={`share password of username:password format`} value={shareObject.auth || ""}
+          label="share password of username:password format" value={shareObject.auth || ""}
           onChange={e => setShareObject({ ...shareObject, auth: e.target.value })}
           placeholder='optional password' InputProps={{
             endAdornment:
@@ -502,10 +516,15 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               </>
           }} />
       </Box>
-      <Box>
+      <Box sx={{ mt: 1 }}>
         <TextField disabled={status === Status.Sharing} fullWidth multiline
-          placeholder='optional description' helperText={`share public description (html)`} value={shareObject.desc || ""}
+          label="optional share public description (html)" value={shareObject.desc || ""}
           onChange={e => setShareObject({ ...shareObject, desc: e.target.value })} />
+      </Box>
+      <Box sx={{ mt: 1 }}>
+        <TextField disabled={status === Status.Sharing} fullWidth multiline
+          label="optional comment (admin visible)" value={shareObject.comment || ""}
+          onChange={e => setShareObject({ ...shareObject, comment: e.target.value })} />
       </Box>
       <Box>
         <FormControl sx={{ m: 1, minWidth: 120 }}>
@@ -517,6 +536,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             inputProps={{ id: 'share-ttl' }}
           >
             {status !== Status.Creating && <option value={-1}>No change</option>}
+            <option value={-2}>Expired</option>
             <option value={0}>Never</option>
             {/* Cloudflare KV expiration times must be at least 60 seconds in the future */}
             {globalConfig.dev && <option value={62}>60 seconds</option>}
@@ -579,8 +599,14 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       </>}
       {status === Status.Editing && <Typography>
         Shared link: <a href={link}>{new URL(link).pathname}</a>
-        {!!shareObject.expiration &&
-          <span>&nbsp;(Link expires on {new Date(shareObject.expiration * 1000).toISOString()})</span>}
+        {!!shareObject.expiration && (shareObjectExpired
+          ? <span style={{ color: "red" }}>
+            &nbsp;(Link expired on {new Date(shareObject.expiration).toISOString()})
+          </span>
+          : <span>
+            &nbsp;(Link expires on {new Date(shareObject.expiration).toISOString()})
+          </span>
+        )}
       </Typography>}
     </DialogContent>}
     {tab === 1 && <DialogActions>

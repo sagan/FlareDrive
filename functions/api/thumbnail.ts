@@ -16,6 +16,7 @@ import {
   checkAuthFailure,
   generateFileThumbnail,
   generateFileThumbnailWithWorker,
+  getOnRequestHead,
   jsonResponse,
   responseInternalServerError,
   responseNotFound,
@@ -73,13 +74,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   return new Response(obj.body, { headers });
 };
 
-export const onRequestHead: FdCfFunc = async function (context) {
-  const res = await onRequestGet(context);
-  return new Response(null, {
-    status: res.status,
-    headers: res.headers,
-  });
-};
+export const onRequestHead = getOnRequestHead(onRequestGet);
 
 /**
  * POST: Server-side thumbnails generation using Cloudflare images Transform:

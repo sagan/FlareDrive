@@ -1,4 +1,4 @@
-import { FdCfFunc, getGlobalConfig } from "./commons";
+import { FdCfFunc, getGlobalConfig, getOnRequestHead } from "./commons";
 import { parseBucketPath } from "./dav/utils";
 import { handleGetShare } from "./s/[[path]]";
 
@@ -27,3 +27,5 @@ export const onRequestGet: FdCfFunc = async function (context) {
   // No asset matched this request, so this will evaluate `not_found_handling` behavior.
   return env.ASSETS.fetch(request);
 };
+
+export const onRequestHead = getOnRequestHead(onRequestGet);

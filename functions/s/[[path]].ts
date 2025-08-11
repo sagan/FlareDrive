@@ -8,6 +8,7 @@ import {
   INDEX_FILE,
   RAW_VARIABLE,
   JSON_VARIABLE,
+  PAST_TIMESTAMP,
   type ShareObject,
   path2Key,
   trimPrefix,
@@ -36,6 +37,8 @@ import {
   outputR2Object,
   FdCfFuncContextEnv,
   FdCfFuncContextRequest,
+  getOnRequestHead,
+  getGlobalConfig,
 } from "../commons";
 
 const SHARE_KEY_PREFIX = "s_";
@@ -64,6 +67,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   if (!env.KV) {
     return responseNotFound();
   }
+  const globalConfig = await getGlobalConfig(env);
   const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
   if (failResponse) {
     return failResponse;
@@ -83,8 +87,8 @@ export const onRequestPut: FdCfFunc = async function (context) {
   }
 
   const options: KVNamespacePutOptions = {};
-  if (shareObject.expiration) {
-    options.expiration = shareObject.expiration;
+  if (globalConfig.hardShareExpiration && shareObject.expiration && shareObject.expiration !== PAST_TIMESTAMP) {
+    options.expiration = Math.round(shareObject.expiration / 1000);
   }
   await env.KV.put(SHARE_KEY_PREFIX + sharekey, JSON.stringify(shareObject), options);
   return responseNoContent();
@@ -156,7 +160,7 @@ export const handleGetShare = async function ({
   if (requestMeta) {
     return jsonResponse(data);
   }
-  if (!data || !data.key) {
+  if (!data || !data.key || (data.expiration && data.expiration < Date.now())) {
     return responseNotFound();
   }
   if (data.auth) {
@@ -256,13 +260,7 @@ export const handleGetShare = async function ({
   });
 };
 
-export const onRequestHead: FdCfFunc = async function (context) {
-  const res = await onRequestGet(context);
-  return new Response(null, {
-    status: res.status,
-    headers: res.headers,
-  });
-};
+export const onRequestHead = getOnRequestHead(onRequestGet);
 
 function noindexPage(sitename: string, desc: string, dir: string): string {
   const title = `${dir} - ${sitename}`;

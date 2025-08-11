@@ -87,6 +87,10 @@ export type Env = {
    */
   DEV?: string;
   /**
+   * Flag. set it to any value (e.g. "1") to enable hard share deletion mode.
+   */
+  HARD_SHARE_EXPIRATION?: string;
+  /**
    * Comma-separated "public" path prefixes.
    * Path with any of these prefixes is allowed to read file anonymously
    * But dir browsing is NOT allowed.
@@ -715,7 +719,7 @@ export async function putGlobalConfig(env: Env, data: GlobalConfig) {
 
 /**
  * Return current effective globalConfig from KV or environment variables.
- * This function do internal caching.
+ * This function does internal caching.
  */
 export async function getGlobalConfig(env: Env, nocache = false): Promise<GlobalConfig> {
   const now = Date.now();
@@ -740,11 +744,12 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
     }
   }
 
-  const fallbackData = {
+  const fallbackData: GlobalConfig = {
     buildConfig,
     ok: true,
     comment: "",
     dev: !!env.DEV,
+    hardShareExpiration: !!env.HARD_SHARE_EXPIRATION,
     mappings: {},
     publicPrefix: env.PUBLIC_PREFIX
       ? env.PUBLIC_PREFIX.split(/\s*,\s*/)
@@ -776,4 +781,21 @@ export function getPublicConfig(globalConfig: GlobalConfig): PublicConfig {
     publicRwdirPrefix: globalConfig.publicRwdirPrefix,
   };
   return publicConfig;
+}
+
+/**
+ * Get onRequestHead function.
+ * It is used to return response headers without body.
+ * This is useful for HEAD request, where body is not needed.
+ * @param onRequestGet - The original onRequest function that handles GET requests.
+ * @returns A new function that handles HEAD requests by calling the original function and returning headers only.
+ */
+export function getOnRequestHead(onRequestGet: FdCfFunc): FdCfFunc {
+  return async function (context) {
+    const res = await onRequestGet(context);
+    return new Response(null, {
+      status: res.status,
+      headers: res.headers,
+    });
+  };
 }
