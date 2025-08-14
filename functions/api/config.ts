@@ -35,6 +35,6 @@ export const onRequestPost: FdCfFunc = async function (context) {
   } catch (e) {
     return responseBadRequest(`Invalid globalConfig: ${e}`);
   }
-  await putGlobalConfig(env, globalConfig);
+  globalConfig = await putGlobalConfig(env, globalConfig);
   return jsonResponse(globalConfig);
 };

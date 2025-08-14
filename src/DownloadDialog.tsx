@@ -15,6 +15,7 @@ import {
   isDirectory,
   basename,
   str2int,
+  newFileName,
 } from "../lib/commons";
 import { downloadFile, FileItem, useConfig } from "./commons";
 import { fetchPath } from "./app/transfer";
@@ -150,7 +151,7 @@ export default function DownloadDialog({ files, open, onClose }: {
     }
     const limit = pLimit(5);
 
-    const addFileToZip = async (zip: JSZip, file: FileItem, url: string, signal: AbortSignal) => {
+    const addFileToZip = async (zip: JSZip, file: FileItem, url: string, signal: AbortSignal, asName = "") => {
       const res = await fetch(url, { signal });
       if (!res.body) {
         throw new Error("Response body is not readable.");
@@ -178,7 +179,7 @@ export default function DownloadDialog({ files, open, onClose }: {
       }
 
       const blob = new Blob(chunks);
-      zip.file(basename(file.key), blob);
+      zip.file(asName || basename(file.key), blob);
       return { fileCount: 1, size: blob.size };
     };
 
@@ -238,16 +239,22 @@ export default function DownloadDialog({ files, open, onClose }: {
         zipFilename = `${basename(files[0].key)}, ${basename(files[1].key)} and ${files.length - 2} items.zip`;
       }
 
+      // top level files may have duplicate names, such as in search result page.
+      const topLevelFileNames = new Set<string>();
       try {
         await Promise.all(files.map(async (file) => {
           if (signal.aborted) {
             return;
           }
+          let name = basename(file.key);
+          while (topLevelFileNames.has(name)) {
+            name = newFileName(name);
+          }
+          topLevelFileNames.add(name);
           if (isDirectory(file)) {
-            const itemName = basename(file.key);
-            const dirZip = zip.folder(itemName);
+            const dirZip = zip.folder(name);
             if (!dirZip) {
-              throw new Error(`Failed to create directory: ${itemName}`);
+              throw new Error(`Failed to create directory: ${name}`);
             }
             await addDirectoryToZip(dirZip, file, added, signal);
             dispatch({ type: "UPDATE_OVERALL_PROGRESS", payload: { fileCount: 1, size: 0 } });
@@ -263,7 +270,7 @@ export default function DownloadDialog({ files, open, onClose }: {
                 scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
                 token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
               });
-              return addFileToZip(zip, file, downloadUrl, signal);
+              return addFileToZip(zip, file, downloadUrl, signal, name);
             });
             dispatch({ type: "UPDATE_OVERALL_PROGRESS", payload: progress });
           }
@@ -288,7 +295,7 @@ export default function DownloadDialog({ files, open, onClose }: {
       }
     };
     processDownload().then(() => { }, () => { });
-  }, [status, abortController, files, auth, expires]);
+  }, [status, abortController, files, auth, expires, effectiveAuth, authSearchParams]);
 
   const handleClose = () => {
     if (status === Status.Downloading) {
@@ -321,7 +328,7 @@ export default function DownloadDialog({ files, open, onClose }: {
       downloadFile(link);
       dispatch({ type: "ADD_LOG", payload: `download ${file.key}\n` });
     }
-  }, [auth, expires, normalFiles]);
+  }, [auth, authSearchParams, expires, normalFiles]);
 
   const statusTitles: Record<Status, string> = {
     [Status.Idle]: "Download",

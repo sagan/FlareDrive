@@ -29,6 +29,7 @@ import {
   HEADER_CONTENT_SECURITY_POLICY,
   CONTENT_SECURITY_POLICY_SANDBOX,
   SCOPE_GLOBAL,
+  KEY_PART_SEARCH,
   sha256,
   hmacSha256Verify,
   key2Path,
@@ -299,6 +300,11 @@ export async function checkInvalidUserFileKey(key: string): Promise<Response | n
   const parts = key.split("/");
   if (invalidKeys.includes(parts[0])) {
     return responseForbidden(`Prefix name "${parts[0]}" is reserved.`);
+  }
+  const invalidKeyPartValues = [KEY_PART_SEARCH];
+  const invalidPart = parts.find((part) => invalidKeyPartValues.includes(part));
+  if (invalidPart) {
+    return responseForbidden(`Key part "${invalidPart}" is reserved.`);
   }
   return null;
 }
@@ -708,13 +714,18 @@ let globalConfig: GlobalConfig | null | undefined;
 let globalConfigTs = 0;
 const CACHE_DURATION_MS = 60 * 1000;
 
-export async function putGlobalConfig(env: Env, data: GlobalConfig) {
+/**
+ * Update global config and return updated effective global config.
+ * @returns
+ */
+export async function putGlobalConfig(env: Env, data: GlobalConfig): Promise<GlobalConfig> {
   if (!env.KV) {
-    return;
+    throw new Error("KV is not set");
   }
   await env.KV.put(KEY_GLOBAL_CONFIG, JSON.stringify(data));
   globalConfigTs = Date.now();
   globalConfig = { ...data, buildConfig };
+  return globalConfig;
 }
 
 /**

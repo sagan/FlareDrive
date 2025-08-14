@@ -24,7 +24,6 @@ import { FileItem, generatePassword, useConfig } from './commons';
 import { uploadFromUrl } from './app/transfer';
 import { useNavigate } from 'react-router-dom';
 
-
 export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
   cwd: string;
   open: boolean;
@@ -50,11 +49,7 @@ export default function CloudDownloadDialog({ cwd, open, close, onUpload }: {
       if (url.pathname.endsWith("/")) {
         return INDEX_FILE;
       }
-      let name = basename(decodeURI(url.pathname).trim());
-      const ext = extname(name);
-      if (!ext) {
-        name += ".html";
-      }
+      const name = basename(decodeURI(url.pathname).trim());
       return name;
     } catch (e) { /* empty */ }
     return "";
