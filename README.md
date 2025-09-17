@@ -31,7 +31,7 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - Share & Publish files or folders temporarily or permanently. ("Publish" feature requires Cloudflare Workers KV)
 - Images lightbox
 - Online text / image files editor
-- Online PDF files previewer
+- Online PDF / DOCX files previewer
 - Create and manage "url" (internet shortcut) files
 
 # Installation

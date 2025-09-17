@@ -244,7 +244,9 @@ export const handleGetShare = async function ({
     });
 
     if (requestJson) {
-      return jsonResponse({ sitename, description, files }, { cors });
+      const prefix = trimSuffix(data.key, "/") + "/";
+      const items = files.map((file) => ({ ...file, key: trimPrefix(file.key, prefix) }));
+      return jsonResponse({ sitename, description, files: items }, { cors });
     }
     return htmlResponse(indexPage(sitename, description, sharekey + (relpath ? "/" + relpath : ""), !relpath, files));
   } else if (url.pathname.endsWith("/")) {

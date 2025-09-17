@@ -582,7 +582,12 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       </Box>
       {!!shareObject.refererMode && <>
         <Box>
-          <TextField disabled={status === Status.Sharing} multiline fullWidth label="Referer list"
+          <TextField disabled={status === Status.Sharing} multiline fullWidth
+            label={shareObject.refererMode === ShareRefererMode.BlackListMode
+              ? "Referer blacklist"
+              : shareObject.refererMode === ShareRefererMode.WhitelistMode
+                ? "Referer whitelist"
+                : "Referer list"}
             helperText={<>
               One <a href="https://github.com/clearlylocal/browser-extension-url-match">url pattern</a> per line.
             </>} value={referer} onChange={e => setReferer(e.target.value)}

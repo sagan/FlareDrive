@@ -215,6 +215,8 @@ export const MIME_TXT = "text/plain";
 
 export const MIME_PDF = "application/pdf";
 
+export const MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 export const MIME_SH = "application/x-sh";
 
 export const MIME_JS = "application/javascript";

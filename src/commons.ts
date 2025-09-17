@@ -395,6 +395,6 @@ export type UploadFile = {
 
 export type EditingItem = {
   key: string;
-  kind: "text" | "image" | "pdf" | "url";
+  kind: "text" | "image" | "pdf" | "url" | "docx";
   file?: FileItem;
 };

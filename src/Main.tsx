@@ -21,6 +21,7 @@ import {
   isUrlFile,
   validateAndGetSafeUrl,
   isAudio,
+  MIME_DOCX,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -41,6 +42,7 @@ import EditorDialog from "./EditorDialog";
 import PdfDialog from "./PdfDialog";
 import ImageEditorDialog from "./ImageEditorDialog";
 import UrlFileEditorDialog from "./UrlFileEditorDialog";
+import DocxDialog from "./DocxDialog";
 
 function DropZone({ disabled, children, onDrop }:
   { disabled: boolean, children: React.ReactNode; onDrop: (files: Record<string, File>) => void }) {
@@ -131,14 +133,15 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       }}>
         Download
       </Button>
-      {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) || file.httpMetadata.contentType === MIME_PDF) && <Button
-        variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          edit(file);
-        }}>
-        Open
-      </Button>
+      {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) || file.httpMetadata.contentType === MIME_PDF
+        || file.httpMetadata.contentType === MIME_DOCX) && <Button
+          variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            edit(file);
+          }}>
+          Open
+        </Button>
       }
     </Box>
     <Typography sx={{ mb: 1 }} variant="h5" component="h5">
@@ -380,6 +383,8 @@ export default function Main({
     edit: (file) => {
       if (file.httpMetadata.contentType === MIME_PDF) {
         setEditing({ file, key: file.key, kind: "pdf" });
+      } else if (file.httpMetadata.contentType === MIME_DOCX) {
+        setEditing({ file, key: file.key, kind: "docx" });
       } else if (isUrlFile(file) && (file.customMetadata?.url || file.size === 0)) {
         setEditing({ file, key: file.key, kind: "url" });
       } else if (isTextual(file)) {
@@ -439,6 +444,8 @@ export default function Main({
       },
     };
     switch (editing.kind) {
+      case "docx":
+        return <DocxDialog  {...fileViewerProps} />;
       case "pdf":
         return <PdfDialog  {...fileViewerProps} />;
       case "image":

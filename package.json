@@ -1,6 +1,6 @@
 {
   "name": "flare-drive",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -13,6 +13,7 @@
     "@types/react-dom": "^18.3.0",
     "@uidotdev/usehooks": "^2.4.1",
     "browser-extension-url-match": "^1.2.0",
+    "docx-preview": "^0.3.6",
     "ini": "^5.0.0",
     "jsox": "^1.2.123",
     "jszip": "^3.10.1",

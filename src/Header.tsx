@@ -7,7 +7,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
 import { Permission } from "../lib/commons";
-import { SearchOptions, Sort, ViewMode, search2Cwd, sortLabels, useConfig } from "./commons";
+import { SHARES_FOLDER_KEY, SearchOptions, Sort, ViewMode, search2Cwd, sortLabels, useConfig } from "./commons";
 
 export default function Header({
   cwd,
@@ -70,11 +70,12 @@ export default function Header({
       </Link>
       <form
         onSubmit={e => {
-          e.preventDefault()
+          e.preventDefault();
           if (!auth) {
-            return
+            return;
           }
-          setCwd(search2Cwd(search, search || isSearch ? searchOptions : { baseDir: cwd }))
+          setCwd(
+            search2Cwd(search, search || isSearch || cwd === SHARES_FOLDER_KEY ? searchOptions : { baseDir: cwd }));
         }}
         style={{ display: 'flex', flexGrow: 1 }}
       >
@@ -146,7 +147,7 @@ export default function Header({
         {!!onShare && !isSearch && <MenuItem
           onClick={() => {
             setAnchorEl(null);
-            onShare()
+            onShare();
           }}
         >
           Share & Publish dir
@@ -167,9 +168,9 @@ export default function Header({
       <IconButton title={auth ? "Authorized" : "Unauthorized. Click to sign in"}
         onClick={(e) => {
           if (auth) {
-            setAnchorEl2(e.currentTarget)
+            setAnchorEl2(e.currentTarget);
           } else {
-            onSignnIn()
+            onSignnIn();
           }
         }}
       >
