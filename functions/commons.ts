@@ -121,7 +121,6 @@ export type Env = {
    * associated worker token
    */
   WORKER_TOKEN?: string;
-  SITENAME?: string;
   BUCKET: R2Bucket;
   KV?: KVNamespace;
   DB?: D1Database;

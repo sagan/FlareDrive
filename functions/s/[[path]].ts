@@ -1,6 +1,5 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
-import { DEFAULT_SITENAME } from "../../lib/constants";
 import {
   META_VARIABLE,
   HEADER_REFERER,
@@ -40,6 +39,7 @@ import {
   getOnRequestHead,
   getGlobalConfig,
 } from "../commons";
+import buildVariables from "../../build_config.json";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -219,7 +219,7 @@ export const handleGetShare = async function ({
     if (indexHtmlObj) {
       return outputR2Object({ obj: indexHtmlObj, cors, fullHtml });
     }
-    const sitename = env.SITENAME || DEFAULT_SITENAME;
+    const sitename = buildVariables.sitename;
     const description = data.desc || "";
     if (data.noindex) {
       if (relpath) {

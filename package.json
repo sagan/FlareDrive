@@ -1,6 +1,6 @@
 {
   "name": "flare-drive",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -45,6 +45,7 @@
     "cfdev": "wrangler dev --test-scheduled",
     "cfpagesdev": "wrangler pages dev",
     "cfversion": "wrangler versions upload",
+    "cfdevmigrations": "wrangler d1 migrations apply flaredrive --local",
     "deploy": "node scripts/conditional-d1-migrate.cjs flaredrive && wrangler deploy"
   },
   "browserslist": {

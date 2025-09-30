@@ -654,7 +654,12 @@ export function hmacSha256SignSync(key: string, payload: string): string {
 
 export async function hmacSha256Verify(key: string, signature: string, payload: string): Promise<boolean> {
   const singkey = await getHMACKey(key);
-  const verified = await crypto.subtle.verify("HMAC", singkey, decodeHex(signature), new TextEncoder().encode(payload));
+  const verified = await crypto.subtle.verify(
+    "HMAC",
+    singkey,
+    decodeHex(signature) as BufferSource,
+    new TextEncoder().encode(payload)
+  );
   return verified;
 }
 
@@ -820,11 +825,11 @@ export function fileUrl({
 export async function sha256(content: Blob | string | ArrayBuffer | { buffer: ArrayBufferLike }) {
   let input: ArrayBuffer;
   if (typeof content == "string") {
-    input = new TextEncoder().encode(content);
+    input = new TextEncoder().encode(content).buffer;
   } else if (content instanceof Blob) {
     input = await content.arrayBuffer();
   } else if ("buffer" in content) {
-    input = content.buffer;
+    input = content.buffer as ArrayBuffer;
   } else {
     input = content;
   }

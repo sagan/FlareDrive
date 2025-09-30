@@ -1,6 +1,6 @@
-import { DEFAULT_SITENAME } from "../../lib/constants";
 import { HEADER_CONTENT_TYPE } from "../../lib/commons";
 import { FdCfFunc } from "../commons";
+import buildVariables from "../../build_config.json";
 
 export const onRequestGet: FdCfFunc = async function (context) {
   return new Response(
@@ -8,7 +8,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>${context.env.SITENAME || DEFAULT_SITENAME}</title>
+    <title>${buildVariables.sitename}</title>
     <link rel="icon" href="/assets/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />

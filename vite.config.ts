@@ -4,14 +4,13 @@ import react from "@vitejs/plugin-react";
 import fs from "fs/promises";
 import path from "path";
 import { favicons } from "favicons";
-import { DEFAULT_SITENAME } from "./lib/constants";
 
 // const __dirname = path.dirname(fileURLToPath(import.meta.url));
 console.log("vite run", __dirname);
 
 // override these with ".env" / ".env.local" dotenv file or environment variables.
 const DefaultPublicVariables: Record<string, string> = {
-  SITENAME: DEFAULT_SITENAME,
+  SITENAME: "FlareDrive",
   SHORT_SITENAME: "", // Optional, if not present, app will use SITENAME instead.
   JS_URL: "",
   CSS_URL: "",
@@ -92,7 +91,7 @@ async function generateAssets(variables: Record<string, string>) {
     if (!faviconFiles[file.name]) {
       continue;
     }
-    await fs.writeFile(path.join(__dirname, "public", faviconFiles[file.name]), file.contents);
+    await fs.writeFile(path.join(__dirname, "public", faviconFiles[file.name]), file.contents as Uint8Array);
   }
   manifest.name = variables.SITENAME;
   manifest.short_name = variables.SHORT_SITENAME || variables.SITENAME;
@@ -169,6 +168,7 @@ export default defineConfig(async ({ command, mode }) => {
   await fs.writeFile(
     path.join(__dirname, "build_config.json"),
     JSON.stringify({
+      sitename: publicVariables.SITENAME,
       run_worker_first: builConfig?.assets?.run_worker_first || null,
     })
   );

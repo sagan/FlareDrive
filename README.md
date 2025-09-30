@@ -120,7 +120,7 @@ Prepare development environment:
 1. Run `npm i`.
 2. Copy `.env.sample` to `.env.local` and modify it to set environment variables. (Note: `.env.local` is used by Vite. Cloudflare Wrangler only recognizes `.dev.vars` file, running `npm run build` will automatically copy the former to the latter)
 3. Copy `wrangler.sample.toml` (Running as Workers) or `wrangler.example-pages.toml` (Running as Pages) to `wrangler.toml`.
-4. Run `wrangler d1 migrations apply flaredrive --local` to apply local D1 database [migrations](https://developers.cloudflare.com/d1/reference/migrations/), which are defined inside `migrations/` folder.
+4. Run `npm run cfdevmigrations` to apply local D1 database [migrations](https://developers.cloudflare.com/d1/reference/migrations/), which are defined inside `migrations/` folder.
 5. Run `npm run codegen` to generate `graphql/generated/*.ts` files from `graphql/*.graphql` source files.
 
 ## Run this project locally as Workers
