@@ -21,6 +21,7 @@ import {
   isUrlFile,
   validateAndGetSafeUrl,
   removeZeroFields,
+  str2Html,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -40,6 +41,7 @@ import {
   getGlobalConfig,
 } from "../commons";
 import buildVariables from "../../build_config.json";
+import { README_FILES } from "@/src/commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -221,11 +223,22 @@ export const handleGetShare = async function ({
     }
     const sitename = buildVariables.sitename;
     const description = data.desc || "";
+
+    let readme = "";
+    for (const readmeFileName of README_FILES) {
+      const readmeFileKey = `${obj.key}/${readmeFileName}`;
+      const readmeFile = await env.BUCKET.get(readmeFileKey);
+      if (readmeFile) {
+        const contents = await readmeFile.text();
+        readme = await str2Html(contents, readmeFile.httpMetadata?.contentType);
+        break;
+      }
+    }
     if (data.noindex) {
       if (relpath) {
         return responseNotFound();
       } else {
-        return htmlResponse(noindexPage(sitename, description, sharekey));
+        return htmlResponse(noindexPage(sitename, description, sharekey, readme));
       }
     }
     const files = await findChildren({
@@ -246,9 +259,11 @@ export const handleGetShare = async function ({
     if (requestJson) {
       const prefix = trimSuffix(data.key, "/") + "/";
       const items = files.map((file) => ({ ...file, key: trimPrefix(file.key, prefix) }));
-      return jsonResponse({ sitename, description, files: items }, { cors });
+      return jsonResponse({ sitename, description, files: items, readme }, { cors });
     }
-    return htmlResponse(indexPage(sitename, description, sharekey + (relpath ? "/" + relpath : ""), !relpath, files));
+    return htmlResponse(
+      indexPage(sitename, description, sharekey + (relpath ? "/" + relpath : ""), !relpath, files, readme)
+    );
   } else if (url.pathname.endsWith("/")) {
     // target is file, but the request path ends with "/"
     return responseNotFound();
@@ -264,7 +279,7 @@ export const handleGetShare = async function ({
 
 export const onRequestHead = getOnRequestHead(onRequestGet);
 
-function noindexPage(sitename: string, desc: string, dir: string): string {
+function noindexPage(sitename: string, desc: string, dir: string, readme: string): string {
   const title = `${dir} - ${sitename}`;
   // from Chrome file:// url dir index page
   return `<!DOCTYPE html>
@@ -281,12 +296,20 @@ function noindexPage(sitename: string, desc: string, dir: string): string {
     <h1>Index of ${encodeHtml(dir)}</h1>
     ${desc ? `<div>${desc}</div>` : ""}
     <p>Dir index is disabled for this folder. Append the file relative path to url directly to access it.</p>
+    ${readme ? `<h2>README</h2><div>${readme}</div>` : ""}
   </body>
 </html>
 `;
 }
 
-function indexPage(sitename: string, desc: string, dir: string, isRoot: boolean, items: R2Object[]): string {
+function indexPage(
+  sitename: string,
+  desc: string,
+  dir: string,
+  isRoot: boolean,
+  items: R2Object[],
+  readme: string
+): string {
   const title = `${dir} - ${sitename}`;
   // from Chrome file:// url dir index page
 
@@ -510,7 +533,7 @@ ${parentDirLinkHtml}
     ${tableRowsHtml}
   </tbody>
 </table>
-
+${readme ? `<h2>README</h2><div>${readme}</div>` : ""}
 </body>
 
 </html>

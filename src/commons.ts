@@ -11,6 +11,7 @@ import {
   Permission,
   mimeType,
   GlobalConfig,
+  str2Html,
 } from "../lib/commons";
 import React from "react";
 import mime from "../lib/mime";
@@ -18,9 +19,14 @@ import mime from "../lib/mime";
 /**
  * GitHub rule:
  *  /^readme\.(?:markdown|mdown|mkdn|md|textile|rdoc|org|creole|mediawiki|wiki|rst|asciidoc|adoc|asc|pod|txt)/i
- * For simplicity, we only handle common names: ["README.md", "README.txt", "readme.md", "readme.txt"].
+ * For simplicity and efficacy, we only handle most common names.
  */
-export const README_FILES = ["README.md", "README.txt", "readme.md", "readme.txt"];
+export const README_FILES = [
+  "README.md",
+  "README.txt",
+  // "readme.md",
+  // "readme.txt"
+] as const;
 
 export const VIEWMODE_VARIABLE = "viewMode";
 
@@ -299,21 +305,9 @@ export function cwd2Search(cwd: string): [isSearch: boolean, keyword: string, op
  */
 export async function response2Html(res: Response): Promise<string> {
   const [mime] = mimeType(res.headers.get("Content-Type"));
-  if (mime === MIME_MARKDOWN) {
-    const text = await res.text();
-    const htmlOutput = await marked.parse(text);
-    const sanitizedHtml = sanitizeHtml(htmlOutput);
-    return sanitizedHtml;
-  } else if (mime === MIME_TXT) {
-    let text = await res.text();
-    // Simple text to HTML conversion, escaping HTML entities
-    // Also, recognize "http(s)://..." urls and convert them to <a> links
-    text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    text = text.replace(/https?:\/\/[^\s]+/g, (url) => `<a href="${url}" rel="noopener noreferrer">${url}</a>`);
-    text = sanitizeHtml(text);
-    return text;
-  }
-  throw new Error("Unsupported response type for conversion to HTML");
+  const text = await res.text();
+  const html = await str2Html(text, mime);
+  return html;
 }
 
 /**

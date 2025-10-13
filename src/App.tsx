@@ -256,7 +256,7 @@ export default function App() {
       return "";
     }
     for (const file of files) {
-      if (README_FILES.includes(basename(file.key))) {
+      if ((README_FILES as readonly string[]).includes(basename(file.key))) {
         return file.key;
       }
     }
