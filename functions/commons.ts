@@ -759,7 +759,6 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
     ok: true,
     comment: "",
     dev: !!env.DEV,
-    hardShareExpiration: !!env.HARD_SHARE_EXPIRATION,
     mappings: {},
     publicPrefix: env.PUBLIC_PREFIX
       ? env.PUBLIC_PREFIX.split(/\s*,\s*/)

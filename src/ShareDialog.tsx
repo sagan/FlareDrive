@@ -577,8 +577,12 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
           title="Render html in full mode instead of sandbox mode. Warning: malicious html files could do XSS attack"
           control={
             <Checkbox checked={!!shareObject.fullHtml} onChange={e => {
-              setShareObject({ ...shareObject, fullHtml: !!e.target.checked });
+              setShareObject({ ...shareObject, fullHtml: e.target.checked });
             }} />} />
+        {!!ttl && <FormControlLabel label="Auto Delete" title='Automatically delete share object after expiration' control={
+          <Checkbox checked={!!shareObject.autoDelete} onChange={e => {
+            setShareObject({ ...shareObject, autoDelete: e.target.checked });
+          }} />} />}
       </Box>
       {!!shareObject.refererMode && <>
         <Box>

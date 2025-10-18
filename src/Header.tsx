@@ -132,7 +132,7 @@ export default function Header({
             <CheckIcon />
           </ListItemIcon>}
         </MenuItem>)}
-        {!!auth && <MenuItem onClick={() => {
+        {!!auth && cwd !== SHARES_FOLDER_KEY && <MenuItem onClick={() => {
           setAnchorEl(null);
           onGenerateThumbnails();
         }}>Generate thumbnails</MenuItem>}

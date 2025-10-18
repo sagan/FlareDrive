@@ -388,7 +388,6 @@ export interface ShareObject {
    * optional. share expires unix timestamp (miliseconds).
    * Negative or zero value means no expiration.
    * Note: in <= v0.1.7 versions it was seconds.
-   * If "hardShareExpiration" global config is true, it's also set as KV key expiration option.
    */
   expiration?: number;
 
@@ -427,6 +426,12 @@ export interface ShareObject {
    * optional, disable directory index page.
    */
   noindex?: boolean;
+
+  /**
+   * optional, automatically delete share object after expiration.
+   * If true, set the KV key expiration option.
+   */
+  autoDelete?: boolean;
 
   /**
    * optional, full html mode. render .html files in full mode instead of sandbox mode.
@@ -1065,11 +1070,6 @@ export const GlobalConfigSchema = PublicConfigSchema.extend({
       z.string().refine(validateShareName, { message: INVALID_SHARE_NAME_MESSAGE })
     )
     .default({}),
-
-  /**
-   * If set to true, the share KV object will be automatically deleted after expiration.
-   */
-  hardShareExpiration: z.boolean().default(false),
 
   /**
    * build-time config

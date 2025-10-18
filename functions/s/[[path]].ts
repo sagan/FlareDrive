@@ -89,7 +89,7 @@ export const onRequestPut: FdCfFunc = async function (context) {
   }
 
   const options: KVNamespacePutOptions = {};
-  if (globalConfig.hardShareExpiration && shareObject.expiration && shareObject.expiration !== PAST_TIMESTAMP) {
+  if (shareObject.autoDelete && shareObject.expiration && shareObject.expiration !== PAST_TIMESTAMP) {
     options.expiration = Math.round(shareObject.expiration / 1000);
   }
   await env.KV.put(SHARE_KEY_PREFIX + sharekey, JSON.stringify(shareObject), options);
