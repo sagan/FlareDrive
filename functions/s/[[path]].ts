@@ -45,6 +45,15 @@ import { README_FILES } from "@/src/commons";
 
 const SHARE_KEY_PREFIX = "s_";
 
+const CSS = `* {
+  word-wrap: break-word;
+  word-break: break-all;
+}
+pre {
+  white-space: break-spaces;
+}
+`;
+
 // POST: list shares. optional, pass a prefix as path
 export const onRequestPost: FdCfFunc = async function (context) {
   const { request, env, params } = context;
@@ -291,6 +300,9 @@ function noindexPage(sitename: string, desc: string, dir: string, readme: string
     <meta name="google" value="notranslate">
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/assets/favicon.png" />
+    <style>
+${CSS}
+    </style>
   </head>
   <body>
     <h1>Index of ${encodeHtml(dir)}</h1>
@@ -363,6 +375,9 @@ function indexPage(
 <meta name="google" value="notranslate">
 <meta name="referrer" content="no-referrer" />
 <link rel="icon" href="/assets/favicon.png" />
+<style>
+${CSS}
+</style>
 
 <script>
 function sortTable(column) {

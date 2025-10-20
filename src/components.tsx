@@ -109,7 +109,7 @@ export function PathBreadcrumb({ prefix, isSearch, searchKeyword, searchOptions,
         </Button>
       }
       {!auth && !!authSearchParams?.get(EXPIRES_VARIABLE) && <span>
-        ! Expires at {new Date(parseInt(authSearchParams.get(EXPIRES_VARIABLE)!)).toISOString()}
+        ! Expires at {new Date(parseInt(authSearchParams.get(EXPIRES_VARIABLE)!)).toISOString().slice(0, 19) + "Z"}
       </span>}
       {isSearch && (searchKeyword ? <Link href={dirUrlPath(search2Cwd("", { baseDir: searchOptions.baseDir }))}
         onClick={e => {

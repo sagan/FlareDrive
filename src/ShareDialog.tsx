@@ -414,7 +414,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             }} />
         </Box>
         {linkTtl ? <Typography>
-          Link expires on {new Date(linkTs + linkTtl * 1000).toISOString()}, or until the admin password changed
+          Link expires on {new Date(linkTs + linkTtl * 1000).toISOString().slice(0, 19) + "Z"}, or until the admin password changed
         </Typography> : <Typography sx={{ color: "red" }}>
           Link will never expire (unless the admin password is changed)
         </Typography>}
@@ -610,10 +610,10 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
         Shared link: <a href={link}>{new URL(link).pathname}</a>
         {!!shareObject.expiration && (shareObjectExpired
           ? <span style={{ color: "red" }}>
-            &nbsp;(Link expired on {new Date(shareObject.expiration).toISOString()})
+            &nbsp;(Link expired on {new Date(shareObject.expiration).toISOString().slice(0, 19) + "Z"})
           </span>
           : <span>
-            &nbsp;(Link expires on {new Date(shareObject.expiration).toISOString()})
+            &nbsp;(Link expires on {new Date(shareObject.expiration).toISOString().slice(0, 19) + "Z"})
           </span>
         )}
       </Typography>}
