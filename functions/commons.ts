@@ -83,10 +83,17 @@ export type Env = {
    * Cloudflare API token of Analytics. ("Read analytics and logs" template)
    */
   CF_ANALYTICS_TOKEN?: string;
+
   /**
    * Flag. set it to any value (e.g. "1") to enable dev mode.
    */
   DEV?: string;
+
+  /**
+   * Flag. set it to any value (e.g. "1") to enable full text search by default.
+   */
+  USE_FULL_SEARCH?: string;
+
   /**
    * Flag. set it to any value (e.g. "1") to enable hard share deletion mode.
    */
@@ -759,6 +766,7 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
     ok: true,
     comment: "",
     dev: !!env.DEV,
+    useFullSearch: !!env.USE_FULL_SEARCH,
     mappings: {},
     publicPrefix: env.PUBLIC_PREFIX
       ? env.PUBLIC_PREFIX.split(/\s*,\s*/)
@@ -782,9 +790,10 @@ export async function getGlobalConfig(env: Env, nocache = false): Promise<Global
 }
 
 export function getPublicConfig(globalConfig: GlobalConfig): PublicConfig {
-  const publicConfig = {
+  const publicConfig: PublicConfig = {
     ok: globalConfig.ok,
     dev: globalConfig.dev,
+    useFullSearch: globalConfig.useFullSearch,
     publicPrefix: globalConfig.publicPrefix,
     publicDirPrefix: globalConfig.publicDirPrefix,
     publicRwdirPrefix: globalConfig.publicRwdirPrefix,

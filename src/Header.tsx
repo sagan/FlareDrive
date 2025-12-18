@@ -7,7 +7,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
 import { Permission } from "../lib/commons";
-import { SHARES_FOLDER_KEY, SearchOptions, Sort, ViewMode, search2Cwd, sortLabels, useConfig } from "./commons";
+import { SHARES_FOLDER_KEY, SearchOptions, Sort, ViewMode, search2Cwd, sortLabels, useConfig, useGlobalConfig } from "./commons";
 
 export default function Header({
   cwd,
@@ -48,6 +48,7 @@ export default function Header({
   onDownloadAsZip?: () => void;
   onShare?: () => void;
 }) {
+  const globalConfig = useGlobalConfig();
   const { auth, effectiveAuth, fullControl } = useConfig();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [anchorEl2, setAnchorEl2] = useState<null | HTMLElement>(null);
@@ -74,8 +75,14 @@ export default function Header({
           if (!auth) {
             return;
           }
-          setCwd(
-            search2Cwd(search, search || isSearch || cwd === SHARES_FOLDER_KEY ? searchOptions : { baseDir: cwd }));
+          const options = { ...searchOptions }
+          if (search || isSearch || cwd === SHARES_FOLDER_KEY) {
+            options.baseDir = cwd
+          }
+          if (globalConfig.useFullSearch && !isSearch) {
+            options.full = true
+          }
+          setCwd(search2Cwd(search, options));
         }}
         style={{ display: 'flex', flexGrow: 1 }}
       >

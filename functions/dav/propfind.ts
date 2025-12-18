@@ -7,9 +7,12 @@ import {
   HEADER_INAPP,
   MIME_XML,
   WEBDAV_ENDPOINT,
-  encodeHex,
   isHttpsOrLocalUrl,
   isDirectory,
+  getR2FileMd5,
+  getR2FileSha1,
+  getR2FileSha256,
+  R2ObjectAlike,
 } from "../../lib/commons";
 import { findChildren, responseNotFound } from "../commons";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
@@ -29,19 +32,22 @@ type DavProperties = {
   "oc:checksums": string | undefined;
 };
 
-function fromR2Object(object: R2Object | typeof ROOT_OBJECT): DavProperties {
+function fromR2Object(object: R2ObjectAlike): DavProperties {
   // owncloud compatible checksum fields
-  const checksums = `<oc:checksum>${
-    "checksums" in object
-      ? [
-          object.checksums.md5 ? `MD5:${encodeHex(object.checksums.md5)}` : "",
-          object.checksums.sha1 ? `SHA1:${encodeHex(object.checksums.sha1)}` : "",
-          object.checksums.sha256 ? `SHA256:${encodeHex(object.checksums.sha256)}` : "",
-        ]
-          .filter((a) => a)
-          .join(" ")
-      : ""
-  }</oc:checksum>`;
+  const checksumData: string[] = [];
+  const md5 = getR2FileMd5(object);
+  const sha1 = getR2FileSha1(object);
+  const sha256 = getR2FileSha256(object);
+  if (md5) {
+    checksumData.push(`MD5:${md5}`);
+  }
+  if (sha1) {
+    checksumData.push(`SHA1:${sha1}`);
+  }
+  if (sha256) {
+    checksumData.push(`SHA256:${sha256}`);
+  }
+  const checksums = `<oc:checksum>${checksumData.join(" ")}</oc:checksum>`;
   return {
     creationdate: object.uploaded.toUTCString(),
     displayname: object.httpMetadata?.contentDisposition,

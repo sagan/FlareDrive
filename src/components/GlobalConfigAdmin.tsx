@@ -129,6 +129,7 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
         <Typography variant="caption" component="div">
           <strong>Configuration fields explanation:</strong>
           <ul>
+            <li><code>useFullSearch</code>: Set to <code>true</code> to use full search mode by default.</li>
             <li><code>publicPrefix</code>: An array of path prefixes. Files under these paths are publicly readable.</li>
             <li><code>publicDirPrefix</code>: An array of path prefixes. Directories under these paths are publicly listable. This implies files are also readable.</li>
             <li><code>publicRwdirPrefix</code>: An array of path prefixes. Directories under these paths are publicly writable (upload/modify/delete). This implies directory listing and file reading.</li>

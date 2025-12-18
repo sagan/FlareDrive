@@ -1,4 +1,4 @@
-import { METHODS_READ_DIR, MIME_DIR, SYSFILES, basename, path2Key } from "../../lib/commons";
+import { METHODS_READ_DIR, MIME_DIR, SYSFILES, R2ObjectAlike, basename, path2Key } from "../../lib/commons";
 import { getGlobalConfig, type FdCfFuncContext } from "../commons";
 
 export interface RequestHandlerParams {
@@ -16,17 +16,16 @@ export interface RequestHandlerParams {
   authed?: boolean;
 }
 
-export const ROOT_OBJECT = {
+export const ROOT_OBJECT: R2ObjectAlike = {
   key: "",
   uploaded: new Date(),
   httpMetadata: {
     contentType: MIME_DIR,
-    contentDisposition: undefined,
-    contentLanguage: undefined,
   },
+  checksums: {},
   customMetadata: undefined,
   size: 0,
-  etag: undefined,
+  etag: "",
 };
 
 /**

@@ -1,4 +1,5 @@
 import pLimit from "p-limit";
+import SparkMD5 from "spark-md5";
 import { pdfjs } from "react-pdf";
 import mime from "../../lib/mime";
 import {
@@ -36,6 +37,8 @@ import {
   URL_VARIABLE,
   joinPathes,
   dirname,
+  MD5_VARIABLE,
+  UPLOADS_VARIABLE,
 } from "../../lib/commons";
 import { FileItem, UploadFile } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -262,8 +265,13 @@ export async function multipartUpload(
   const headers = options?.headers || {};
   headers[HEADER_CONTENT_TYPE] = file.type || mime.getType(file.name) || MIME_DEFAULT;
 
+  const md5 = await md5sum(file);
+  const searchParams = new URLSearchParams({
+    [UPLOADS_VARIABLE]: "1",
+    [MD5_VARIABLE]: md5,
+  });
   const uploadRequest = applyAuth(
-    new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?uploads`, {
+    new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?${searchParams}`, {
       headers,
       method: "POST",
       signal,
@@ -693,4 +701,39 @@ export async function prepareUploadFiles(
     await createFolder(dir, auth, true);
   }
   return fileList;
+}
+
+async function md5sum(file: File): Promise<string> {
+  const chunkSize = 1024 * 1024; // 1MB
+  const spark = new SparkMD5.ArrayBuffer();
+  const fileReader = new FileReader();
+
+  return new Promise((resolve, reject) => {
+    let offset = 0;
+
+    fileReader.onload = (e) => {
+      const buf = e.target?.result;
+      if (buf) spark.append(buf as ArrayBuffer);
+    };
+
+    fileReader.onerror = () => reject(fileReader.error);
+
+    fileReader.onloadend = () => {
+      if (fileReader.error) return; // already rejected via onerror
+
+      if (offset < file.size) {
+        readNextChunk();
+      } else {
+        resolve(spark.end()); // only after last chunk
+      }
+    };
+
+    const readNextChunk = () => {
+      const chunk = file.slice(offset, offset + chunkSize);
+      offset += chunkSize;
+      fileReader.readAsArrayBuffer(chunk);
+    };
+
+    readNextChunk();
+  });
 }

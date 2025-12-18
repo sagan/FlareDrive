@@ -59,14 +59,15 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - (optional) `CF_ACCOUNT_ID` & `CF_ANALYTICS_TOKEN`. For access Clareflare Resources (Workers / R2 / KV / D1) usage statistics data.
     - `CF_ACCOUNT_ID`: Cloudflare Account ID. The uuid part of Cloudflare dashboard url, e.g. `https://dash.cloudflare.com/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` => `a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6` .
     - `CF_ANALYTICS_TOKEN`: Cloudflare API token of Analytics. Create one [here](https://dash.cloudflare.com/profile/api-tokens). Use `Read analytics and logs` template.
-  - (optional) global config keys: If `KV` is binded, these configs can be modified through Web UI, the env values are used as initial config.
+  - (optional) global config keys: If `KV` is binded, these configs can be modified through Web UI, the env values (if any) are used as initial config.
     -  `PUBLIC_PREFIX`, `PUBLIC_DIR_PREFIX`, `PUBLIC_RWDIR_PREFIX`. Values of each variable are comma-separated "public" path prefixes. Pathes of these prefixes are allowed to be accessed (readonly / readonly with dir listing / writable) anonymously.
     -  `HARD_SHARE_EXPIRATION`: Flag. Set an `1` to enable share hard deletion mode: automatically delete the share KV object after expiration.
+    -  `USE_FULL_SEARCH`: Flag. Set to `1` to use full search mode by default.
 - Build - Variables and secrets. (Any change require re-build to take effect)
   - `R2_BUCKET_NAME` : The [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket name.
   - (optional) `KV_ID` : The [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) instance id.
   - (optional) `DATABASE_ID` : The [Cloudflare D1](https://developers.cloudflare.com/d1/) database id.
-    - Though `KV_ID` and `DATABASE_ID` are optional, we highly recommand to set them, otherwise some features of this project won't work.
+    - Though `KV_ID` and `DATABASE_ID` are optional, we strongly recommand to set them, otherwise some features of this project won't work.
   - (optional) `SITENAME` : Site name. Default is `FlareDrive`.
   - (optional) `SHORT_SITENAME` : Short site name. Default is the same value as `SITENAME` variable.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.

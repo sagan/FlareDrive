@@ -22,6 +22,7 @@ import {
   validateAndGetSafeUrl,
   removeZeroFields,
   str2Html,
+  getR2FileMd5,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -346,7 +347,7 @@ function indexPage(
       const sizeDisplay = !isDir ? humanReadableSize(item.size) : "";
       const dateDisplay = item.uploaded.toISOString().slice(0, 19) + "Z";
       const mimeDisplay = encodeHtml(item.httpMetadata?.contentType || "");
-      const md5Display = !isDir && item.checksums?.md5 ? encodeHex(item.checksums.md5) : "";
+      const md5Display = !isDir ? getR2FileMd5(item) : "";
       const commentDisplay = encodeHtml(item.customMetadata?.comment || "");
 
       return `

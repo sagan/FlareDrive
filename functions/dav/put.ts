@@ -28,6 +28,7 @@ import {
   isImage,
   validateAndGetSafeUrl,
   isDirectory,
+  MD5_VARIABLE,
 } from "../../lib/commons";
 import {
   checkConflict,
@@ -244,6 +245,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     onlyIf: request.headers,
     httpMetadata: request.headers,
     customMetadata,
+    md5: searchParams.get(MD5_VARIABLE) || undefined,
   });
 
   if (!result) {

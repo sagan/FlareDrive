@@ -2,6 +2,8 @@ import {
   HEADER_FD_THUMBNAIL,
   HEADER_NO_THUMBNAIL,
   KEY_PREFIX_PRIVATE,
+  MD5_VARIABLE,
+  THUMBNAIL_VARIABLE,
   UPLOADS_VARIABLE,
   UPLOAD_ID_VARIABLE,
   isImage,
@@ -17,8 +19,16 @@ import { upsertDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
+  const searchParams = new URLSearchParams(new URL(request.url).search);
   const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
-  const customMetadata = thumbnail ? { thumbnail } : undefined;
+  const md5 = searchParams.get(MD5_VARIABLE);
+  const customMetadata: Record<string, string> = {};
+  if (md5) {
+    customMetadata[MD5_VARIABLE] = md5;
+  }
+  if (thumbnail) {
+    customMetadata[THUMBNAIL_VARIABLE] = thumbnail;
+  }
 
   const multipartUpload = await bucket.createMultipartUpload(path, {
     httpMetadata: request.headers,

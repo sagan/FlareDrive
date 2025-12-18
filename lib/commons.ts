@@ -46,6 +46,11 @@ export const THIRTEEN_MONTHS_DAYS = 398;
 export const THUMBNAIL_VARIABLE = "thumbnail";
 
 /**
+ * Manually specify uploading (large) file md5.
+ */
+export const MD5_VARIABLE = "md5";
+
+/**
  * url variable.
  * Only apply MIME_URL files. Set to the url of the file.
  * @see {MIME_URL}
@@ -929,11 +934,26 @@ export function appendQueryStringToUrl(url: string, qs: string): string {
 }
 
 /**
- * httpMetadata?.contentType?: string
+ * Similar struct to R2Object
  */
-interface R2ObjectAlike {
+export interface R2ObjectAlike {
+  key: string;
+  etag: string;
+  uploaded: Date;
+  size: number;
   httpMetadata?: {
     contentType?: string;
+    contentLanguage?: string;
+    contentDisposition?: string;
+    contentEncoding?: string;
+    cacheControl?: string;
+    cacheExpiry?: Date;
+  };
+  customMetadata?: Record<string, string>;
+  checksums: {
+    md5?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
+    sha1?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
+    sha256?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
   };
 }
 
@@ -944,6 +964,39 @@ export function isHtml(object: R2ObjectAlike): boolean {
   return (
     object.httpMetadata?.contentType === MIME_HTML || !!object.httpMetadata?.contentType?.startsWith(MIME_HTML + ";")
   );
+}
+
+/**
+ * Get file MD5 from checksums (if exists) or custom meta.
+ */
+export function getR2FileMd5(object: R2ObjectAlike): string {
+  if (object.checksums.md5) {
+    if (typeof object.checksums.md5 == "string") {
+      return object.checksums.md5;
+    }
+    return encodeHex(object.checksums.md5);
+  }
+  return object.customMetadata?.md5 || "";
+}
+
+export function getR2FileSha1(object: R2ObjectAlike): string {
+  if (object.checksums.sha1) {
+    if (typeof object.checksums.sha1 == "string") {
+      return object.checksums.sha1;
+    }
+    return encodeHex(object.checksums.sha1);
+  }
+  return object.customMetadata?.sha1 || "";
+}
+
+export function getR2FileSha256(object: R2ObjectAlike): string {
+  if (object.checksums.sha256) {
+    if (typeof object.checksums.sha256 == "string") {
+      return object.checksums.sha256;
+    }
+    return encodeHex(object.checksums.sha256);
+  }
+  return object.customMetadata?.sha256 || "";
 }
 
 /**
@@ -1030,6 +1083,12 @@ export const PublicConfigSchema = z
      * dev mode
      */
     dev: z.boolean().default(false),
+
+    /**
+     * Use full text search by default.
+     */
+    useFullSearch: z.boolean().default(false),
+
     /**
      * Public prefix list. Each one in list is guaranteed to be not empty
      * and do not start or end with white space or "/".

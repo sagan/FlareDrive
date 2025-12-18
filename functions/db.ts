@@ -1,4 +1,12 @@
-import { EMPTY_MD5_RAW, KEY_PREFIX_PRIVATE, decodeHex, encodeHex, fileDepth, trimPrefixSuffix } from "../lib/commons";
+import {
+  EMPTY_MD5_RAW,
+  KEY_PREFIX_PRIVATE,
+  decodeHex,
+  encodeHex,
+  fileDepth,
+  getR2FileMd5,
+  trimPrefixSuffix,
+} from "../lib/commons";
 import { File } from "../lib/schema";
 
 /**
@@ -36,7 +44,7 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
       uploaded.getTime(),
       // dir or other empty file (size = 0) have a fixed md5 d41d8cd98f00b204e9800998ecf8427e
       // do not store it to save database space
-      file.size > 0 ? encodeHex(checksums.md5) : "",
+      file.size > 0 ? getR2FileMd5(file) : "",
       ctime,
       mtime
     )
