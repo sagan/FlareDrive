@@ -134,12 +134,22 @@ export function isTextual(file: FileItem): boolean {
 }
 
 export function downloadFile(url: string, filename = "") {
+  if (url.startsWith("//")) {
+    url = location.protocol + url;
+  } else if (url.startsWith("/")) {
+    url = location.origin + url;
+  }
   const a = document.createElement("a");
   a.href = url;
   if (!filename) {
     const urlObj = new URL(url);
     if (urlObj.protocol != "blob:") {
       filename = urlObj.pathname.split("/").pop()!;
+      try {
+        filename = decodeURIComponent(filename);
+      } catch (e) {
+        // empty
+      }
     }
   }
   a.download = filename;
