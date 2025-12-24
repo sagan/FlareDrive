@@ -1,6 +1,7 @@
 // share file api
 import { matchPattern } from "browser-extension-url-match";
 import {
+  type ShareObject,
   META_VARIABLE,
   HEADER_REFERER,
   HTML_VARIABLE,
@@ -8,15 +9,12 @@ import {
   RAW_VARIABLE,
   JSON_VARIABLE,
   PAST_TIMESTAMP,
-  type ShareObject,
-  path2Key,
   trimPrefix,
   ShareRefererMode,
   trimSuffix,
   cut,
   str2int,
   humanReadableSize,
-  encodeHex,
   isDirectory,
   isUrlFile,
   validateAndGetSafeUrl,
@@ -40,6 +38,7 @@ import {
   FdCfFuncContextRequest,
   getOnRequestHead,
   getGlobalConfig,
+  getPathArray,
 } from "../commons";
 import buildVariables from "../../build_config.json";
 import { README_FILES } from "@/src/commons";
@@ -66,7 +65,11 @@ export const onRequestPost: FdCfFunc = async function (context) {
     return failResponse;
   }
 
-  const sharekeyPrefix = params.path ? path2Key((params.path as string[]).join("/")) : "";
+  const pathParams = getPathArray(context);
+  if (pathParams.length > 1) {
+    return responseBadRequest();
+  }
+  const sharekeyPrefix = pathParams[0] || "";
   const data = await env.KV.list({ prefix: SHARE_KEY_PREFIX + sharekeyPrefix });
 
   const shares = data.keys.map(({ name }) => trimPrefix(name, SHARE_KEY_PREFIX));
@@ -89,11 +92,11 @@ export const onRequestPut: FdCfFunc = async function (context) {
     return responseBadRequest();
   }
 
-  const pathParams = params.path as string[];
-  if (pathParams?.length != 1) {
+  const pathParams = getPathArray(context);
+  if (pathParams.length != 1) {
     return responseBadRequest();
   }
-  const sharekey = path2Key(pathParams[0]);
+  const sharekey = pathParams[0];
   if (!sharekey) {
     return responseBadRequest();
   }
@@ -116,18 +119,18 @@ export const onRequestDelete: FdCfFunc = async function (context) {
   if (failResponse) {
     return failResponse;
   }
-  const pathParams = params.path as string[];
-  if (pathParams?.length != 1) {
+  const pathParams = getPathArray(context);
+  if (pathParams.length != 1) {
     return responseBadRequest();
   }
-  const sharekey = path2Key(pathParams[0]);
+  const sharekey = pathParams[0];
   await env.KV.delete(SHARE_KEY_PREFIX + sharekey);
   return responseNoContent();
 };
 
 export const onRequestGet: FdCfFunc = async function (context) {
   const { request, env, params } = context;
-  return handleGetShare({ request, env, path: (params.path as string[]).join("/") });
+  return handleGetShare({ request, env, path: getPathArray(context).join("/") });
 };
 
 // GET: request a shared file meta or contents
@@ -137,7 +140,7 @@ export const handleGetShare = async function ({
   path,
 }: {
   /**
-   * E.g. "foo/bar.txt"
+   * E.g. "foo/bar.txt". Each part already url decoded.
    */
   path: string;
   /**
@@ -161,13 +164,13 @@ export const handleGetShare = async function ({
       return failResponse;
     }
   }
-  // const pathParams = params.path as string[];
+
   const pathParams = path.split("/");
   if (requestMeta ? pathParams?.length != 1 : pathParams?.length < 1) {
     return responseBadRequest();
   }
-  const sharekey = path2Key(pathParams[0]);
-  const relpath = path2Key(pathParams.slice(1).join("/"));
+  const sharekey = pathParams[0];
+  const relpath = pathParams.slice(1).join("/");
   const data = (await env.KV.get(SHARE_KEY_PREFIX + sharekey, "json")) as ShareObject | null;
   if (requestMeta) {
     return jsonResponse(data);

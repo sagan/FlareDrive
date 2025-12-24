@@ -1,5 +1,5 @@
-import { METHODS_READ_DIR, MIME_DIR, SYSFILES, R2ObjectAlike, basename, path2Key } from "../../lib/commons";
-import { getGlobalConfig, type FdCfFuncContext } from "../commons";
+import { METHODS_READ_DIR, MIME_DIR, SYSFILES, R2ObjectAlike, basename } from "../../lib/commons";
+import { type FdCfFuncContext, getGlobalConfig, getPathArray } from "../commons";
 
 export interface RequestHandlerParams {
   context: FdCfFuncContext;
@@ -54,7 +54,7 @@ function testKeyHasPrefix(key: string, prefixes: string[], includeSelf?: boolean
  */
 export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: boolean, scope: string]> {
   const { env, params } = context;
-  const key = path2Key(((params.path as string[]) || []).join("/"));
+  const key = getPathArray(context).join("/");
   const globalConfig = await getGlobalConfig(env);
   if (key && !SYSFILES.includes(basename(key))) {
     let prefix: string;
@@ -72,11 +72,4 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
     }
   }
   return [false, ""];
-}
-
-export function parseBucketPath(context: FdCfFuncContext): string {
-  const { params } = context;
-  const pathSegments = (params.path || []) as string[];
-  const path = decodeURIComponent(pathSegments.join("/"));
-  return path;
 }

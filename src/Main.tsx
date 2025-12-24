@@ -622,7 +622,7 @@ export default function Main({
           }), isDir];
         }}
         onSelectAll={() => {
-          const selects = [] as string[]
+          const selects: string[] = []
           files.forEach(file => {
             if (file.system) {
               return

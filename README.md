@@ -72,6 +72,7 @@ Fork this project and connect your fork with Cloudflare Workers. Cloudflare dash
   - (optional) `SHORT_SITENAME` : Short site name. Default is the same value as `SITENAME` variable.
   - (optional) `FAVICON_URL` : Custom site favicon (icon) image url. It's recommended to use an .png image of 512x512 size.
   - (optionL) `JS_URL` & `CSS_URL`: Custom JavaScript & CSS file url. If set, they will be injected in the `<head>` element of Web UI.
+  - (optional) `DEBUG` : Flag. Set to `1` to enable Cloudflare Workers Logs.
 
 ## Deployment to Cloudflare Pages
 

@@ -76,11 +76,13 @@ export default function Header({
             return;
           }
           const options = { ...searchOptions }
-          if (search || isSearch || cwd === SHARES_FOLDER_KEY) {
-            options.baseDir = cwd
-          }
-          if (globalConfig.useFullSearch && !isSearch) {
-            options.full = true
+          if (!isSearch) {
+            if (!search && cwd !== SHARES_FOLDER_KEY) {
+              options.baseDir = cwd
+            }
+            if (globalConfig.useFullSearch) {
+              options.full = true
+            }
           }
           setCwd(search2Cwd(search, options));
         }}

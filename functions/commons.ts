@@ -817,3 +817,23 @@ export function getOnRequestHead(onRequestGet: FdCfFunc): FdCfFunc {
     });
   };
 }
+
+/**
+ * get actual path array from Cloudflare worker [[id]].ts style file system routing path params.
+ * which may be indeed undefined if user visit root url like "/s/" of "/s/[id].ts" routing.
+ * Each element of returned array is url decoded and normalized.
+ */
+export function getPathArray(context: FdCfFuncContext): string[] {
+  const pathParam = context.params.path;
+  if (!pathParam) {
+    return [];
+  }
+  if (typeof pathParam == "string") {
+    const path = decodeURIComponent(trimPrefixSuffix(pathParam, "/"));
+    if (path) {
+      return [path];
+    }
+    return [];
+  }
+  return pathParam.map((p) => decodeURIComponent(trimPrefixSuffix(p, "/"))).filter((p) => p);
+}

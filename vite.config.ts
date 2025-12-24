@@ -58,6 +58,21 @@ async function generateWranglerConfig(env: Record<string, string>) {
       throw new Error(`invalid RUN_WORKER_FIRST value: must be either "true" or a string of JSON array`);
     }
   }
+  if (env.DEBUG) {
+    config.observability = {
+      logs: {
+        enabled: true,
+        head_sampling_rate: 1,
+        persist: true,
+        invocation_logs: true,
+      },
+      traces: {
+        enabled: false,
+        head_sampling_rate: 1,
+        persist: true,
+      },
+    };
+  }
   const contents = JSON.stringify(config, null, 2);
   console.log("generate wrangler.json", contents);
   await fs.writeFile(file, contents);

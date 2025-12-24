@@ -1,11 +1,10 @@
-import { FdCfFunc, getGlobalConfig, getOnRequestHead } from "./commons";
-import { parseBucketPath } from "./dav/utils";
+import { FdCfFunc, getGlobalConfig, getOnRequestHead, getPathArray } from "./commons";
 import { handleGetShare } from "./s/[[path]]";
 
 // The "catch-all" routing, process mappings: map path prefix to a published share.
 export const onRequestGet: FdCfFunc = async function (context) {
   const { env, request } = context;
-  const key = parseBucketPath(context);
+  const key = getPathArray(context).join("/");
   console.log("catch-all worker:", key, request.url);
 
   const globalConfig = await getGlobalConfig(env);

@@ -1,5 +1,4 @@
-import { FdCfFunc, checkAuthFailure, responseMethodNotAllowed, responseNotFound } from "../commons";
-import { parseBucketPath } from "./utils";
+import { FdCfFunc, checkAuthFailure, getPathArray, responseMethodNotAllowed } from "../commons";
 import { handleRequestCopy } from "./copy";
 import { handleRequestDelete } from "./delete";
 import { handleRequestGet } from "./get";
@@ -49,7 +48,7 @@ export const onRequest: FdCfFunc = async function (context) {
     scope = _scope;
   }
 
-  const path = parseBucketPath(context);
+  const path = getPathArray(context).join("/");
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
   return handler({ context, path, request: context.request, scope, authed: !authFailResponse, bucket: env.BUCKET });
