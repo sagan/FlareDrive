@@ -94,6 +94,7 @@ export interface FileItem {
 
   key: string;
   size: number;
+  etag?: string;
   uploaded: Date;
   httpMetadata: { contentType: string };
   customMetadata?: { thumbnail?: string; url?: string; comment?: string };

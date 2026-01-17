@@ -1,8 +1,9 @@
 import {
   EMPTY_MD5_RAW,
   KEY_PREFIX_PRIVATE,
+  SEARCH_MAGIC_WORD_LARGEST,
+  SEARCH_MAGIC_WORD_RECENT,
   decodeHex,
-  encodeHex,
   fileDepth,
   getR2FileMd5,
   trimPrefixSuffix,
@@ -120,13 +121,16 @@ LEFT JOIN filemeta AS fm ON f.key = fm.key
 WHERE 1 = 1`;
   const params: unknown[] = [];
 
-  if (query) {
+  if (query && query !== SEARCH_MAGIC_WORD_LARGEST && query !== SEARCH_MAGIC_WORD_RECENT) {
     sql += ` AND (f.name LIKE ?)`;
     if (full) {
       params.push(`%${query}%`);
     } else {
       params.push(`${query}%`);
     }
+  }
+  if (query == SEARCH_MAGIC_WORD_LARGEST) {
+    sql += ` AND (f.size > 0)`; // implies not dir
   }
 
   if (depth >= 0) {
@@ -152,7 +156,15 @@ WHERE 1 = 1`;
   //   If the SELECT list contains a "bare" column (a column that is not within an aggregate function),
   //   SQLite is free to return the value from any row within that group.
   sql += ` GROUP BY f.key`;
-  sql += ` ORDER BY f.key`;
+
+  if (query === SEARCH_MAGIC_WORD_LARGEST) {
+    sql += ` ORDER BY f.size DESC`;
+  } else if (query === SEARCH_MAGIC_WORD_RECENT) {
+    sql += ` ORDER BY f.mtime DESC`;
+  } else {
+    sql += ` ORDER BY f.key`;
+  }
+
   if (limit > 0) {
     sql += ` LIMIT ? OFFSET ?`;
     params.push(limit, offset);

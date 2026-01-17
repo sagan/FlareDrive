@@ -19,7 +19,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
     return jsonResponse([]);
   }
   const prefix = searchParams.get("prefix") || "";
-  const limit = str2int(searchParams.get("limit"), 10);
+  const limit = str2int(searchParams.get("limit"), 100);
   const offset = str2int(searchParams.get("offset"));
   const depth = str2int(searchParams.get("depth"), -1);
   const full = !!str2int(searchParams.get("full"));

@@ -14,7 +14,8 @@ import ReindexerAdmin from './components/ReindexerAdmin';
 import GlobalConfigAdmin from "./components/GlobalConfigAdmin";
 import StatisticsAdmin from "./components/StatisticsAdmin";
 import packageInfo from "../package.json";
-import { GlobalConfig } from "../lib/commons";
+import { GlobalConfig, KEY_PART_SEARCH, SEARCH_MAGIC_WORD_LARGEST, SEARCH_MAGIC_WORD_RECENT } from "../lib/commons";
+import { Link } from "react-router-dom";
 
 
 export default function AdminDialog({
@@ -48,6 +49,7 @@ export default function AdminDialog({
         <Tab label="Global Config" />
         <Tab label="Reindexer" />
         <Tab label="Statistics" />
+        <Tab label="Files" />
         <Tab label="About" />
       </Tabs>
       <DialogContent sx={{ p: 1 }}>
@@ -61,6 +63,17 @@ export default function AdminDialog({
           <StatisticsAdmin />
         </Box>
         <Box hidden={tab !== 3} sx={{ pt: 1 }}>
+          <Typography variant="h5" gutterBottom>
+            Manage files
+          </Typography>
+          <Typography >
+            <ul>
+              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_LARGEST}>Largest files</Link></li>
+              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_RECENT}>Recent files</Link></li>
+            </ul>
+          </Typography>
+        </Box>
+        <Box hidden={tab !== 4} sx={{ pt: 1 }}>
           <Typography variant="h5" gutterBottom>
             About
           </Typography>

@@ -169,6 +169,7 @@ export default function Main({
   readmeFile,
   readmeContents,
   isSearch,
+  fixedOrder,
   cwd,
   setCwd,
   loading,
@@ -189,6 +190,7 @@ export default function Main({
   fetchFiles,
   setError,
 }: {
+  fixedOrder?: "" | "recent" | "largest";
   readmeError: unknown;
   readmeStatus: "" | "loading" | "ok" | "error";
   readmeFile: string;
@@ -245,11 +247,13 @@ export default function Main({
       (filter ? files.filter((file) => (file.name || file.key).toLowerCase().includes(filter.toLowerCase())) : files)
         .sort((a, b) => compareBoolean(!a.system, !b.system) ||
           compareBoolean(!isDirectory(a), !isDirectory(b)) || (
-            sort === Sort.ByDate ? +a.uploaded - +b.uploaded
-              : sort === Sort.BySize ? a.size - b.size
-                : compareString(a.key, b.key)
+            fixedOrder == "largest" ? b.size - a.size :
+              fixedOrder == "recent" ? +b.uploaded - +a.uploaded :
+                sort === Sort.ByDate ? +a.uploaded - +b.uploaded
+                  : sort === Sort.BySize ? a.size - b.size
+                    : compareString(a.key, b.key)
           )),
-    [files, filter, sort]
+    [files, filter, fixedOrder, sort]
   );
 
   const handleMultiSelect = useCallback((key: string, source?: "" | "context" | "click") => {

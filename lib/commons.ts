@@ -189,6 +189,16 @@ export const KEY_PART_SEARCH_FULL = ".full";
 export const KEY_PREFIX_THUMBNAIL = KEY_PREFIX_PRIVATE + "thumbnails/";
 
 /**
+ * Magic search word to return largest files
+ */
+export const SEARCH_MAGIC_WORD_LARGEST = "__largest__";
+
+/**
+ * Magic search word to return recent modified files
+ */
+export const SEARCH_MAGIC_WORD_RECENT = "__recent__";
+
+/**
  * Windows .url file extension
  */
 export const EXT_URL = ".url";
@@ -938,7 +948,7 @@ export function appendQueryStringToUrl(url: string, qs: string): string {
  */
 export interface R2ObjectAlike {
   key: string;
-  etag: string;
+  etag?: string;
   uploaded: Date;
   size: number;
   httpMetadata?: {

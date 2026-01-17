@@ -13,7 +13,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import { useLocalStorage } from "@uidotdev/usehooks";
 import {
   AUTH_VARIABLE, TOKEN_VARIABLE, EXPIRES_VARIABLE, FULL_CONTROL_VARIABLE, MIME_DIR, SCOPE_VARIABLE, HEADER_RANGE,
-  CONFIG_API, HEADER_AUTHORIZATION,
+  CONFIG_API, HEADER_AUTHORIZATION, SEARCH_MAGIC_WORD_LARGEST, SEARCH_MAGIC_WORD_RECENT,
   nextDayEndTimestamp, path2Key, str2int, basicAuthorizationHeader, dirUrlPath,
   GlobalConfigSchema,
   GlobalConfig,
@@ -371,6 +371,8 @@ export default function App() {
                       readmeContents={readmeContents} readmeFile={readmeFile} onDownloadAsZip={onDownloadAsZip}
                       editing={editing} setEditing={setEditing} slideIndex={slideIndex} setSlideIndex={setSlideIndex}
                       cwd={cwd} setCwd={setCwd} loading={loading} filter={!isSearch ? search : ""}
+                      fixedOrder={searchKeyword == SEARCH_MAGIC_WORD_LARGEST
+                        ? "largest" : searchKeyword == SEARCH_MAGIC_WORD_RECENT ? "recent" : ""}
                       sharing={sharing} setSharing={setSharing} setShowProgressDialog={setShowProgressDialog}
                       permission={permission} files={files} setError={setError} isSearch={isSearch} setTip={setTip}
                       multiSelected={multiSelected} setMultiSelected={setMultiSelected} fetchFiles={fetchFiles} />
