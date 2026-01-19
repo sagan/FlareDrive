@@ -579,6 +579,12 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
             <Checkbox checked={!!shareObject.fullHtml} onChange={e => {
               setShareObject({ ...shareObject, fullHtml: e.target.checked });
             }} />} />
+        <FormControlLabel label="Enable CGI" sx={{ color: "red" }}
+          title="Render .cgi file as LiquidJS template; recognize index.cgi as dir index file"
+          control={
+            <Checkbox checked={!!shareObject.cgi} onChange={e => {
+              setShareObject({ ...shareObject, cgi: e.target.checked });
+            }} />} />
         {!!ttl && <FormControlLabel label="Auto Delete" title='Automatically delete share object after expiration' control={
           <Checkbox checked={!!shareObject.autoDelete} onChange={e => {
             setShareObject({ ...shareObject, autoDelete: e.target.checked });

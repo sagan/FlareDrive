@@ -351,7 +351,10 @@ export async function checkAuthFailure(
     authed = await (async () => {
       const expires = str2int(searchParams.get(EXPIRES_VARIABLE));
       const fullControl = str2int(searchParams.get(FULL_CONTROL_VARIABLE));
-      if ((expires > 0 && expires <= +new Date()) || (!fullControl && !METHODS_READ_DIR.includes(request.method))) {
+      if (
+        (expires > 0 && expires <= +new Date()) ||
+        (!fullControl && !(METHODS_READ_DIR as readonly string[]).includes(request.method))
+      ) {
         return false;
       }
       for (const param of NOSIGN_VARIABLES) {
@@ -368,7 +371,10 @@ export async function checkAuthFailure(
         key = trimPrefix(url.pathname, SHARE_ENDPOINT);
         key = trimPrefix(url.pathname, WEBDAV_ENDPOINT);
         key = path2Key(key);
-        if (!(METHODS_READ_DIR.includes(request.method) && key == scope) && !key.startsWith(scope + "/")) {
+        if (
+          !((METHODS_READ_DIR as readonly string[]).includes(request.method) && key == scope) &&
+          !key.startsWith(scope + "/")
+        ) {
           return false;
         }
       }
@@ -378,7 +384,7 @@ export async function checkAuthFailure(
   }
 
   if (!authed) {
-    if (url.pathname.startsWith(SHARE_ENDPOINT) && METHODS_READ_DIR.includes(request.method)) {
+    if (url.pathname.startsWith(SHARE_ENDPOINT) && (METHODS_READ_DIR as readonly string[]).includes(request.method)) {
       const basicAuthHeader: Record<string, string> = { "WWW-Authenticate": `Basic realm="${encodeURI(realm)}"` };
       return [responseUnauthorized(basicAuthHeader), scope];
     }

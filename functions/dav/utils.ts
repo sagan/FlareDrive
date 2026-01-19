@@ -66,7 +66,11 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
     if (prefix) {
       return [true, prefix];
     }
-    prefix = testKeyHasPrefix(key, globalConfig.publicRwdirPrefix, METHODS_READ_DIR.includes(context.request.method));
+    prefix = testKeyHasPrefix(
+      key,
+      globalConfig.publicRwdirPrefix,
+      (METHODS_READ_DIR as readonly string[]).includes(context.request.method)
+    );
     if (prefix) {
       return [true, prefix];
     }

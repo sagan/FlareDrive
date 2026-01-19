@@ -6,6 +6,7 @@ import {
   HEADER_REFERER,
   HTML_VARIABLE,
   INDEX_FILE,
+  INDEX_CGI,
   RAW_VARIABLE,
   JSON_VARIABLE,
   PAST_TIMESTAMP,
@@ -21,6 +22,7 @@ import {
   removeZeroFields,
   str2Html,
   getR2FileMd5,
+  EXT_CGI,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -41,7 +43,8 @@ import {
   getPathArray,
 } from "../commons";
 import buildVariables from "../../build_config.json";
-import { README_FILES } from "@/src/commons";
+import { README_FILES } from "../../src/commons";
+import { executeCgi } from "../cgi";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -226,6 +229,12 @@ export const handleGetShare = async function ({
       url.pathname += "/";
       return responseRedirect(url.href);
     }
+    if (data.cgi) {
+      const indexCgiObj = await env.BUCKET.get(filekey + "/" + INDEX_CGI);
+      if (indexCgiObj) {
+        return executeCgi(request, await indexCgiObj.text(), data.fullHtml);
+      }
+    }
     const indexHtmlObj = await env.BUCKET.get(filekey + "/" + INDEX_FILE, {
       onlyIf: request.headers,
       range: request.headers,
@@ -281,6 +290,11 @@ export const handleGetShare = async function ({
     // target is file, but the request path ends with "/"
     return responseNotFound();
   }
+
+  if (data.cgi && filekey.endsWith(EXT_CGI) && "body" in obj) {
+    return executeCgi(request, await obj.text(), data.fullHtml);
+  }
+
   return outputR2Object({
     obj,
     fullHtml,

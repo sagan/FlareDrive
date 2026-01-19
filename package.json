@@ -1,6 +1,6 @@
 {
   "name": "flare-drive",
-  "version": "0.1.16-dev",
+  "version": "0.1.16",
   "private": true,
   "type": "module",
   "dependencies": {

@@ -133,18 +133,34 @@ export const PART_NUMBER_VARIABLE = "partNumber";
  * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND].
  * It includes PROPFIND method which is used by WebDAV protocol to list dir.
  */
-export const METHODS_READ_DIR: readonly string[] = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+export const METHODS_READ_DIR = ["GET", "HEAD", "OPTIONS", "PROPFIND"] as const;
 
 /**
  * simple file "read" http methods: [GET, HEAD, OPTIONS].
  */
-export const METHODS_READ_FILE: readonly string[] = ["GET", "HEAD", "OPTIONS"];
+export const METHODS_READ_FILE = ["GET", "HEAD", "OPTIONS"] as const;
+
+/**
+ * http methods
+ */
+export const METHODS = [
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "PROPFIND",
+  "PUT",
+  "POST",
+  "DELETE",
+  "MKCOL",
+  "COPY",
+  "MOVE",
+] as const;
 
 /**
  * These query string variables do not participate in signing:
  * [raw, html, json, meta, token, ts, url, comment, thumbnail*... (except thumbnailDigest)]
  */
-export const NOSIGN_VARIABLES: readonly string[] = [
+export const NOSIGN_VARIABLES = [
   RAW_VARIABLE,
   HTML_VARIABLE,
   JSON_VARIABLE,
@@ -162,7 +178,7 @@ export const NOSIGN_VARIABLES: readonly string[] = [
   UPLOADS_VARIABLE,
   UPLOAD_ID_VARIABLE,
   PART_NUMBER_VARIABLE,
-];
+] as const;
 
 /**
  * private file url default valid time in milliseconds.
@@ -207,6 +223,11 @@ export const EXT_URL = ".url";
  * macOS .webloc file extension
  */
 export const EXT_WEBLOC = ".webloc";
+
+/**
+ * Dynamically rendered CGI file. Using liquidjs.
+ */
+export const EXT_CGI = ".cgi";
 
 /**
  * Used for "url" files, such as Windows .url files, MacOS .webloc files.
@@ -300,6 +321,10 @@ export const HEADER_LOCATION = "Location";
 
 export const HEADER_CONTENT_SECURITY_POLICY = "Content-Security-Policy";
 
+export const HEADER_CACHE_CONTROL = `Cache-Control`;
+
+export const CACHE_CONTROL_NO_CACHE = `no-cache, no-store, must-revalidate`;
+
 /**
  * A restrictive Content-Security-Policy for serving user-provided content.
  * It uses 'sandbox' to prevent script execution, form submission, etc.
@@ -357,6 +382,8 @@ export const HEADER_AUTH = "X-Auth";
 export const HEADER_SOURCE_ASYNC = "X-Source-Async";
 
 export const INDEX_FILE = "index.html";
+
+export const INDEX_CGI = "index.cgi";
 
 /**
  * System files which only admin can manage / write / update:
@@ -458,6 +485,11 @@ export interface ShareObject {
    * CORS policy. 0 or undefined - disable. 1 - enable.
    */
   cors?: number;
+
+  /**
+   * Enable CGI. Render .cgi file as liquidjs template; use index.cgi as default dir index.
+   */
+  cgi?: boolean;
 }
 
 export interface ThumbnailObject {

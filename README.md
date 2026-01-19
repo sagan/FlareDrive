@@ -14,6 +14,7 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
   - [Deployment to Cloudflare Workers (recommended)](#deployment-to-cloudflare-workers-recommended)
   - [Deployment to Cloudflare Pages](#deployment-to-cloudflare-pages)
 - [WebDAV endpoint](#webdav-endpoint)
+- [CGI feature](#cgi-feature)
 - [Development](#development)
   - [Run this project locally as Workers](#run-this-project-locally-as-workers)
   - [Run this project locally as Pages](#run-this-project-locally-as-pages)
@@ -33,6 +34,7 @@ Free serverless backend with a limit of 100,000 invocation requests per day.
 - Online text / image files editor
 - Online PDF / DOCX files previewer
 - Create and manage "url" (internet shortcut) files
+- CGI feature: Use [LiquidJS][] template to generate contents dynamically.
 
 # Installation
 
@@ -42,7 +44,7 @@ Before starting, you should make sure that
 - R2 service is activated (requires payment method added to CF account) and at least one bucket is created
 - (optional but recommended) KV & D1 instances are created.
 
-This project can be de deployed to [Cloudflare Workers](https://developers.cloudflare.com/workers/) or [Cloudflare Pages](https://developers.cloudflare.com/pages/).The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV / D1) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard, but lacks with some features.
+This project can be de deployed to [Cloudflare Workers][] or [Cloudflare Pages][].The Workers is the new and recommanded way, but it requires you to manually input the Cloudflare resource (R2 / KV / D1) ids in the variables at this time. The Pages way is slightly simpler to configure as you can set the Cloudflare resource bindings directly in the dashboard, but lacks with some features.
 
 ## Deployment to Cloudflare Workers (recommended)
 
@@ -115,6 +117,50 @@ pass = obscured_password # rclone obscure <WEBDAV_PASSWORD>
 encoding = None
 ```
 
+# CGI feature
+
+CGI feature use [LiquidJS][] template engine to render a `.cgi` file and serve rendered contents.
+Currently it works on published links (`/s/*`) only, you also need to tick `Enable CGI` checkbox in publish dialog;
+It also recognize `index.cgi` as dir index file automatically.
+
+Several custom tags are available:
+
+- `{% set_header "Content-Type: text/plain" %}` : Set response http header.
+- `{% set_header "_status" 404 %}` : Set response status code.
+- `{% fetch "variableName" "url" %}` : fetch a url and store response as `{status, headers, body, data}` in `variableName` context variable. The `body` is raw response body string; the `data` is response body parsed object if it's a valid json.
+- `{% md5sum "123456" %}` : Calculate the md5 sum.
+
+Available custom filters:
+
+- `json_parse`: Parse a string as JavaScript literal to object. The string doesn't need to be strict json. E.g. `{% assign my_obj = '{id: 1, name: "Item"}' | json_parse %}`
+
+Example `example.cgi` contents:
+
+```
+{%-  fetch "todoItem" "https://jsonplaceholder.typicode.com/todos/1" -%}
+{%-  set_header "Content-Type: text/html" -%}
+
+<h1>Async Fetch Test</h1>
+<div class="card">
+  <h3>Todo ID: {{ todoItem.data.id }}</h3>
+  <p>Title: {{ todoItem.data.title }}</p>
+  <p>Completed: {{ todoItem.data.completed }}</p>
+</div>
+```
+
+Rendered contents:
+
+```html
+<h1>Async Fetch Test</h1>
+<div class="card">
+  <h3>Todo ID: 1</h3>
+  <p>Title: delectus aut autem</p>
+  <p>Completed: false</p>
+</div>
+```
+
+For more examples, check [functions/cgi.ts](https://github.com/sagan/FlareDrive/blob/mod/functions/cgi.ts) file.
+
 # Development
 
 Prepare development environment:
@@ -143,3 +189,7 @@ Same as above, open `http://localhost:5173/` in browser and it's done.
 # Acknowledgments
 
 WebDAV related code is based on [r2-webdav](https://github.com/abersheeran/r2-webdav) project by [abersheeran](https://github.com/abersheeran).
+
+[Cloudflare Workers]: https://developers.cloudflare.com/workers/
+[Cloudflare Pages]: https://developers.cloudflare.com/pages/
+[LiquidJS]: https://github.com/harttle/liquidjs
