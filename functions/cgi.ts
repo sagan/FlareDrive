@@ -6,19 +6,28 @@ import {
   CONTENT_SECURITY_POLICY_SANDBOX,
   HEADER_CACHE_CONTROL,
   HEADER_CONTENT_SECURITY_POLICY,
+  HEADER_CONTENT_TYPE,
   METHODS,
   MIME_TXT,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 
+/**
+ * Response headers variable key in context, used by set_header
+ */
 const TPL_CONTEXT_KEY_HEADERS = "_headers";
 
-const TPL_CONTEXT_KEY_REQUEST = "_request";
+/**
+ * Request variable key in context.
+ */
+const TPL_CONTEXT_KEY_REQUEST = "request";
 
-const TPL_CONTEXT_KEY_STATUS = "_status";
+const TPL_CONTEXT_KEY_STATUS = "Status"; // in compliance with CGI
 
 export interface SelfRequest {
   url: string;
+  method: string;
+  headers: Record<string, string>;
 }
 
 export interface FetchResponse {
@@ -42,7 +51,26 @@ function parseArgs(str: string): unknown[] {
 }
 
 // Initialize the template engine
-const engine = new Liquid();
+const engine = new Liquid({
+  // https://github.com/harttle/liquidjs/issues/131
+  fs: {
+    resolve: function (dir: string, file: string, ext: string): string {
+      throw new Error("File system not implemented");
+    },
+    exists: function (filepath: string): Promise<boolean> {
+      throw new Error("Function not implemented.");
+    },
+    existsSync: function (filepath: string): boolean {
+      throw new Error("Function not implemented.");
+    },
+    readFile: function (filepath: string): Promise<string> {
+      throw new Error("Function not implemented.");
+    },
+    readFileSync: function (filepath: string): string {
+      throw new Error("Function not implemented.");
+    },
+  },
+});
 
 engine.registerFilter("json_parse", (str) => JSOX.parse(str));
 
@@ -116,9 +144,7 @@ engine.registerTag("fetch", {
 /*
 {% set_header "Content-Type" "text/plain" %}
 {% set_header "Content-Type: text/plain" %}
-{% set_header "_status" 404 %}
-
-pseudo header: _status
+{% set_header "Status" 404 %}
 
 Set value to "-" to delete a header
 */
@@ -208,9 +234,15 @@ engine.registerTag("md5sum", {
  */
 export async function executeCgi(request: Request, template: string, fullHtml = false): Promise<Response> {
   try {
-    const headers: Record<string, string> = { "Content-Type": MIME_TXT };
+    const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
+    const requestHeaders: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      requestHeaders[key] = value;
+    });
     const req: SelfRequest = {
       url: request.url,
+      method: request.method,
+      headers: requestHeaders,
     };
     const context: Record<string, unknown> = {
       [TPL_CONTEXT_KEY_REQUEST]: req,

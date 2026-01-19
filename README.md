@@ -122,11 +122,12 @@ encoding = None
 CGI feature use [LiquidJS][] template engine to render a `.cgi` file and serve rendered contents.
 Currently it works on published links (`/s/*`) only, you also need to tick `Enable CGI` checkbox in publish dialog;
 It also recognize `index.cgi` as dir index file automatically.
+Currently only GET method is supported. The template receives `{ request }` as initial context.
 
 Several custom tags are available:
 
 - `{% set_header "Content-Type: text/plain" %}` : Set response http header.
-- `{% set_header "_status" 404 %}` : Set response status code.
+- `{% set_header "Status" 404 %}` : Set response status code.
 - `{% fetch "variableName" "url" %}` : fetch a url and store response as `{status, headers, body, data}` in `variableName` context variable. The `body` is raw response body string; the `data` is response body parsed object if it's a valid json.
 - `{% md5sum "123456" %}` : Calculate the md5 sum.
 

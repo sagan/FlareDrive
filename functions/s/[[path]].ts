@@ -10,6 +10,7 @@ import {
   RAW_VARIABLE,
   JSON_VARIABLE,
   PAST_TIMESTAMP,
+  EXT_CGI,
   trimPrefix,
   ShareRefererMode,
   trimSuffix,
@@ -22,7 +23,7 @@ import {
   removeZeroFields,
   str2Html,
   getR2FileMd5,
-  EXT_CGI,
+  MIME_DEFAULT,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -214,6 +215,9 @@ export const handleGetShare = async function ({
   }
 
   const filekey = trimSuffix(data.key, "/") + (relpath ? "/" + relpath : "");
+  if (!data.cgi && filekey.endsWith(EXT_CGI)) {
+    return responseForbidden();
+  }
   const obj = await env.BUCKET.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
@@ -263,12 +267,27 @@ export const handleGetShare = async function ({
         return htmlResponse(noindexPage(sitename, description, sharekey, readme));
       }
     }
-    const files = await findChildren({
+    let files = await findChildren({
       bucket: env.BUCKET,
       path: filekey,
       depth: "1",
       db: env.DB,
     });
+    files = files.map((file) =>
+      file.key.endsWith(EXT_CGI)
+        ? ({
+            key: file.key,
+            etag: "",
+            httpEtag: "",
+            version: "",
+            storageClass: "",
+            size: 0,
+            uploaded: new Date(0),
+            checksums: {},
+            httpMetadata: { contentType: MIME_DEFAULT },
+          } as R2Object)
+        : file
+    );
     // Pre-sort files: directories first, then by name
     files.sort((a, b) => {
       const aIsDir = isDirectory(a);
