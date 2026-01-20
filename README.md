@@ -129,12 +129,12 @@ Several custom tags are available:
 - `{% set_header "Content-Type: text/plain" %}` : Set response http header.
 - `{% set_header "Status" 404 %}` : Set response status code.
 - `{% fetch "variableName" "url" %}` : fetch a url and store response as `{status, headers, body, data}` in `variableName` context variable. The `body` is raw response body string; the `data` is response body parsed object if it's a valid json.
-- `{% md5sum "123456" %}` : Calculate the md5 sum.
 
 Available custom filters:
 
 - `json_parse`: Parse a string as JavaScript literal to object. The string doesn't need to be strict json. E.g. `{% assign my_obj = '{id: 1, name: "Item"}' | json_parse %}`.
 - `query_string` : Parse a url query string or a full url and return query variable value. E.g. `{% assign bar = 'https://example.com/?foo=a&bar=b' | query_string: "bar" %}`.
+- `{{ "123456" | md5sum }}` : Calculate the md5 sum.
 
 Example `example.cgi` contents:
 

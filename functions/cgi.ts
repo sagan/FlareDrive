@@ -9,20 +9,34 @@ import {
   HEADER_CONTENT_TYPE,
   METHODS,
   MIME_TXT,
+  STRONG_PASSWORD_LENGTH,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
+import { generatePassword } from "@/src/commons";
 
 /**
- * Response headers variable key in context, used by set_header
+ * Don't read fetch response body.
+ */
+const TPL_FETCH_NOBODY = "NOBODY";
+
+/**
+ * Response headers variable key in context, used by set_header.
  */
 const TPL_CONTEXT_KEY_HEADERS = "_headers";
+
+/**
+ * Internal data variable key in context, used by set_body.
+ */
+const TPL_CONTEXT_KEY_DATA = "_data";
 
 /**
  * Request variable key in context.
  */
 const TPL_CONTEXT_KEY_REQUEST = "request";
 
-const TPL_CONTEXT_KEY_STATUS = "Status"; // in compliance with CGI
+const TPL_CONTEXT_KEY_HEADERS_STATUS = "Status"; // in compliance with CGI
+
+const TPL_CONTEXT_KEY_DATA_BODY = "body";
 
 export interface SelfRequest {
   url: string;
@@ -32,8 +46,8 @@ export interface SelfRequest {
 
 export interface FetchResponse {
   status: number;
-  headers: Headers;
-  body: string;
+  headers: Record<string, string>;
+  body: ReadableStream | string | null;
   /**
    * Parsed structured json object if body is a valid json
    */
@@ -48,6 +62,17 @@ function parseArgs(str: string): unknown[] {
     args.push(tokenizer.readValue());
   }
   return args;
+}
+
+/**
+ * Convert Headers to Record. Since liquidjs template can't handle Headers type.
+ */
+function headers2Record(headers: Headers): Record<string, string> {
+  const record: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    record[key] = value;
+  });
+  return record;
 }
 
 // Initialize the template engine
@@ -75,17 +100,52 @@ const engine = new Liquid({
 
 engine.registerFilter("json_parse", (str) => JSOX.parse(str));
 
-engine.registerFilter("query_string", (str: string, key?: string) => {
+engine.registerFilter("query_string", (input: string | Record<string, string>, key?: string) => {
+  if (typeof input === "object") {
+    if (key) {
+      return input[key];
+    }
+    return new URLSearchParams(input).toString();
+  }
   let searchParams: URLSearchParams;
   try {
-    searchParams = new URL(str).searchParams;
+    searchParams = new URL(input).searchParams;
   } catch (e) {
-    searchParams = new URLSearchParams(str);
+    searchParams = new URLSearchParams(input);
   }
   if (key) {
-    return searchParams.get("key");
+    return searchParams.get(key);
   }
-  return searchParams.toString();
+  return Object.fromEntries(searchParams);
+});
+
+// {{ "123456" | md5sum }}
+engine.registerFilter("md5sum", (str, binaryString?: boolean) => {
+  const spark = new SparkMD5();
+  spark.append(str);
+  return spark.end(binaryString);
+});
+
+engine.registerFilter("sha1sum", async (str, binaryString?: boolean) => {
+  const textEncoder = new TextEncoder();
+  const data = textEncoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  if (binaryString) {
+    return String.fromCharCode(...hashArray);
+  }
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+});
+
+engine.registerFilter("sha256sum", async (str, binaryString?: boolean) => {
+  const textEncoder = new TextEncoder();
+  const data = textEncoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  if (binaryString) {
+    return String.fromCharCode(...hashArray);
+  }
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 });
 
 /*
@@ -118,12 +178,15 @@ engine.registerTag("fetch", {
 
     let method = "GET";
     let requestBody: string | undefined;
+    let nobodyMode = false;
     const headers: Record<string, string> = {};
     const optionArgs = args.slice(2);
     for (const arg of optionArgs) {
       const token = `${yield evalToken(arg, ctx)}`;
       if ((METHODS as readonly string[]).includes(token)) {
         method = token;
+      } else if (token === TPL_FETCH_NOBODY) {
+        nobodyMode = true;
       } else if (token.startsWith("@")) {
         requestBody = token.slice(1);
       } else {
@@ -136,16 +199,21 @@ engine.registerTag("fetch", {
     }
 
     const res: Response = yield fetch(url, { method, headers, body: requestBody });
-    const body = yield res.text();
+    let body: ReadableStream | string | null = res.body;
     let data = null;
-    try {
-      data = JSON.parse(body);
-    } catch (e) {
-      /* empty */
+    if (!nobodyMode) {
+      body = (yield res.text()) as string;
+      data = null;
+      try {
+        data = JSON.parse(body);
+      } catch (e) {
+        /* empty */
+      }
     }
+
     const response: FetchResponse = {
       status: res.status,
-      headers: res.headers,
+      headers: headers2Record(res.headers),
       body,
       data,
     };
@@ -155,12 +223,32 @@ engine.registerTag("fetch", {
   },
 });
 
+// {%- random_string [length] -%}
+engine.registerTag("random_string", {
+  parse: function (tagToken) {
+    this.args = parseArgs(tagToken.args);
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  *render(ctx, emitter): Generator<unknown, any, any> {
+    const selfRequest = ctx.getSync([TPL_CONTEXT_KEY_REQUEST]) as SelfRequest;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = this.args as any[];
+    let length = STRONG_PASSWORD_LENGTH;
+    if (args.length > 0) {
+      length = parseInt(yield evalToken(args[0], ctx)) || STRONG_PASSWORD_LENGTH;
+    }
+    const str = generatePassword(length);
+    emitter.write(str);
+  },
+});
+
 /*
 {% set_header "Content-Type" "text/plain" %}
 {% set_header "Content-Type: text/plain" %}
 {% set_header "Status" 404 %}
+{% set_header headers %} # headers is Record<string,string> type
 
-Set value to "-" to delete a header
+Set value to "" / undefined / null to delete a header
 */
 engine.registerTag("set_header", {
   parse: function (tagToken) {
@@ -173,13 +261,25 @@ engine.registerTag("set_header", {
   // Just use yield instead await on promise.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   *render(ctx, emitter): Generator<unknown, any, any> {
+    const headers = ctx.getSync([TPL_CONTEXT_KEY_HEADERS]) as Record<string, string>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const args = this.args as any[];
-    let name = "";
+    let name: string | Record<string, string>;
     let value = "";
-    name = `${yield evalToken(args[0], ctx)}`;
+    name = yield evalToken(args[0], ctx);
+    if (typeof name === "object") {
+      for (const key in name) {
+        const value = name[key];
+        if (value) {
+          headers[key] = value;
+        } else {
+          delete headers[key];
+        }
+      }
+      return;
+    }
     if (args.length >= 2) {
-      value = `${yield evalToken(args[1], ctx)}`;
+      value = yield evalToken(args[1], ctx);
     } else {
       // name is "name: value" format
       const index = name.indexOf(":");
@@ -188,47 +288,28 @@ engine.registerTag("set_header", {
         name = name.slice(0, index).trim();
       }
     }
-    const headers = ctx.getSync([TPL_CONTEXT_KEY_HEADERS]) as Record<string, string>;
-    if (value === "-") {
-      delete headers[name];
-    } else {
+    if (value) {
       headers[name] = value;
+    } else {
+      delete headers[name];
     }
   },
 });
 
-/*
-{% md5sum "123456" %}
-
-or:
-
-{%- capture md5 -%}
-  {%- md5sum "123456" -%}
-{%- endcapture -%}
-md5: {{ md5 }}
-
-Note the {% assign %} tag works only with values and filters, not the direct tag output. So this is invalid:
-  {% assign md5 = md5sum "123456" %}
-  {{ md5 }}
-*/
-engine.registerTag("md5sum", {
+engine.registerTag("set_body", {
   parse: function (tagToken) {
     this.args = parseArgs(tagToken.args);
-    if (this.args.length == 0) {
-      throw new Error("set_header tag requires at least 1 argument");
+    if (this.args.length !== 1) {
+      throw new Error("set_body tag requires exact 1 argument");
     }
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   *render(ctx, emitter): Generator<unknown, any, any> {
-    const values: string[] = [];
-    for (const arg of this.args) {
-      values.push(yield evalToken(arg, ctx));
-    }
-    const spark = new SparkMD5();
-    for (const val of values) {
-      spark.append(val);
-    }
-    emitter.write(spark.end());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = this.args as any[];
+    const body = yield evalToken(args[0], ctx);
+    const data = ctx.getSync([TPL_CONTEXT_KEY_DATA]) as Record<string, unknown>;
+    data[TPL_CONTEXT_KEY_DATA_BODY] = body;
   },
 });
 
@@ -249,25 +330,30 @@ engine.registerTag("md5sum", {
 export async function executeCgi(request: Request, template: string, fullHtml = false): Promise<Response> {
   try {
     const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
-    const requestHeaders: Record<string, string> = {};
-    request.headers.forEach((value, key) => {
-      requestHeaders[key] = value;
-    });
+    const requestHeaders = headers2Record(request.headers);
     const req: SelfRequest = {
       url: request.url,
       method: request.method,
       headers: requestHeaders,
     };
+    const data: Record<string, unknown> = {};
     const context: Record<string, unknown> = {
       [TPL_CONTEXT_KEY_REQUEST]: req,
       [TPL_CONTEXT_KEY_HEADERS]: headers,
+      [TPL_CONTEXT_KEY_DATA]: data,
     };
     const tpl = engine.parse(template);
     const html = await engine.render(tpl, context);
     let status = 200;
-    if (headers[TPL_CONTEXT_KEY_STATUS]) {
-      status = parseInt(headers[TPL_CONTEXT_KEY_STATUS]) || 200;
-      delete headers[TPL_CONTEXT_KEY_STATUS];
+    let body: BodyInit | null | undefined;
+    if (headers[TPL_CONTEXT_KEY_HEADERS_STATUS]) {
+      status = parseInt(headers[TPL_CONTEXT_KEY_HEADERS_STATUS]) || 200;
+      delete headers[TPL_CONTEXT_KEY_HEADERS_STATUS];
+    }
+    if (data[TPL_CONTEXT_KEY_DATA_BODY]) {
+      body = data[TPL_CONTEXT_KEY_DATA_BODY] as BodyInit;
+    } else {
+      body = html;
     }
     // headers were passed to LiquidJs template as part of context and may be tampered.
     // For security reason, don't use it directly.
@@ -279,7 +365,7 @@ export async function executeCgi(request: Request, template: string, fullHtml = 
       actualHeaders.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     }
     actualHeaders.set(HEADER_CACHE_CONTROL, CACHE_CONTROL_NO_CACHE);
-    return new Response(html, {
+    return new Response(body, {
       status,
       headers: actualHeaders,
     });
