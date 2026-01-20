@@ -9,6 +9,7 @@ import { handleRequestPropfind } from "./propfind";
 import { handleRequestPut } from "./put";
 import { RequestHandlerParams, isOpenRequest } from "./utils";
 import { handleRequestPost } from "./post";
+import { getStorage } from "../storage";
 
 async function handleRequestOptions() {
   return new Response(null, {
@@ -34,6 +35,8 @@ const HANDLERS: Record<string, (context: RequestHandlerParams) => Promise<Respon
 export const onRequest: FdCfFunc = async function (context) {
   const env = context.env;
   const request: Request = context.request;
+  const url = new URL(request.url);
+  const bucket = getStorage(env);
   if (request.method === "OPTIONS") {
     return handleRequestOptions();
   }
@@ -48,8 +51,11 @@ export const onRequest: FdCfFunc = async function (context) {
     scope = _scope;
   }
 
-  const path = getPathArray(context).join("/");
+  let path = getPathArray(context).join("/");
+  if (path != "" && !path.endsWith("/") && url.pathname.endsWith("/")) {
+    path += "/";
+  }
   const method: string = (context.request as Request).method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
-  return handler({ context, path, request: context.request, scope, authed: !authFailResponse, bucket: env.BUCKET });
+  return handler({ context, path, request: context.request, scope, authed: !authFailResponse, bucket });
 };

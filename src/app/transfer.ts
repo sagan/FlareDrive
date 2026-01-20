@@ -69,6 +69,9 @@ export async function fetchPath(
   auth: string;
   items: FileItem[] | null;
 }> {
+  if (path != "" && !path.endsWith("/")) {
+    path += "/";
+  }
   const req = applyAuth(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
       method: "PROPFIND",
@@ -102,11 +105,16 @@ export async function fetchPath(
   const text = await res.text();
   const document = parser.parseFromString(text, MIME_XML);
   const items: FileItem[] = Array.from(document.querySelectorAll("response"))
-    .filter(
-      (response) =>
-        decodeURIComponent(response.querySelector("href")?.textContent ?? "").slice(WEBDAV_ENDPOINT.length) !==
-        path.replace(/\/$/, "")
-    )
+    .filter((response, i) => {
+      const relativePath = decodeURIComponent(response.querySelector("href")?.textContent ?? "").slice(
+        WEBDAV_ENDPOINT.length
+      );
+      // compatible with prio v0.1.17
+      if (i == 0 && !relativePath.endsWith("/") && relativePath + "/" === path) {
+        return false;
+      }
+      return relativePath !== path;
+    })
     .map((response) => {
       const href = response.querySelector("href")?.textContent;
       if (!href) {
@@ -389,6 +397,9 @@ export async function copyPaste(source: string, target: string, auth: string, mo
  * @param ignoreExisting if true, it will ignore the "dir already exists" error sent by server.
  */
 export async function createFolder(folderKey: string, auth: string, ignoreExisting = false) {
+  if (!folderKey.endsWith("/")) {
+    folderKey += "/";
+  }
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
   const req = applyAuth(new Request(uploadUrl, { method: "MKCOL" }), auth);
   const res = await fetch(req);

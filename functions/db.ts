@@ -19,7 +19,7 @@ export async function upsertDbFile(db: D1Database, file: R2Object) {
     return;
   }
   const mime = httpMetadata?.contentType || "";
-  const name = key.split("/").pop() || "";
+  const name = trimPrefixSuffix(key, "/").split("/").pop() || "";
   const ctime = new Date(uploaded).getTime();
   const mtime = ctime; // Assuming mtime is same as ctime for now
 

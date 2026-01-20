@@ -46,6 +46,7 @@ import {
 import buildVariables from "../../build_config.json";
 import { README_FILES } from "../../src/commons";
 import { executeCgi } from "../cgi";
+import { getStorage } from "../storage";
 
 const SHARE_KEY_PREFIX = "s_";
 
@@ -156,6 +157,7 @@ export const handleGetShare = async function ({
   if (!env.KV) {
     return responseNotFound();
   }
+  const bucket = getStorage(env);
 
   const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
@@ -218,7 +220,7 @@ export const handleGetShare = async function ({
   if (!data.cgi && filekey.endsWith(EXT_CGI)) {
     return responseForbidden();
   }
-  const obj = await env.BUCKET.get(filekey, {
+  const obj = await bucket.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
   });
@@ -234,12 +236,12 @@ export const handleGetShare = async function ({
       return responseRedirect(url.href);
     }
     if (data.cgi) {
-      const indexCgiObj = await env.BUCKET.get(filekey + "/" + INDEX_CGI);
+      const indexCgiObj = await bucket.get(filekey + "/" + INDEX_CGI);
       if (indexCgiObj) {
         return executeCgi(request, await indexCgiObj.text(), data.fullHtml);
       }
     }
-    const indexHtmlObj = await env.BUCKET.get(filekey + "/" + INDEX_FILE, {
+    const indexHtmlObj = await bucket.get(filekey + "/" + INDEX_FILE, {
       onlyIf: request.headers,
       range: request.headers,
     });
@@ -253,7 +255,7 @@ export const handleGetShare = async function ({
     let readme = "";
     for (const readmeFileName of README_FILES) {
       const readmeFileKey = `${obj.key}/${readmeFileName}`;
-      const readmeFile = await env.BUCKET.get(readmeFileKey);
+      const readmeFile = await bucket.get(readmeFileKey);
       if (readmeFile) {
         const contents = await readmeFile.text();
         readme = await str2Html(contents, readmeFile.httpMetadata?.contentType);
@@ -268,7 +270,7 @@ export const handleGetShare = async function ({
       }
     }
     let files = await findChildren({
-      bucket: env.BUCKET,
+      bucket,
       path: filekey,
       depth: "1",
       db: env.DB,

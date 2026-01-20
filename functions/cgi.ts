@@ -52,6 +52,7 @@ function parseArgs(str: string): unknown[] {
 
 // Initialize the template engine
 const engine = new Liquid({
+  relativeReference: false,
   // https://github.com/harttle/liquidjs/issues/131
   fs: {
     resolve: function (dir: string, file: string, ext: string): string {
@@ -73,6 +74,19 @@ const engine = new Liquid({
 });
 
 engine.registerFilter("json_parse", (str) => JSOX.parse(str));
+
+engine.registerFilter("query_string", (str: string, key?: string) => {
+  let searchParams: URLSearchParams;
+  try {
+    searchParams = new URL(str).searchParams;
+  } catch (e) {
+    searchParams = new URLSearchParams(str);
+  }
+  if (key) {
+    return searchParams.get("key");
+  }
+  return searchParams.toString();
+});
 
 /*
 {% fetch "variableName" "url" %}

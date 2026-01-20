@@ -361,7 +361,7 @@ export default function Main({
       }
       handleMultiSelect(file.key);
     } else if (isDirectory(file)) {
-      setCwd(file.key + "/");
+      setCwd(file.key + (!file.key.endsWith("/") ? "/" : ""));
     } else if (slideIndexes[file.key] !== undefined) {
       setSlideIndex(slideIndexes[file.key]);
     } else {

@@ -133,7 +133,8 @@ Several custom tags are available:
 
 Available custom filters:
 
-- `json_parse`: Parse a string as JavaScript literal to object. The string doesn't need to be strict json. E.g. `{% assign my_obj = '{id: 1, name: "Item"}' | json_parse %}`
+- `json_parse`: Parse a string as JavaScript literal to object. The string doesn't need to be strict json. E.g. `{% assign my_obj = '{id: 1, name: "Item"}' | json_parse %}`.
+- `query_string` : Parse a url query string or a full url and return query variable value. E.g. `{% assign bar = 'https://example.com/?foo=a&bar=b' | query_string: "bar" %}`.
 
 Example `example.cgi` contents:
 

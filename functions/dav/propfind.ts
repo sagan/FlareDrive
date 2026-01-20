@@ -83,12 +83,24 @@ export async function handleRequestPropfind({ context, bucket, path, request, au
       : {}),
   };
 
-  const rootObject = path === "" ? ROOT_OBJECT : await bucket.head(path);
+  let rootObject: R2ObjectAlike | R2Object | null;
+  if (path === "" || path === "/") {
+    rootObject = ROOT_OBJECT;
+  } else {
+    if (!path.endsWith("/")) {
+      path += "/";
+    }
+    rootObject = await bucket.head(path);
+    // prior v0.1.17 save "dir" file name without trailing "/". keep compatible for now.
+    if (!rootObject) {
+      rootObject = await bucket.head(path.slice(0, -1));
+    }
+  }
   if (!rootObject) {
     return responseNotFound(fixedHeaders);
   }
 
-  const isDir = rootObject === ROOT_OBJECT || isDirectory(rootObject);
+  const isDir = isDirectory(rootObject);
   const depth = request.headers.get(HEADER_DEPTH) ?? "infinity";
   const children = !isDir ? [] : await findChildren({ bucket, path, depth, db: context.env.DB });
 

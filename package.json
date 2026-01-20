@@ -1,6 +1,6 @@
 {
   "name": "flare-drive",
-  "version": "0.1.16",
+  "version": "0.1.17-dev",
   "private": true,
   "type": "module",
   "dependencies": {
@@ -12,6 +12,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@uidotdev/usehooks": "^2.4.1",
+    "aws4fetch": "^1.0.20",
     "browser-extension-url-match": "^1.2.0",
     "docx-preview": "^0.3.6",
     "ini": "^5.0.0",

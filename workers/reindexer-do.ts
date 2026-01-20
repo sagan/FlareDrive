@@ -17,6 +17,7 @@ import {
   responseInternalServerError,
 } from "../functions/commons";
 import { deleteAllDbFiles, upsertDbFile } from "../functions/db";
+import { getStorage } from "@/functions/storage";
 
 const BATCH_SIZE = 100; // Number of files to process per R2 list operation
 const ALARM_DELAY_MS = 1000; // Delay between batches
@@ -116,7 +117,8 @@ export class ReindexerDO implements DurableObject {
         // @ts-expect-error include not defined in types
         include: ["httpMetadata", "customMetadata"],
       };
-      const listed = await this.env.BUCKET.list(listOptions);
+      const bucket = getStorage(this.env);
+      const listed = await bucket.list(listOptions);
 
       for (const obj of listed.objects) {
         try {

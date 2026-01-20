@@ -22,6 +22,7 @@ import {
   responseNotFound,
 } from "../commons";
 import { fallbackIconResponse } from "../icons";
+import { getStorage } from "../storage";
 
 interface PostBody {
   keys: string[];
@@ -35,7 +36,7 @@ interface PostBody {
  */
 export const onRequestGet: FdCfFunc = async function (context) {
   const { request, env } = context;
-  const bucket = env.BUCKET;
+  const bucket = getStorage(env);
   const searchParams = new URL(request.url).searchParams;
   const digest = searchParams.get(THUMBNAIL_DIGEST_VARIABLE) || "";
   const ext = searchParams.get(THUMBNAIL_EXT_VARIABLE) || "";
@@ -83,7 +84,7 @@ export const onRequestHead = getOnRequestHead(onRequestGet);
  */
 export const onRequestPost: FdCfFunc = async function (context) {
   const { env, request } = context;
-  const bucket = env.BUCKET;
+  const bucket = getStorage(env);
   const db = env.DB;
   const url = new URL(request.url);
   const searchParams = url.searchParams;

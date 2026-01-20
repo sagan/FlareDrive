@@ -4,6 +4,9 @@ import { upsertDbFile } from "../db";
 import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
 
 export async function handleRequestMkcol({ bucket, context, path }: RequestHandlerParams) {
+  if (!path.endsWith("/")) {
+    path += "/";
+  }
   // Check if the resource already exists
   const resource = await bucket.head(path);
   if (resource) {

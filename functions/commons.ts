@@ -55,6 +55,20 @@ import buildConfig from "../build_config.json";
 
 export type Env = {
   /**
+   * If set, use S3 compatible storage instead of Cloudflare R2.
+   * S3 Bucket url. Either "https://endpoint/bucket" or "https://bucket.endpoint" style.
+   * Bucket name info included in url.
+   */
+  S3_ENDPOINT?: string;
+  S3_ACCESS_KEY_ID?: string;
+  S3_SECRET_ACCESS_KEY?: string;
+  /**
+   * Optional S3 region info. E.g. "us-west-001".
+   * Some providers (like Backblaze B2) requires it exists and strictly matching endpoint.
+   */
+  S3_REGION?: string;
+
+  /**
    * Flag. set it to any value (e.g. "1") to lift cloud download size limitation.
    */
   CLOUD_DOWNLOAD_UNLIMITED?: string;
@@ -128,7 +142,7 @@ export type Env = {
    * associated worker token
    */
   WORKER_TOKEN?: string;
-  BUCKET: R2Bucket;
+  BUCKET?: R2Bucket;
   KV?: KVNamespace;
   DB?: D1Database;
   IMAGES?: ImagesBinding;
@@ -432,7 +446,7 @@ export async function findChildren({
   }
   if (db) {
     // use queryDbFiles to list files from db, instead of using bucket API.
-    const prefix = path === "" ? path : `${path}/`;
+    const prefix = path === "" || path.endsWith("/") ? path : `${path}/`;
     const files = await queryDbFiles(db, "", {
       prefix,
       depth: depth === "infinity" ? -1 : path ? fileDepth(path) + 1 : 0,

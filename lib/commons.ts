@@ -661,7 +661,30 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
     return 0;
   }
 }
-export function encodeHex(input?: Uint8Array | ArrayBuffer): string {
+
+/**
+ * Convert input to string. Based on input type:
+ * - ArrayBuffer, Uint8Array : return hex string.
+ * - null / undefined : return "".
+ * - otherwise: return the string representation.
+ */
+export function toString(
+  input: ArrayBuffer | ArrayBufferView | Uint8Array | string | null | undefined | number
+): string {
+  if (!input) {
+    return "";
+  }
+  switch (typeof input) {
+    case "string":
+      return input;
+    case "number":
+      return `${input}`;
+    default:
+      return encodeHex(input);
+  }
+}
+
+export function encodeHex(input?: Uint8Array | ArrayBuffer | ArrayBufferView): string {
   if (!input) {
     return "";
   }
@@ -1059,7 +1082,7 @@ export function isAudio(object: R2ObjectAlike): boolean {
  * Return whether an R2Object or alike is a dir
  */
 export function isDirectory(object: R2ObjectAlike): boolean {
-  return object.httpMetadata?.contentType === MIME_DIR;
+  return (object.size === 0 && object.key.endsWith("/")) || object.httpMetadata?.contentType === MIME_DIR;
 }
 
 /**
