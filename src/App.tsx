@@ -20,6 +20,7 @@ import {
   basename,
   fileUrl,
   ShareObject,
+  rangeHeader,
 } from "../lib/commons";
 import {
   SHARES_FOLDER_KEY, VIEWMODE_VARIABLE, EDITOR_PROMPT_VARIABLE, EDITOR_READ_ONLY_VARIABLE, SORT_VARIABLE, README_FILES,
@@ -284,7 +285,7 @@ export default function App() {
     try {
       const res = await fetch(fileUrl({ auth, key, expires: config.expires }), {
         headers: {
-          [HEADER_RANGE]: "bytes=0-524287", // first 512KiB (524288)
+          [HEADER_RANGE]: rangeHeader(0, 524287), // first 512KiB (524288)
         },
         signal,
       });
@@ -366,7 +367,7 @@ export default function App() {
                   ? <ShareManager setError={setError} fetchFiles={fetchFiles} shareObject={shareObject}
                     setShareObject={setShareObject} search={search} shares={shares} loading={loading} />
                   : (isSearch && !searchKeyword)
-                    ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} />
+                    ? <SearchForm searchBaseDir={searchOptions.baseDir || ""} setCwd={setCwd} setSearch={setSearch} />
                     : <Main readmeError={readmeError} readmeStatus={readmeStatus}
                       readmeContents={readmeContents} readmeFile={readmeFile} onDownloadAsZip={onDownloadAsZip}
                       editing={editing} setEditing={setEditing} slideIndex={slideIndex} setSlideIndex={setSlideIndex}
@@ -399,6 +400,8 @@ export default function App() {
               currentDir={currentDir}
               open={showAdminDialog}
               onClose={() => setShowAdminDialog(false)}
+              setCwd={setCwd}
+              setSearch={setSearch}
               setGlobalConfig={setGlobalConfig}
             />
             {showGenerateThumbnailDialog && <GenerateThumbnailsDialog open={true}

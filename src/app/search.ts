@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HEADER_AUTHORIZATION, SEARCH_API } from "../../lib/commons";
+import { HEADER_AUTHORIZATION, METHOD_GET, SEARCH_API } from "../../lib/commons";
 import { FileSchema, File } from "../../lib/schema";
 import { SearchOptions } from "../commons";
 
@@ -13,7 +13,7 @@ export async function searchFiles(auth: string, query: string, searchOptions: Se
       searchOptions.full ? "1" : "0"
     }`,
     {
-      method: "GET",
+      method: METHOD_GET,
       headers: {
         ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
       },

@@ -1,5 +1,6 @@
 // It's a CF durable object ( https://developers.cloudflare.com/durable-objects/ ).
 // In Pages deployment mode, it must be deployed to CF separately.
+import { METHOD_POST } from "../lib/commons";
 import {
   REINDEXER_KEY_LAST_ERROR,
   REINDEXER_KEY_STATUS,
@@ -17,7 +18,7 @@ import {
   responseInternalServerError,
 } from "../functions/commons";
 import { deleteAllDbFiles, upsertDbFile } from "../functions/db";
-import { getStorage } from "@/functions/storage";
+import { getStorage } from "../functions/storage";
 
 const BATCH_SIZE = 100; // Number of files to process per R2 list operation
 const ALARM_DELAY_MS = 1000; // Delay between batches
@@ -37,7 +38,7 @@ export class ReindexerDO implements DurableObject {
     }
 
     // Assuming commands are sent via POST body or specific paths
-    if (request.method === "POST") {
+    if (request.method === METHOD_POST) {
       let jsonData: ReindexerPayload = {};
       try {
         jsonData = await request.json<ReindexerPayload>();

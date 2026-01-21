@@ -1,4 +1,3 @@
-import mime, { parseUrlFile } from "../../lib/mime";
 import {
   CLOUD_DOWNLOAD_SIZE_LIMIT,
   HEADER_CONTENT_LENGTH,
@@ -19,6 +18,8 @@ import {
   COMMENT_VARIABLE,
   HEADER_LOCATION,
   SCOPE_GLOBAL,
+  MD5_VARIABLE,
+  ROOT_OBJECT,
   ThumbnailObject,
   humanReadableSize,
   mimeType,
@@ -28,12 +29,14 @@ import {
   isImage,
   validateAndGetSafeUrl,
   isDirectory,
-  MD5_VARIABLE,
+  R2ObjectAlike,
 } from "../../lib/commons";
+import mime, { parseUrlFile } from "../../lib/mime";
 import {
   checkConflict,
   checkInvalidUserFileKey,
   generateFileThumbnail,
+  getParent,
   jsonResponse,
   responseBadRequest,
   responseConflict,
@@ -46,7 +49,7 @@ import {
   responseNotModified,
   responsePreconditionsFailed,
 } from "../commons";
-import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { RequestHandlerParams } from "./utils";
 import { upsertDbFile } from "../db";
 
 async function handleRequestPutMultipart({ bucket, path, request }: RequestHandlerParams) {
@@ -131,8 +134,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
 
   // Check if the parent directory exists
   if (!path.startsWith(KEY_PREFIX_PRIVATE)) {
-    const parentPath = dirname(path);
-    const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
+    const parentDir = await getParent(bucket, path);
     if (parentDir === null || !isDirectory(parentDir)) {
       return responseConflict();
     }

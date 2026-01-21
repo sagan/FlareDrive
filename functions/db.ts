@@ -1,6 +1,8 @@
 import {
   EMPTY_MD5_RAW,
   KEY_PREFIX_PRIVATE,
+  MD5_REGEXP,
+  QUERY_META_REGEXP,
   SEARCH_MAGIC_WORD_LARGEST,
   SEARCH_MAGIC_WORD_RECENT,
   decodeHex,
@@ -121,16 +123,41 @@ LEFT JOIN filemeta AS fm ON f.key = fm.key
 WHERE 1 = 1`;
   const params: unknown[] = [];
 
-  if (query && query !== SEARCH_MAGIC_WORD_LARGEST && query !== SEARCH_MAGIC_WORD_RECENT) {
-    sql += ` AND (f.name LIKE ?)`;
-    if (full) {
-      params.push(`%${query}%`);
-    } else {
-      params.push(`${query}%`);
+  if (query) {
+    const matchMetaQuery = query.match(QUERY_META_REGEXP);
+    if (matchMetaQuery) {
+      const metaKey = matchMetaQuery[1];
+      const matchMode = matchMetaQuery[2];
+      const metaValue = matchMetaQuery[3];
+      if (!metaValue) {
+        sql += ` AND f.key IN (SELECT key FROM filemeta WHERE name = ?)`;
+        params.push(metaKey);
+      } else if (matchMode === "^") {
+        sql += ` AND f.key IN (SELECT key FROM filemeta WHERE name = ? AND value LIKE ?)`;
+        params.push(metaKey, metaValue + "%");
+      } else if (matchMode === "$") {
+        sql += ` AND f.key IN (SELECT key FROM filemeta WHERE name = ? AND value LIKE ?)`;
+        params.push(metaKey, "%" + metaValue);
+      } else if (matchMode === "*") {
+        sql += ` AND f.key IN (SELECT key FROM filemeta WHERE name = ? AND value LIKE ?)`;
+        params.push(metaKey, "%" + metaValue + "%");
+      } else {
+        sql += ` AND f.key IN (SELECT key FROM filemeta WHERE name = ? AND value = ?)`;
+        params.push(metaKey, metaValue);
+      }
+    } else if (MD5_REGEXP.test(query)) {
+      sql += ` AND (f.md5 = ?)`;
+      params.push(query);
+    } else if (query == SEARCH_MAGIC_WORD_LARGEST) {
+      sql += ` AND (f.size > 0)`; // implies not dir
+    } else if (query !== SEARCH_MAGIC_WORD_RECENT) {
+      sql += ` AND (f.name LIKE ?)`;
+      if (full) {
+        params.push(`%${query}%`);
+      } else {
+        params.push(`${query}%`);
+      }
     }
-  }
-  if (query == SEARCH_MAGIC_WORD_LARGEST) {
-    sql += ` AND (f.size > 0)`; // implies not dir
   }
 
   if (depth >= 0) {

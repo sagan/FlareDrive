@@ -1,12 +1,12 @@
 import { SyntheticEvent } from "react";
-import { marked } from "marked";
-import sanitizeHtml from "sanitize-html";
 import {
   KEY_PART_SEARCH,
   KEY_PART_SEARCH_FULL,
   MIME_DEFAULT,
-  MIME_MARKDOWN,
-  MIME_TXT,
+  SEARCH_MAGIC_WORD_LARGEST,
+  SEARCH_MAGIC_WORD_RECENT,
+  MD5_REGEXP,
+  QUERY_META_REGEXP,
   TXT_MIMES,
   Permission,
   mimeType,
@@ -272,13 +272,22 @@ export interface SearchOptions {
   full?: boolean;
 }
 
+export function isSpecialSearch(searchKeyword: string): boolean {
+  return (
+    searchKeyword === SEARCH_MAGIC_WORD_LARGEST ||
+    searchKeyword === SEARCH_MAGIC_WORD_RECENT ||
+    MD5_REGEXP.test(searchKeyword) ||
+    QUERY_META_REGEXP.test(searchKeyword)
+  );
+}
+
 export function search2Cwd(keyword: string, options: SearchOptions = {}): string {
   let cwd = options.baseDir || "";
   if (cwd) {
     cwd += "/";
   }
   cwd += KEY_PART_SEARCH;
-  if (options.full) {
+  if (options.full && !isSpecialSearch(keyword)) {
     cwd += "/" + KEY_PART_SEARCH_FULL;
   }
   if (keyword) {

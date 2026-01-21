@@ -16,12 +16,13 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, MIME_URL,
-  Permission, basename, cleanPath, compareBoolean, compareString, fileUrl, humanReadableSize,
+  Permission, basename, cleanDirPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
   isUrlFile,
   validateAndGetSafeUrl,
   isAudio,
   MIME_DOCX,
+  trimSuffix,
 } from "../lib/commons";
 import {
   EDIT_FILE_SIZE_LIMIT,
@@ -471,8 +472,9 @@ export default function Main({
     if (!newName || oldName === newName) {
       return;
     }
+    const dst = (cwd ? cwd + "/" : "") + newName + (multiSelected[0].endsWith("/") ? "/" : "");
     try {
-      await copyPaste((cwd ? cwd + "/" : "") + oldName, (cwd ? cwd + "/" : "") + newName, effectiveAuth, true);
+      await copyPaste(multiSelected[0], dst, effectiveAuth, true);
       fetchFiles();
     } catch (e) {
       setError(e);
@@ -494,24 +496,20 @@ export default function Main({
   };
 
   const onMove = async () => {
-    const dir = cwd || "/";
+    const dir = cwd + "/";
     let newdir = window.prompt(`Move files to dir (enter "/" to move to root dir):`, dir);
+    newdir = (newdir || "").trim();
     if (!newdir) {
       return;
     }
-    newdir = cleanPath(newdir);
+    newdir = cleanDirPath(newdir);
     if (newdir == dir) {
       return;
     }
-    if (!newdir.endsWith("/")) {
-      newdir += "/"
-    }
     for (const file of multiSelected) {
-      const name = basename(file);
-      const src = (cwd ? cwd + "/" : "") + name;
-      const dst = trimPrefixSuffix(newdir + name, "/");
+      const dst = newdir + basename(file) + (file.endsWith("/") ? "/" : "");
       try {
-        await copyPaste(src, dst, effectiveAuth, true);
+        await copyPaste(file, dst, effectiveAuth, true);
       } catch (e) {
         setError(e);
       }

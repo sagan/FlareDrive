@@ -27,9 +27,14 @@ import {
   THUMBNAIL_SIZE,
   KEY_GLOBAL_CONFIG,
   HEADER_CONTENT_SECURITY_POLICY,
+  HEADER_CONTENT_TYPE_OPTIONS,
   CONTENT_SECURITY_POLICY_SANDBOX,
+  CONTENT_TYPE_OPTIONS_NOSNIFF,
+  REFERRER_POLICY_NOREFERRER,
   SCOPE_GLOBAL,
   KEY_PART_SEARCH,
+  METHOD_POST,
+  ROOT_OBJECT,
   sha256,
   hmacSha256Verify,
   key2Path,
@@ -47,6 +52,9 @@ import {
   GlobalConfig,
   GlobalConfigSchema,
   isHtml,
+  R2ObjectAlike,
+  dirname,
+  METHODS_WITH_BODY,
 } from "../lib/commons";
 import { parseUrlFile } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
@@ -246,7 +254,7 @@ export function responseRedirect(url: string, noreferer = false): Response {
     status: 302,
     headers: {
       Location: url,
-      ...(noreferer ? { [HEADER_REFERRER_POLICY]: "no-referrer" } : {}),
+      ...(noreferer ? { [HEADER_REFERRER_POLICY]: REFERRER_POLICY_NOREFERRER } : {}),
     },
   });
 }
@@ -578,7 +586,7 @@ export async function generateFileThumbnailWithWorker({
   // As it seems CF worker strip "Authorization" header from sub-requests that's inside request of worker.
   const targetFileUrl = originIsBucket ? origin + "/" + key2Path(key) : fileUrl({ key, auth, origin, expires });
   const thumbResponse = await fetch(workerUrl, {
-    method: "POST",
+    method: METHOD_POST,
     headers: {
       [HEADER_CONTENT_TYPE]: "application/json",
     },
@@ -688,13 +696,16 @@ export async function outputR2Object({
     const htmlOutput = await marked.parse(body);
     const sanitizedHtml = sanitizeHtml(htmlOutput);
     headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
+    headers.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);
+    headers.set(HEADER_REFERRER_POLICY, REFERRER_POLICY_NOREFERRER);
     if (!fullHtml) {
       headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     }
     headers.delete(HEADER_CONTENT_LENGTH);
     return new Response(sanitizedHtml, { headers });
   }
-  // headers.set("Cache-Control", "max-age=31536000");
+  headers.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);
+  headers.set(HEADER_REFERRER_POLICY, REFERRER_POLICY_NOREFERRER);
   if (isHtml(obj) && !fullHtml) {
     headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
   }
@@ -723,7 +734,11 @@ export function checkConflict(request: Request, object?: R2Object | null | undef
  * Return a "Content-Type: application/json" request to url.
  * @param method default to POST.
  */
-export function requestJson(url: string | URL, payload: unknown, method: "POST" | "PUT" | "DELETE" = "POST"): Request {
+export function requestJson(
+  url: string | URL,
+  payload: unknown,
+  method: (typeof METHODS_WITH_BODY)[number] = METHOD_POST
+): Request {
   if (url instanceof URL) {
     url = url.href;
   }
@@ -856,4 +871,19 @@ export function getPathArray(context: FdCfFuncContext): string[] {
     return [];
   }
   return pathParam.map((p) => decodeURIComponent(trimPrefixSuffix(p, "/"))).filter((p) => p);
+}
+
+/**
+ * Get the parent object of a path
+ */
+export async function getParent(bucket: R2Bucket, path: string): Promise<R2Object | R2ObjectAlike | null> {
+  const parentPath = dirname(path);
+  let parentDir: R2Object | R2ObjectAlike | null;
+  if (parentPath === "" || parentPath === "/") {
+    parentDir = ROOT_OBJECT;
+  } else {
+    // compatible with prior v0.1.17 dir object, which doesn't end with slash.
+    parentDir = (await bucket.head(parentPath + "/")) || (await bucket.head(parentPath));
+  }
+  return parentDir;
 }

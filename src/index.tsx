@@ -10,7 +10,6 @@ import "yet-another-react-lightbox/plugins/counter.css";
 import "yet-another-react-lightbox/plugins/captions.css";
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
-import "./monaco.ts";
 import "nprogress/nprogress.css";
 import "./index.css";
 

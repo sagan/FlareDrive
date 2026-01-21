@@ -26,6 +26,17 @@ import {
   HEADER_DESTINATION,
   HEADER_DIR_EXISTS,
   COMMENT_VARIABLE,
+  MD5_VARIABLE,
+  UPLOADS_VARIABLE,
+  METHOD_GET,
+  METHOD_POST,
+  METHOD_PUT,
+  METHOD_DELETE,
+  METHOD_PROPFIND,
+  METHOD_MKCOL,
+  METHOD_MOVE,
+  METHOD_COPY,
+  URL_VARIABLE,
   appendQueryStringToUrl,
   isBasicAuthHeader,
   ThumbnailObject,
@@ -34,11 +45,8 @@ import {
   escapeRegExp,
   str2int,
   cut,
-  URL_VARIABLE,
   joinPathes,
   dirname,
-  MD5_VARIABLE,
-  UPLOADS_VARIABLE,
 } from "../../lib/commons";
 import { FileItem, UploadFile } from "../commons";
 import { TransferTask } from "./transferQueue";
@@ -74,7 +82,7 @@ export async function fetchPath(
   }
   const req = applyAuth(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
-      method: "PROPFIND",
+      method: METHOD_PROPFIND,
       headers: {
         Depth: "1",
         [HEADER_INAPP]: "1",
@@ -236,7 +244,7 @@ function xhrFetch(
       requestInit.signal.addEventListener("abort", () => xhr.abort());
     }
     xhr.upload.onprogress = requestInit.onUploadProgress ?? null;
-    xhr.open(requestInit.method ?? "GET", url);
+    xhr.open(requestInit.method ?? METHOD_GET, url);
     headers.forEach((value, key) => xhr.setRequestHeader(key, value));
     xhr.onload = () => {
       const headers = xhr
@@ -281,7 +289,7 @@ export async function multipartUpload(
   const uploadRequest = applyAuth(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?${searchParams}`, {
       headers,
-      method: "POST",
+      method: METHOD_POST,
       signal,
     }),
     auth
@@ -312,7 +320,7 @@ export async function multipartUpload(
         const res = await xhrFetch(
           uploadUrl,
           {
-            method: "PUT",
+            method: METHOD_PUT,
             headers,
             body: chunk,
             signal,
@@ -359,7 +367,7 @@ export async function multipartUpload(
   const completeParams = new URLSearchParams({ uploadId });
   const req = applyAuth(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}?${completeParams}`, {
-      method: "POST",
+      method: METHOD_POST,
       body: JSON.stringify({ parts: uploadedParts }),
     }),
     auth
@@ -377,7 +385,7 @@ export async function copyPaste(source: string, target: string, auth: string, mo
   const destinationUrl = new URL(`${WEBDAV_ENDPOINT}${key2Path(target)}`, window.location.href);
   const req = applyAuth(
     new Request(uploadUrl, {
-      method: move ? "MOVE" : "COPY",
+      method: move ? METHOD_MOVE : METHOD_COPY,
       headers: {
         [HEADER_DESTINATION]: destinationUrl.href,
       },
@@ -401,7 +409,7 @@ export async function createFolder(folderKey: string, auth: string, ignoreExisti
     folderKey += "/";
   }
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(folderKey)}`;
-  const req = applyAuth(new Request(uploadUrl, { method: "MKCOL" }), auth);
+  const req = applyAuth(new Request(uploadUrl, { method: METHOD_MKCOL }), auth);
   const res = await fetch(req);
   if (!res.ok && (!ignoreExisting || res.status !== 405 || !res.headers.has(HEADER_DIR_EXISTS))) {
     throw new Error(`status=${res.status}`);
@@ -414,7 +422,7 @@ export async function createFolder(folderKey: string, auth: string, ignoreExisti
  * @param auth
  */
 export async function deleteFile(key: string, auth: string) {
-  const req = applyAuth(new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}`, { method: "DELETE" }), auth);
+  const req = applyAuth(new Request(`${WEBDAV_ENDPOINT}${key2Path(key)}`, { method: METHOD_DELETE }), auth);
   const res = await fetch(req);
   if (!res.ok) {
     throw new Error(`status=${res.status}`);
@@ -454,7 +462,7 @@ export async function putFile({
   const uploadUrl = `${WEBDAV_ENDPOINT}${key2Path(key)}${searchParams.size > 0 ? "?" + searchParams.toString() : ""}`;
   const req = applyAuth(
     new Request(uploadUrl, {
-      method: "PUT",
+      method: METHOD_PUT,
       headers: {
         [HEADER_CONTENT_TYPE]: contentType || mime.getType(key) || MIME_DEFAULT,
         ...(create ? { [HEADER_IF_UNMODIFIED_SINCE]: new Date(0).toUTCString() } : {}),
@@ -506,7 +514,7 @@ export async function processTransferTask({
       try {
         const req = applyAuth(
           new Request(thumbnailUploadUrl, {
-            method: "PUT",
+            method: METHOD_PUT,
             body: thumbnailBlob,
             headers: {
               [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
@@ -544,7 +552,7 @@ export async function processTransferTask({
     const res = await xhrFetch(
       uploadUrl,
       {
-        method: "PUT",
+        method: METHOD_PUT,
         headers,
         body: file,
         signal,
@@ -571,7 +579,7 @@ export async function generateThumbnailsServerSide(
   force: boolean
 ): Promise<Record<string, number>> {
   const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
-    method: "POST",
+    method: METHOD_POST,
     headers: {
       [HEADER_CONTENT_TYPE]: "application/json",
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
@@ -594,7 +602,7 @@ export async function generateThumbnailsServerSide(
  */
 export async function putThumbnail(key: string, blob: Blob, auth: string | null): Promise<ThumbnailObject> {
   const res = await fetch(WEBDAV_ENDPOINT + key2Path(key) + `?${THUMBNAIL_VARIABLE}=1`, {
-    method: "PUT",
+    method: METHOD_PUT,
     body: blob,
     headers: {
       [HEADER_CONTENT_TYPE]: CLIENT_THUMBNAIL_TYPE,
@@ -624,7 +632,7 @@ export async function uploadFromUrl({
   asyncMode?: boolean;
 }): Promise<FileItem | null> {
   const res = await fetch(`${WEBDAV_ENDPOINT}${key2Path(key)}`, {
-    method: "PUT",
+    method: METHOD_PUT,
     headers: {
       [HEADER_SOURCE_URL]: sourceUrl,
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),

@@ -120,8 +120,9 @@ encoding = None
 # CGI feature
 
 CGI feature use [LiquidJS][] template engine to render a `.cgi` file and serve rendered contents.
-Currently it works on published links (`/s/*`) only, you also need to tick `Enable CGI` checkbox in publish dialog;
-It also recognize `index.cgi` as dir index file automatically.
+Currently it works on published links (`/s/*`) only, you also need to tick `Enable CGI` checkbox in publish dialog.
+It recognizes `index.cgi` as dir index file automatically.
+Also, if `404.cgi` in share root dir exists, it will be used as fallback if current requested path file doesn't exist.
 Currently only GET method is supported. The template receives `{ request }` as initial context.
 
 Several custom tags are available:

@@ -7,6 +7,7 @@ import {
   SCOPE_GLOBAL,
   SYSFILES,
   WEBDAV_ENDPOINT,
+  ROOT_OBJECT,
   basename,
   dirname,
   isDirectory,
@@ -22,7 +23,7 @@ import {
   responseNotFound,
   responsePreconditionsFailed,
 } from "../commons";
-import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { RequestHandlerParams } from "./utils";
 import { upsertDbFile } from "../db";
 
 export async function handleRequestCopy({ context, bucket, path, request, scope, authed }: RequestHandlerParams) {
@@ -38,12 +39,18 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
   }
 
   const destPathname = new URL(destinationHeader).pathname;
-  const decodedPathname = decodeURIComponent(destPathname).replace(/\/$/, "");
+  const decodedPathname = decodeURIComponent(destPathname);
   if (!decodedPathname.startsWith(WEBDAV_ENDPOINT)) {
     return responseBadRequest();
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
-  if (!destination || destination === path || (isDirectory(src) && destination.startsWith(path + "/"))) {
+  if (
+    !destination ||
+    destination === path ||
+    destination === path + "/" ||
+    path === destination + "/" ||
+    (isDirectory(src) && destination.startsWith(path + "/"))
+  ) {
     return responseBadRequest();
   }
   const invalidPathResponse = await checkInvalidUserFileKey(destination);

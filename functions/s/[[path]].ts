@@ -24,6 +24,7 @@ import {
   str2Html,
   getR2FileMd5,
   MIME_DEFAULT,
+  FALLBACK_CGI,
 } from "../../lib/commons";
 import {
   FdCfFunc,
@@ -225,6 +226,12 @@ export const handleGetShare = async function ({
     range: request.headers,
   });
   if (!obj) {
+    if (data.cgi && data.key.endsWith("/") && relpath) {
+      const fallbackCgi = await bucket.get(data.key + FALLBACK_CGI);
+      if (fallbackCgi) {
+        return executeCgi(request, await fallbackCgi.text(), data.fullHtml, data.env);
+      }
+    }
     return responseNotFound();
   }
   const fullHtml = !!data.fullHtml;
@@ -236,9 +243,9 @@ export const handleGetShare = async function ({
       return responseRedirect(url.href);
     }
     if (data.cgi) {
-      const indexCgiObj = await bucket.get(filekey + "/" + INDEX_CGI);
+      const indexCgiObj = (await bucket.get(filekey + "/" + INDEX_CGI)) || (await bucket.get(data.key + FALLBACK_CGI));
       if (indexCgiObj) {
-        return executeCgi(request, await indexCgiObj.text(), data.fullHtml);
+        return executeCgi(request, await indexCgiObj.text(), data.fullHtml, data.env);
       }
     }
     const indexHtmlObj = await bucket.get(filekey + "/" + INDEX_FILE, {
@@ -313,7 +320,7 @@ export const handleGetShare = async function ({
   }
 
   if (data.cgi && filekey.endsWith(EXT_CGI) && "body" in obj) {
-    return executeCgi(request, await obj.text(), data.fullHtml);
+    return executeCgi(request, await obj.text(), data.fullHtml, data.env);
   }
 
   return outputR2Object({

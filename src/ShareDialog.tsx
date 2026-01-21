@@ -73,6 +73,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     "shareKey" in otherProps ? otherProps.shareObject! : { key: fileKeyWithDirSlash });
   const [referer, setReferer] = useState("shareKey" in otherProps ?
     list2Referer(otherProps.shareObject.refererList) : "");
+  const [envText, setEnvText] = useState("shareKey" in otherProps ? env2Text(otherProps.shareObject.env) : "");
   const [status, setStatus] = useState("shareKey" in otherProps ? Status.Editing : Status.Creating);
   // share ttl in seconds. zero or negative value has special meaning.
   const [ttl, setTtl] = useState(!shareObject.expiration ? 0 : -1);
@@ -128,7 +129,10 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
         } : {}),
       ...(shareObject.refererMode ? {
         refererList: refer2list(referer),
-      } : {})
+      } : {}),
+      ...(shareObject.cgi ? {
+        env: text2Env(envText),
+      } : {}),
     };
     try {
       await createShare(shareKey, newShareObject, auth);
@@ -580,7 +584,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               setShareObject({ ...shareObject, fullHtml: e.target.checked });
             }} />} />
         <FormControlLabel label="Enable CGI" sx={{ color: "red" }}
-          title="Render .cgi file as LiquidJS template; recognize index.cgi as dir index file"
+          title="Render .cgi file as LiquidJS template; recognize index.cgi as dir index file; recognize 404.cgi in share root dir as fallback"
           control={
             <Checkbox checked={!!shareObject.cgi} onChange={e => {
               setShareObject({ ...shareObject, cgi: e.target.checked });
@@ -610,6 +614,14 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               <Checkbox checked={!!shareObject.refererModeEmpty} onChange={e => {
                 setShareObject({ ...shareObject, refererModeEmpty: !!e.target.checked });
               }} />} />
+        </Box>
+      </>}
+      {!!shareObject.cgi && <>
+        <Box>
+          <TextField disabled={status === Status.Sharing} multiline fullWidth
+            label="CGI env"
+            helperText="NAME=Value format; one env per line." value={envText} onChange={e => setEnvText(e.target.value)}
+          />
         </Box>
       </>}
       {status === Status.Editing && <Typography>
@@ -661,4 +673,30 @@ function list2Referer(list?: string[]): string {
     return "";
   }
   return list.join("\n");
+}
+
+function env2Text(env?: Record<string, string>): string {
+  if (!env) {
+    return "";
+  }
+  return Object.entries(env).map(([k, v]) => `${k}=${v}`).join("\n");
+}
+
+function text2Env(text: string): Record<string, string> | undefined {
+  if (!text) {
+    return undefined;
+  }
+  const env: Record<string, string> = {};
+  text.split(/\r?\n/).forEach(line => {
+    const trimmedLine = line.trim();
+    if (trimmedLine) {
+      const parts = trimmedLine.split('=');
+      if (parts.length >= 2) {
+        const key = parts[0];
+        const value = parts.slice(1).join('=');
+        env[key] = value;
+      }
+    }
+  });
+  return Object.keys(env).length > 0 ? env : undefined;
 }

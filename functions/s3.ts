@@ -1,5 +1,50 @@
 import { AwsClient } from "aws4fetch";
-import { toString } from "../lib/commons";
+import {
+  HEADER_CACHE_CONTROL,
+  HEADER_CONTENT_DISPOSITION,
+  HEADER_CONTENT_ENCODING,
+  HEADER_CONTENT_LANGUAGE,
+  HEADER_CONTENT_LENGTH,
+  HEADER_CONTENT_MD5,
+  HEADER_CONTENT_TYPE,
+  HEADER_ETAG,
+  HEADER_IF_MATCH,
+  HEADER_IF_MODIFIED_SINCE,
+  HEADER_IF_NONE_MATCH,
+  HEADER_IF_UNMODIFIED_SINCE,
+  HEADER_LAST_MODIFIED,
+  HEADER_PREFIX_X_AMAZON_META,
+  HEADER_RANGE,
+  METHOD_DELETE,
+  METHOD_GET,
+  METHOD_HEAD,
+  METHOD_POST,
+  METHOD_PUT,
+  PART_NUMBER_VARIABLE,
+  UPLOADS_VARIABLE,
+  UPLOAD_ID_VARIABLE,
+  rangeHeader,
+  toString,
+} from "../lib/commons";
+
+const SEARCH_PARAM_LIST_TYPE = "list-type";
+const SEARCH_PARAM_PREFIX = "prefix";
+const SEARCH_PARAM_CONTINUATION_TOKEN = "continuation-token";
+const SEARCH_PARAM_MAX_KEYS = "max-keys";
+const SEARCH_PARAM_DELIMITER = "delimiter";
+
+const XML_TAG_UPLOAD_ID = "UploadId";
+const XML_TAG_CONTENTS = "Contents";
+const XML_TAG_KEY = "Key";
+const XML_TAG_SIZR = "Size";
+const XML_TAG_ETAG = "ETag";
+const XML_TAG_LAST_MODIFIED = "LastModified";
+const XML_TAG_COMMON_PREFIXES = "CommonPrefixes";
+const XML_TAG_PREFIX = "Prefix";
+const XML_TAG_IS_TRUNCATED = "IsTruncated";
+const XML_TAG_NEXT_CONTINUATION_TOKEN = "NextContinuationToken";
+
+const XML_VALUE_TRUE = "true";
 
 export interface S3BucketConfig {
   accessKeyId: string;
@@ -54,12 +99,12 @@ class S3ObjectStub implements R2Object {
     checksums?: R2Checksums
   ) {
     this.key = key;
-    this.size = size ?? Number(headers.get("content-length") || 0);
-    this.etag = etag ?? headers.get("etag") ?? "";
+    this.size = size ?? Number(headers.get(HEADER_CONTENT_LENGTH) || 0);
+    this.etag = etag ?? headers.get(HEADER_ETAG) ?? "";
     // S3 Etags often come wrapped in quotes, R2 sometimes doesn't. We normalize to "raw" string if needed,
     // but usually keeping quotes is safer for If-Match headers.
     this.httpEtag = this.etag;
-    this.uploaded = lastModified ?? new Date(headers.get("last-modified") || Date.now());
+    this.uploaded = lastModified ?? new Date(headers.get(HEADER_LAST_MODIFIED) || Date.now());
     this.httpMetadata = this.headersToHttpMetadata(headers);
     this.customMetadata = this.headersToCustomMetadata(headers);
     this.checksums = checksums || ({} as R2Checksums);
@@ -67,37 +112,37 @@ class S3ObjectStub implements R2Object {
 
   writeHttpMetadata(headers: Headers): void {
     if (this.httpMetadata.contentType) {
-      headers.set("Content-Type", this.httpMetadata.contentType);
+      headers.set(HEADER_CONTENT_TYPE, this.httpMetadata.contentType);
     }
     if (this.httpMetadata.contentLanguage) {
-      headers.set("Content-Language", this.httpMetadata.contentLanguage);
+      headers.set(HEADER_CONTENT_LANGUAGE, this.httpMetadata.contentLanguage);
     }
     if (this.httpMetadata.contentDisposition) {
-      headers.set("Content-Disposition", this.httpMetadata.contentDisposition);
+      headers.set(HEADER_CONTENT_DISPOSITION, this.httpMetadata.contentDisposition);
     }
     if (this.httpMetadata.contentEncoding) {
-      headers.set("Content-Encoding", this.httpMetadata.contentEncoding);
+      headers.set(HEADER_CONTENT_ENCODING, this.httpMetadata.contentEncoding);
     }
     if (this.httpMetadata.cacheControl) {
-      headers.set("Cache-Control", this.httpMetadata.cacheControl);
+      headers.set(HEADER_CACHE_CONTROL, this.httpMetadata.cacheControl);
     }
   }
 
   private headersToHttpMetadata(headers: Headers): R2HTTPMetadata {
     return {
-      contentType: headers.get("content-type") ?? undefined,
-      contentLanguage: headers.get("content-language") ?? undefined,
-      contentDisposition: headers.get("content-disposition") ?? undefined,
-      contentEncoding: headers.get("content-encoding") ?? undefined,
-      cacheControl: headers.get("cache-control") ?? undefined,
+      contentType: headers.get(HEADER_CONTENT_TYPE) ?? undefined,
+      contentLanguage: headers.get(HEADER_CONTENT_LANGUAGE) ?? undefined,
+      contentDisposition: headers.get(HEADER_CONTENT_DISPOSITION) ?? undefined,
+      contentEncoding: headers.get(HEADER_CONTENT_ENCODING) ?? undefined,
+      cacheControl: headers.get(HEADER_CACHE_CONTROL) ?? undefined,
     };
   }
 
   private headersToCustomMetadata(headers: Headers): Record<string, string> {
     const metadata: Record<string, string> = {};
     headers.forEach((value, key) => {
-      if (key.startsWith("x-amz-meta-")) {
-        metadata[key.replace("x-amz-meta-", "")] = value;
+      if (key.startsWith(HEADER_PREFIX_X_AMAZON_META)) {
+        metadata[key.replace(HEADER_PREFIX_X_AMAZON_META, "")] = value;
       }
     });
     return metadata;
@@ -149,11 +194,11 @@ class S3MultipartUpload implements R2MultipartUpload {
 
   async uploadPart(partNumber: number, value: ReadableStream | ArrayBuffer | string): Promise<R2UploadedPart> {
     const url = new URL(`${this.bucketUrl}/${encodeURIComponent(this.key)}`);
-    url.searchParams.set("partNumber", partNumber.toString());
-    url.searchParams.set("uploadId", this.uploadId);
+    url.searchParams.set(PART_NUMBER_VARIABLE, partNumber.toString());
+    url.searchParams.set(UPLOAD_ID_VARIABLE, this.uploadId);
 
     const res = await this.client.fetch(url.toString(), {
-      method: "PUT",
+      method: METHOD_PUT,
       body: value,
     });
 
@@ -161,7 +206,7 @@ class S3MultipartUpload implements R2MultipartUpload {
       throw new Error(`S3 UploadPart failed: ${res.status} ${await res.text()}`);
     }
 
-    const etag = res.headers.get("etag");
+    const etag = res.headers.get(HEADER_ETAG);
     if (!etag) {
       throw new Error("S3 UploadPart missing ETag");
     }
@@ -171,9 +216,9 @@ class S3MultipartUpload implements R2MultipartUpload {
 
   async abort(): Promise<void> {
     const url = new URL(`${this.bucketUrl}/${encodeURIComponent(this.key)}`);
-    url.searchParams.set("uploadId", this.uploadId);
+    url.searchParams.set(UPLOAD_ID_VARIABLE, this.uploadId);
 
-    const res = await this.client.fetch(url.toString(), { method: "DELETE" });
+    const res = await this.client.fetch(url.toString(), { method: METHOD_DELETE });
     if (!res.ok) {
       throw new Error(`S3 Abort failed: ${res.status}`);
     }
@@ -191,10 +236,10 @@ class S3MultipartUpload implements R2MultipartUpload {
     const payload = `<CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`;
 
     const url = new URL(`${this.bucketUrl}/${encodeURIComponent(this.key)}`);
-    url.searchParams.set("uploadId", this.uploadId);
+    url.searchParams.set(UPLOAD_ID_VARIABLE, this.uploadId);
 
     const res = await this.client.fetch(url.toString(), {
-      method: "POST",
+      method: METHOD_POST,
       body: payload,
     });
 
@@ -207,8 +252,8 @@ class S3MultipartUpload implements R2MultipartUpload {
     return new S3ObjectStub(
       this.key,
       new Headers({
-        etag: res.headers.get("etag") || "",
-        "last-modified": new Date().toUTCString(),
+        [HEADER_ETAG]: res.headers.get(HEADER_ETAG) || "",
+        [HEADER_LAST_MODIFIED]: new Date().toUTCString(),
       })
     );
   }
@@ -235,7 +280,7 @@ export class S3Bucket implements R2Bucket {
 
   async head(key: string): Promise<R2Object | null> {
     const url = `${this.bucketUrl}/${encodeURIComponent(key)}`;
-    const res = await this.client.fetch(url, { method: "HEAD" });
+    const res = await this.client.fetch(url, { method: METHOD_HEAD });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`S3 HEAD failed: ${res.statusText}`);
     return new S3ObjectStub(key, res.headers);
@@ -256,51 +301,14 @@ export class S3Bucket implements R2Bucket {
 
     // Range handling
     if (options?.range) {
-      if ("offset" in options.range) {
-        const len = options.range.length;
-        const end = len ? (options.range.offset || 0) + len - 1 : "";
-        headers.set("Range", `bytes=${options.range.offset}-${end}`);
-      } else if ("suffix" in options.range) {
-        headers.set("Range", `bytes=-${options.range.suffix}`);
-      }
+      applyRange2Headers(headers, options.range);
     }
 
-    // Conditionals
     if (options?.onlyIf) {
-      if (options.onlyIf instanceof Headers) {
-        const ifMatch = options.onlyIf.get("If-Match");
-        if (ifMatch) {
-          headers.set("If-Match", ifMatch);
-        }
-        const ifNoneMatch = options.onlyIf.get("If-None-Match");
-        if (ifNoneMatch) {
-          headers.set("If-None-Match", ifNoneMatch);
-        }
-        const ifModifiedSince = options.onlyIf.get("If-Modified-Since");
-        if (ifModifiedSince) {
-          headers.set("If-Modified-Since", ifModifiedSince);
-        }
-        const ifUnmodifiedSince = options.onlyIf.get("If-Unmodified-Since");
-        if (ifUnmodifiedSince) {
-          headers.set("If-Unmodified-Since", ifUnmodifiedSince);
-        }
-      } else {
-        if (options.onlyIf.etagMatches) {
-          headers.set("If-Match", options.onlyIf.etagMatches);
-        }
-        if (options.onlyIf.etagDoesNotMatch) {
-          headers.set("If-None-Match", options.onlyIf.etagDoesNotMatch);
-        }
-        if (options?.onlyIf?.uploadedAfter) {
-          headers.set("If-Modified-Since", options.onlyIf.uploadedAfter.toUTCString());
-        }
-        if (options?.onlyIf?.uploadedBefore) {
-          headers.set("If-Unmodified-Since", options.onlyIf.uploadedBefore.toUTCString());
-        }
-      }
+      applyOnlyIf2Headers(headers, options.onlyIf);
     }
 
-    const res = await this.client.fetch(url, { method: "GET", headers });
+    const res = await this.client.fetch(url, { method: METHOD_GET, headers });
 
     if (res.status === 404) {
       return null;
@@ -324,51 +332,17 @@ export class S3Bucket implements R2Bucket {
     const headers = new Headers();
 
     if (options?.httpMetadata) {
-      if (options.httpMetadata instanceof Headers) {
-        const contentType = options.httpMetadata.get("Content-Type");
-        if (contentType) {
-          headers.set("Content-Type", contentType);
-        }
-        const contentEncoding = options.httpMetadata.get("Content-Encoding");
-        if (contentEncoding) {
-          headers.set("Content-Encoding", contentEncoding);
-        }
-        const contentDisposition = options.httpMetadata.get("Content-Disposition");
-        if (contentDisposition) {
-          headers.set("Content-Disposition", contentDisposition);
-        }
-        const cacheControl = options.httpMetadata.get("Cache-Control");
-        if (cacheControl) {
-          headers.set("Cache-Control", cacheControl);
-        }
-      } else {
-        if (options.httpMetadata.contentType) {
-          headers.set("Content-Type", options.httpMetadata.contentType);
-        }
-        if (options.httpMetadata.contentEncoding) {
-          headers.set("Content-Encoding", options.httpMetadata.contentEncoding);
-        }
-        if (options.httpMetadata.contentDisposition) {
-          headers.set("Content-Disposition", options.httpMetadata.contentDisposition);
-        }
-        if (options.httpMetadata.cacheControl) {
-          headers.set("Cache-Control", options.httpMetadata.cacheControl);
-        }
-      }
+      applyHttpMeta2Headers(headers, options.httpMetadata);
     }
-
     if (options?.customMetadata) {
-      Object.entries(options.customMetadata).forEach(([k, v]) => {
-        headers.set(`x-amz-meta-${k}`, v);
-      });
+      applyCustomMeta2Headers(headers, options.customMetadata);
     }
-
     if (options?.md5) {
-      headers.set("Content-MD5", toString(options.md5));
+      headers.set(HEADER_CONTENT_MD5, toString(options.md5));
     }
 
     const res = await this.client.fetch(url, {
-      method: "PUT",
+      method: METHOD_PUT,
       headers,
       body: value,
     });
@@ -389,7 +363,7 @@ export class S3Bucket implements R2Bucket {
     await Promise.all(
       keys.map(async (k) => {
         const url = `${this.bucketUrl}/${encodeURIComponent(k)}`;
-        const res = await this.client.fetch(url, { method: "DELETE" });
+        const res = await this.client.fetch(url, { method: METHOD_DELETE });
         // S3 returns 204 on success, 404 if not found is often treated as success in delete idempotency
         if (!res.ok && res.status !== 404) {
           throw new Error(`S3 DELETE failed for ${k}`);
@@ -402,22 +376,24 @@ export class S3Bucket implements R2Bucket {
 
   async list(options?: R2ListOptions): Promise<R2Objects> {
     const url = new URL(this.bucketUrl);
-    url.searchParams.set("list-type", "2"); // Use S3 ListObjectsV2
+    url.searchParams.set(SEARCH_PARAM_LIST_TYPE, "2"); // Use S3 ListObjectsV2
 
-    if (options?.prefix) {
-      url.searchParams.set("prefix", options.prefix);
-    }
-    if (options?.cursor) {
-      url.searchParams.set("continuation-token", options.cursor);
-    }
-    if (options?.limit) {
-      url.searchParams.set("max-keys", options.limit.toString());
-    }
-    if (options?.delimiter) {
-      url.searchParams.set("delimiter", options.delimiter);
+    if (options) {
+      if (options.prefix) {
+        url.searchParams.set(SEARCH_PARAM_PREFIX, options.prefix);
+      }
+      if (options.cursor) {
+        url.searchParams.set(SEARCH_PARAM_CONTINUATION_TOKEN, options.cursor);
+      }
+      if (options.limit) {
+        url.searchParams.set(SEARCH_PARAM_MAX_KEYS, options.limit.toString());
+      }
+      if (options.delimiter) {
+        url.searchParams.set(SEARCH_PARAM_DELIMITER, options.delimiter);
+      }
     }
 
-    const res = await this.client.fetch(url.toString(), { method: "GET" });
+    const res = await this.client.fetch(url.toString(), { method: METHOD_GET });
     if (!res.ok) {
       throw new Error(`S3 LIST failed: ${res.status}`);
     }
@@ -427,12 +403,12 @@ export class S3Bucket implements R2Bucket {
     console.log("list", xml);
 
     // Parse Objects
-    const contents = XML.parseList(xml, "Contents");
+    const contents = XML.parseList(xml, XML_TAG_CONTENTS);
     const objects: R2Object[] = contents.map((block) => {
-      const key = XML.parseValue(block, "Key") || "";
-      const size = Number(XML.parseValue(block, "Size"));
-      const etag = XML.parseValue(block, "ETag") || "";
-      const lastMod = new Date(XML.parseValue(block, "LastModified") || Date.now());
+      const key = XML.parseValue(block, XML_TAG_KEY) || "";
+      const size = Number(XML.parseValue(block, XML_TAG_SIZR));
+      const etag = XML.parseValue(block, XML_TAG_ETAG) || "";
+      const lastMod = new Date(XML.parseValue(block, XML_TAG_LAST_MODIFIED) || Date.now());
 
       // Note: S3 List response does not return Custom Metadata/HTTP Metadata.
       // R2 List also implies this limitation (you often have to HEAD to get full metadata).
@@ -440,13 +416,13 @@ export class S3Bucket implements R2Bucket {
     });
 
     // Parse Common Prefixes (folders)
-    const commonPrefixes = XML.parseList(xml, "CommonPrefixes")
-      .map((block) => XML.parseValue(block, "Prefix") || "")
+    const commonPrefixes = XML.parseList(xml, XML_TAG_COMMON_PREFIXES)
+      .map((block) => XML.parseValue(block, XML_TAG_PREFIX) || "")
       .filter(Boolean);
 
     // Parse Pagination
-    const isTruncated = XML.parseValue(xml, "IsTruncated") === "true";
-    const nextCursor = XML.parseValue(xml, "NextContinuationToken");
+    const isTruncated = XML.parseValue(xml, XML_TAG_IS_TRUNCATED) === XML_VALUE_TRUE;
+    const nextCursor = XML.parseValue(xml, XML_TAG_NEXT_CONTINUATION_TOKEN);
 
     return {
       objects,
@@ -460,26 +436,23 @@ export class S3Bucket implements R2Bucket {
 
   async createMultipartUpload(key: string, options?: R2MultipartOptions): Promise<R2MultipartUpload> {
     const url = new URL(`${this.bucketUrl}/${encodeURIComponent(key)}`);
-    url.searchParams.set("uploads", ""); // S3 initiate multipart
+    url.searchParams.set(UPLOADS_VARIABLE, ""); // S3 initiate multipart
 
     const headers = new Headers();
     if (options?.httpMetadata) {
-      // ... (Add Metadata headers same as PUT)
-      if ("contentType" in options.httpMetadata && options.httpMetadata.contentType)
-        headers.set("Content-Type", options.httpMetadata.contentType);
-      // Add other metadata mapping here if needed
+      applyHttpMeta2Headers(headers, options.httpMetadata);
     }
     if (options?.customMetadata) {
-      Object.entries(options.customMetadata).forEach(([k, v]) => headers.set(`x-amz-meta-${k}`, v));
+      applyCustomMeta2Headers(headers, options.customMetadata);
     }
 
-    const res = await this.client.fetch(url.toString(), { method: "POST", headers });
+    const res = await this.client.fetch(url.toString(), { method: METHOD_POST, headers });
     if (!res.ok) {
       throw new Error(`S3 Initiate Multipart failed: ${res.status}`);
     }
 
     const xml = await res.text();
-    const uploadId = XML.parseValue(xml, "UploadId");
+    const uploadId = XML.parseValue(xml, XML_TAG_UPLOAD_ID);
 
     if (!uploadId) {
       throw new Error("Failed to parse UploadId from S3 response");
@@ -490,5 +463,97 @@ export class S3Bucket implements R2Bucket {
 
   resumeMultipartUpload(key: string, uploadId: string): R2MultipartUpload {
     return new S3MultipartUpload(this.client, this.bucketUrl, key, uploadId);
+  }
+}
+
+function applyCustomMeta2Headers(headers: Headers, customMetadata: Record<string, string>) {
+  Object.entries(customMetadata).forEach(([k, v]) => {
+    headers.set(HEADER_PREFIX_X_AMAZON_META + k, v);
+  });
+}
+
+function applyRange2Headers(headers: Headers, range: Headers | R2Range) {
+  if (range instanceof Headers) {
+    const rangeHeader = range.get(HEADER_RANGE);
+    if (rangeHeader) {
+      headers.set(HEADER_RANGE, rangeHeader);
+    }
+  } else {
+    if ("offset" in range) {
+      const len = range.length;
+      const start = range.offset || 0;
+      const end = len ? start + len - 1 : undefined;
+      headers.set(HEADER_RANGE, rangeHeader(start, end));
+    } else if ("suffix" in range) {
+      headers.set(HEADER_RANGE, rangeHeader(-range.suffix));
+    }
+  }
+}
+
+function applyOnlyIf2Headers(headers: Headers, onlyIf: R2Conditional | Headers) {
+  if (onlyIf instanceof Headers) {
+    const ifMatch = onlyIf.get(HEADER_IF_MATCH);
+    if (ifMatch) {
+      headers.set(HEADER_IF_MATCH, ifMatch);
+    }
+    const ifNoneMatch = onlyIf.get(HEADER_IF_NONE_MATCH);
+    if (ifNoneMatch) {
+      headers.set(HEADER_IF_NONE_MATCH, ifNoneMatch);
+    }
+    const ifModifiedSince = onlyIf.get(HEADER_IF_MODIFIED_SINCE);
+    if (ifModifiedSince) {
+      headers.set(HEADER_IF_MODIFIED_SINCE, ifModifiedSince);
+    }
+    const ifUnmodifiedSince = onlyIf.get(HEADER_IF_UNMODIFIED_SINCE);
+    if (ifUnmodifiedSince) {
+      headers.set(HEADER_IF_UNMODIFIED_SINCE, ifUnmodifiedSince);
+    }
+  } else {
+    if (onlyIf.etagMatches) {
+      headers.set(HEADER_IF_MATCH, onlyIf.etagMatches);
+    }
+    if (onlyIf.etagDoesNotMatch) {
+      headers.set(HEADER_IF_NONE_MATCH, onlyIf.etagDoesNotMatch);
+    }
+    if (onlyIf?.uploadedAfter) {
+      headers.set(HEADER_IF_MODIFIED_SINCE, onlyIf.uploadedAfter.toUTCString());
+    }
+    if (onlyIf?.uploadedBefore) {
+      headers.set(HEADER_IF_UNMODIFIED_SINCE, onlyIf.uploadedBefore.toUTCString());
+    }
+  }
+}
+
+function applyHttpMeta2Headers(headers: Headers, httpMetadata: Headers | R2HTTPMetadata) {
+  if (httpMetadata instanceof Headers) {
+    const contentType = httpMetadata.get(HEADER_CONTENT_TYPE);
+    if (contentType) {
+      headers.set(HEADER_CONTENT_TYPE, contentType);
+    }
+    const contentEncoding = httpMetadata.get(HEADER_CONTENT_ENCODING);
+    if (contentEncoding) {
+      headers.set(HEADER_CONTENT_ENCODING, contentEncoding);
+    }
+    const contentDisposition = httpMetadata.get(HEADER_CONTENT_DISPOSITION);
+    if (contentDisposition) {
+      headers.set(HEADER_CONTENT_DISPOSITION, contentDisposition);
+    }
+    const cacheControl = httpMetadata.get(HEADER_CACHE_CONTROL);
+    if (cacheControl) {
+      headers.set(HEADER_CACHE_CONTROL, cacheControl);
+    }
+  } else {
+    if (httpMetadata.contentType) {
+      headers.set(HEADER_CONTENT_TYPE, httpMetadata.contentType);
+    }
+    if (httpMetadata.contentEncoding) {
+      headers.set(HEADER_CONTENT_ENCODING, httpMetadata.contentEncoding);
+    }
+    if (httpMetadata.contentDisposition) {
+      headers.set(HEADER_CONTENT_DISPOSITION, httpMetadata.contentDisposition);
+    }
+    if (httpMetadata.cacheControl) {
+      headers.set(HEADER_CACHE_CONTROL, httpMetadata.cacheControl);
+    }
   }
 }

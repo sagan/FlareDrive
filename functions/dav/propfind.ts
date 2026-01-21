@@ -7,6 +7,7 @@ import {
   HEADER_INAPP,
   MIME_XML,
   WEBDAV_ENDPOINT,
+  ROOT_OBJECT,
   isHttpsOrLocalUrl,
   isDirectory,
   getR2FileMd5,
@@ -15,7 +16,7 @@ import {
   R2ObjectAlike,
 } from "../../lib/commons";
 import { findChildren, responseNotFound } from "../commons";
-import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { RequestHandlerParams } from "./utils";
 
 type DavProperties = {
   creationdate: string | undefined;

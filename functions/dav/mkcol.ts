@@ -1,7 +1,13 @@
-import { HEADER_DIR_EXISTS, KEY_PREFIX_PRIVATE, MIME_DIR, dirname, isDirectory } from "../../lib/commons";
-import { checkInvalidUserFileKey, responseConflict, responseCreated, responseMethodNotAllowed } from "../commons";
+import { HEADER_DIR_EXISTS, KEY_PREFIX_PRIVATE, MIME_DIR, isDirectory } from "../../lib/commons";
+import {
+  checkInvalidUserFileKey,
+  getParent,
+  responseConflict,
+  responseCreated,
+  responseMethodNotAllowed,
+} from "../commons";
 import { upsertDbFile } from "../db";
-import { RequestHandlerParams, ROOT_OBJECT } from "./utils";
+import { RequestHandlerParams } from "./utils";
 
 export async function handleRequestMkcol({ bucket, context, path }: RequestHandlerParams) {
   if (!path.endsWith("/")) {
@@ -18,9 +24,8 @@ export async function handleRequestMkcol({ bucket, context, path }: RequestHandl
   }
 
   // Check if the parent directory exists
-  const parentPath = dirname(path);
-  const parentDir = parentPath === "" ? ROOT_OBJECT : await bucket.head(parentPath);
-  if (parentDir === null) {
+  const parentDir = await getParent(bucket, path);
+  if (parentDir === null || !isDirectory(parentDir)) {
     return responseConflict();
   }
 

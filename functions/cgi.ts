@@ -4,12 +4,18 @@ import SparkMD5 from "spark-md5";
 import {
   CACHE_CONTROL_NO_CACHE,
   CONTENT_SECURITY_POLICY_SANDBOX,
+  CONTENT_TYPE_OPTIONS_NOSNIFF,
   HEADER_CACHE_CONTROL,
   HEADER_CONTENT_SECURITY_POLICY,
   HEADER_CONTENT_TYPE,
+  HEADER_CONTENT_TYPE_OPTIONS,
+  HEADER_REFERRER_POLICY,
   METHODS,
+  METHOD_GET,
   MIME_TXT,
+  REFERRER_POLICY_NOREFERRER,
   STRONG_PASSWORD_LENGTH,
+  hmacSha256Sign,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 import { generatePassword } from "@/src/commons";
@@ -33,6 +39,8 @@ const TPL_CONTEXT_KEY_DATA = "_data";
  * Request variable key in context.
  */
 const TPL_CONTEXT_KEY_REQUEST = "request";
+
+const TPL_CONTEXT_KEY_ENV = "env";
 
 const TPL_CONTEXT_KEY_HEADERS_STATUS = "Status"; // in compliance with CGI
 
@@ -65,12 +73,22 @@ function parseArgs(str: string): unknown[] {
 }
 
 /**
+ * "content-type" => "Content-Type".
+ */
+function normalizeHeaderName(name: string): string {
+  return name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("-");
+}
+
+/**
  * Convert Headers to Record. Since liquidjs template can't handle Headers type.
  */
 function headers2Record(headers: Headers): Record<string, string> {
   const record: Record<string, string> = {};
   headers.forEach((value, key) => {
-    record[key] = value;
+    record[normalizeHeaderName(key)] = value;
   });
   return record;
 }
@@ -100,6 +118,25 @@ const engine = new Liquid({
 
 engine.registerFilter("json_parse", (str) => JSOX.parse(str));
 
+// {%- assign url = "https://example.com/" | url_parse -%}
+engine.registerFilter("url_parse", (str, baseUrl) => {
+  const url = new URL(str, baseUrl || undefined);
+  return {
+    href: url.href,
+    protocol: url.protocol,
+    hostname: url.hostname,
+    port: url.port,
+    pathname: url.pathname,
+    search: url.search,
+    hash: url.hash,
+    host: url.host,
+    origin: url.origin,
+    username: url.username,
+    password: url.password,
+    searchParams: Object.fromEntries(url.searchParams),
+  };
+});
+
 engine.registerFilter("query_string", (input: string | Record<string, string>, key?: string) => {
   if (typeof input === "object") {
     if (key) {
@@ -107,12 +144,7 @@ engine.registerFilter("query_string", (input: string | Record<string, string>, k
     }
     return new URLSearchParams(input).toString();
   }
-  let searchParams: URLSearchParams;
-  try {
-    searchParams = new URL(input).searchParams;
-  } catch (e) {
-    searchParams = new URLSearchParams(input);
-  }
+  const searchParams = new URLSearchParams(input);
   if (key) {
     return searchParams.get(key);
   }
@@ -148,6 +180,11 @@ engine.registerFilter("sha256sum", async (str, binaryString?: boolean) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 });
 
+engine.registerFilter("hmac_sha256_sign", async (payload: string, key: string) => {
+  const sign = await hmacSha256Sign(key, payload);
+  return sign;
+});
+
 /*
 {% fetch "variableName" "url" %}
 
@@ -176,7 +213,7 @@ engine.registerTag("fetch", {
     const variableName = `${yield evalToken(args[0], ctx)}`;
     const url = new URL(`${yield evalToken(args[1], ctx)}`, selfRequest.url);
 
-    let method = "GET";
+    let method = METHOD_GET;
     let requestBody: string | undefined;
     let nobodyMode = false;
     const headers: Record<string, string> = {};
@@ -193,7 +230,7 @@ engine.registerTag("fetch", {
         const index = token.indexOf(":");
         if (index != -1) {
           // A "Content-Type: application/json" style header
-          headers[token.slice(0, index).trim()] = token.slice(index + 1).trim();
+          headers[normalizeHeaderName(token.slice(0, index).trim())] = token.slice(index + 1).trim();
         }
       }
     }
@@ -268,8 +305,9 @@ engine.registerTag("set_header", {
     let value = "";
     name = yield evalToken(args[0], ctx);
     if (typeof name === "object") {
-      for (const key in name) {
+      for (let key in name) {
         const value = name[key];
+        key = normalizeHeaderName(key);
         if (value) {
           headers[key] = value;
         } else {
@@ -285,7 +323,7 @@ engine.registerTag("set_header", {
       const index = name.indexOf(":");
       if (index != -1) {
         value = name.slice(index + 1).trim();
-        name = name.slice(0, index).trim();
+        name = normalizeHeaderName(name.slice(0, index).trim());
       }
     }
     if (value) {
@@ -327,7 +365,12 @@ engine.registerTag("set_body", {
 /**
  * Render an LiquidJs template
  */
-export async function executeCgi(request: Request, template: string, fullHtml = false): Promise<Response> {
+export async function executeCgi(
+  request: Request,
+  template: string,
+  fullHtml = false,
+  env: Record<string, string> = {}
+): Promise<Response> {
   try {
     const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
     const requestHeaders = headers2Record(request.headers);
@@ -341,6 +384,7 @@ export async function executeCgi(request: Request, template: string, fullHtml = 
       [TPL_CONTEXT_KEY_REQUEST]: req,
       [TPL_CONTEXT_KEY_HEADERS]: headers,
       [TPL_CONTEXT_KEY_DATA]: data,
+      [TPL_CONTEXT_KEY_ENV]: env,
     };
     const tpl = engine.parse(template);
     const html = await engine.render(tpl, context);
@@ -361,15 +405,20 @@ export async function executeCgi(request: Request, template: string, fullHtml = 
     for (const name in headers) {
       actualHeaders.set(`${name}`, `${headers[name]}`);
     }
+    actualHeaders.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);
+    actualHeaders.set(HEADER_REFERRER_POLICY, REFERRER_POLICY_NOREFERRER);
+    if (!actualHeaders.has(HEADER_CACHE_CONTROL)) {
+      actualHeaders.set(HEADER_CACHE_CONTROL, CACHE_CONTROL_NO_CACHE);
+    }
     if (!fullHtml) {
       actualHeaders.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     }
-    actualHeaders.set(HEADER_CACHE_CONTROL, CACHE_CONTROL_NO_CACHE);
     return new Response(body, {
       status,
       headers: actualHeaders,
     });
   } catch (err) {
-    return responseInternalServerError(`${err}`);
+    console.log("cgi error", err);
+    return responseInternalServerError();
   }
 }

@@ -2,6 +2,8 @@ import {
   THUMBNAIL_EXT_VARIABLE,
   HEADER_AUTHED,
   HEADER_AUTHORIZATION,
+  HEADER_CACHE_CONTROL,
+  CACHE_CONTROL_CACHE_LONGTIME,
   KEY_PREFIX_THUMBNAIL,
   PRIVATE_URL_TTL,
   THUMBNAIL_COLOR_VARIABLE,
@@ -71,7 +73,7 @@ export const onRequestGet: FdCfFunc = async function (context) {
   const headers = new Headers();
   obj.writeHttpMetadata(headers);
   headers.set(HEADER_AUTHED, "1");
-  headers.set("Cache-Control", "max-age=31536000");
+  headers.set(HEADER_CACHE_CONTROL, CACHE_CONTROL_CACHE_LONGTIME);
   return new Response(obj.body, { headers });
 };
 

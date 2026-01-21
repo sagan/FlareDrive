@@ -1,3 +1,4 @@
+import { METHOD_OPTIONS } from "../../lib/commons";
 import { FdCfFunc, checkAuthFailure, getPathArray, responseMethodNotAllowed } from "../commons";
 import { handleRequestCopy } from "./copy";
 import { handleRequestDelete } from "./delete";
@@ -37,7 +38,7 @@ export const onRequest: FdCfFunc = async function (context) {
   const request: Request = context.request;
   const url = new URL(request.url);
   const bucket = getStorage(env);
-  if (request.method === "OPTIONS") {
+  if (request.method === METHOD_OPTIONS) {
     return handleRequestOptions();
   }
 

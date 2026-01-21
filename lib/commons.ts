@@ -25,9 +25,9 @@ export const KEY_GLOBAL_CONFIG = "globalConfig";
 export const FORCR_VARIABLE = "force";
 
 /**
- * Cloud Download default file size limit (bytes): 10MiB.
+ * Cloud Download default file size limit (bytes): 100MiB.
  */
-export const CLOUD_DOWNLOAD_SIZE_LIMIT = 50 * 1024 * 1024;
+export const CLOUD_DOWNLOAD_SIZE_LIMIT = 100 * 1024 * 1024;
 
 export const ID_VARIABLE = "id";
 
@@ -127,33 +127,49 @@ export const UPLOAD_ID_VARIABLE = "uploadId";
  */
 export const PART_NUMBER_VARIABLE = "partNumber";
 
-// Note: don't use "as const" style declaration due to
-// https://stackoverflow.com/questions/56565528/typescript-const-assertions-how-to-use-array-prototype-includes .
-/**
- * simple "read" http methods: [GET, HEAD, OPTIONS, PROPFIND].
- * It includes PROPFIND method which is used by WebDAV protocol to list dir.
- */
-export const METHODS_READ_DIR = ["GET", "HEAD", "OPTIONS", "PROPFIND"] as const;
+export const METHOD_GET = "GET";
+export const METHOD_HEAD = "HEAD";
+export const METHOD_OPTIONS = "OPTIONS";
+export const METHOD_POST = "POST";
+export const METHOD_PUT = "PUT";
+export const METHOD_DELETE = "DELETE";
+export const METHOD_PATCH = "PATCH";
+
+// webdav extend methods
+export const METHOD_PROPFIND = "PROPFIND";
+export const METHOD_MKCOL = "MKCOL";
+export const METHOD_COPY = "COPY";
+export const METHOD_MOVE = "MOVE";
 
 /**
- * simple file "read" http methods: [GET, HEAD, OPTIONS].
+ * simple "read" http methods.
+ * It includes PROPFIND method which is used by WebDAV protocol to list dir.
  */
-export const METHODS_READ_FILE = ["GET", "HEAD", "OPTIONS"] as const;
+export const METHODS_READ_DIR = [METHOD_GET, METHOD_HEAD, METHOD_OPTIONS, METHOD_PROPFIND] as const;
+
+/**
+ * simple "read" (no mutation) http methods
+ */
+export const METHODS_READ = [METHOD_GET, METHOD_HEAD, METHOD_OPTIONS] as const;
+
+export const METHODS_WITH_BODY = [METHOD_POST, METHOD_PUT, METHOD_DELETE, METHOD_PATCH, METHOD_MKCOL] as const;
 
 /**
  * http methods
  */
 export const METHODS = [
-  "GET",
-  "HEAD",
-  "OPTIONS",
-  "PROPFIND",
-  "PUT",
-  "POST",
-  "DELETE",
-  "MKCOL",
-  "COPY",
-  "MOVE",
+  METHOD_GET,
+  METHOD_HEAD,
+  METHOD_OPTIONS,
+  METHOD_POST,
+  METHOD_PUT,
+  METHOD_DELETE,
+  METHOD_PATCH,
+
+  METHOD_PROPFIND,
+  METHOD_MKCOL,
+  METHOD_COPY,
+  METHOD_MOVE,
 ] as const;
 
 /**
@@ -275,6 +291,8 @@ export const MIME_TOML = "application/toml";
  */
 export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
 
+export const HEADER_PREFIX_X_AMAZON_META = "x-amz-meta-";
+
 export const HEADER_RANGE = "Range";
 
 /**
@@ -317,13 +335,33 @@ export const HEADER_AUTHORIZATION = "Authorization";
 
 export const HEADER_CONTENT_TYPE = "Content-Type";
 
+export const HEADER_CONTENT_LANGUAGE = "Content-Language";
+
+export const HEADER_CONTENT_ENCODING = "Content-Encoding";
+
+export const HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+
+export const HEADER_CONTENT_MD5 = "Content-MD5";
+
+export const HEADER_IF_MATCH = "If-Match";
+
+export const HEADER_IF_NONE_MATCH = "If-None-Match";
+
+export const HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
+
 export const HEADER_LOCATION = "Location";
 
 export const HEADER_CONTENT_SECURITY_POLICY = "Content-Security-Policy";
 
 export const HEADER_CACHE_CONTROL = `Cache-Control`;
 
+export const HEADER_CONTENT_TYPE_OPTIONS = "X-Content-Type-Options";
+
 export const CACHE_CONTROL_NO_CACHE = `no-cache, no-store, must-revalidate`;
+
+export const CACHE_CONTROL_CACHE_LONGTIME = "max-age=31536000";
+
+export const CONTENT_TYPE_OPTIONS_NOSNIFF = "nosniff";
 
 /**
  * A restrictive Content-Security-Policy for serving user-provided content.
@@ -348,6 +386,8 @@ export const HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
 export const HEADER_REFERER = "Referer";
 
 export const HEADER_REFERRER_POLICY = "Referrer-Policy";
+
+export const REFERRER_POLICY_NOREFERRER = "no-referrer";
 
 /**
  * CF image header.
@@ -384,6 +424,8 @@ export const HEADER_SOURCE_ASYNC = "X-Source-Async";
 export const INDEX_FILE = "index.html";
 
 export const INDEX_CGI = "index.cgi";
+
+export const FALLBACK_CGI = "404.cgi";
 
 /**
  * System files which only admin can manage / write / update:
@@ -455,12 +497,12 @@ export interface ShareObject {
   auth?: string;
 
   /**
-   * Optional share description
+   * Optional share description. Visible to everyone.
    */
   desc?: string;
 
   /**
-   * Optional share comment (only visible to admin)
+   * Optional share comment. Only visible to admin.
    */
   comment?: string;
 
@@ -490,6 +532,11 @@ export interface ShareObject {
    * Enable CGI. Render .cgi file as liquidjs template; use index.cgi as default dir index.
    */
   cgi?: boolean;
+
+  /**
+   * Environment data. Apply to CGI only.
+   */
+  env?: Record<string, string>;
 }
 
 export interface ThumbnailObject {
@@ -505,6 +552,10 @@ export function dirname(path: string): string {
   return path.split(/[\\/]/).slice(0, -1).join("/");
 }
 
+/**
+ * Return basename of path. It removes the starting / trailing slash of path first.
+ * Both "foo/bar" and "foo/bar/" => "bar". "/" => "".
+ */
 export function basename(path: string): string {
   path = trimPrefixSuffix(path, "/");
   return path.split(/[\\/]/).pop()!;
@@ -566,12 +617,18 @@ export function trimPrefixSuffix(str: string, prefixSuffix: string): string {
   return trimSuffix(trimPrefix(str, prefixSuffix), prefixSuffix);
 }
 
-export function cleanPath(path: string): string {
+/**
+ * Return the cleaned dir object key of path. The returned value always have a trailing slash.
+ * If path is "", return "/".
+ */
+export function cleanDirPath(path: string): string {
   path = path.trim();
-  if (path == "/") {
-    return path;
+  if (path === "" || path === "/") {
+    return "/";
   }
-  path = trimSuffix(path, "/");
+  if (!path.endsWith("/")) {
+    path += "/";
+  }
   return path;
 }
 
@@ -1022,6 +1079,18 @@ export interface R2ObjectAlike {
   };
 }
 
+export const ROOT_OBJECT: R2ObjectAlike = {
+  key: "",
+  uploaded: new Date(),
+  httpMetadata: {
+    contentType: MIME_DIR,
+  },
+  checksums: {},
+  customMetadata: undefined,
+  size: 0,
+  etag: "",
+};
+
 /**
  * Return whether the R2Object is a html file
  */
@@ -1342,3 +1411,37 @@ export async function str2Html(text: string, mime = ""): Promise<string> {
   }
   return "";
 }
+
+/**
+ * Return http Range header.
+ */
+export function rangeHeader(start: number, end?: number, ...additionalRanges: number[]): string {
+  if (end === undefined) {
+    return `bytes=${start}-`;
+  }
+  let range = `bytes=${start}-${end}`;
+  for (let i = 0; i < additionalRanges.length; i += 2) {
+    const s = additionalRanges[i];
+    const e = additionalRanges[i + 1];
+    if (s !== undefined) {
+      range += `,${s}-${e !== undefined ? e : ""}`;
+    }
+  }
+  return range;
+}
+
+/**
+ * md5 hex string regexp
+ */
+export const MD5_REGEXP = /^[a-f0-9]{32}$/i;
+
+/**
+ * Database file search special meta query regexp.
+ * E.g. "meta:url", "meta:url=https://example.com", "meta:url^=https://".
+ * Sub groups:
+ * - \1 : meta name
+ * - \2 : optional match mode. similar to CSS attribute selector.
+ * empty = exact, "^" = prefix, "$" = suffix, "*" = include.
+ * - \3 : optional meta value (may be empty).
+ */
+export const QUERY_META_REGEXP = /^meta:(.+?)(?:(\^|\$|\*)?=(.*))?$/;

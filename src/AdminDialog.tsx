@@ -16,17 +16,22 @@ import StatisticsAdmin from "./components/StatisticsAdmin";
 import packageInfo from "../package.json";
 import { GlobalConfig, KEY_PART_SEARCH, SEARCH_MAGIC_WORD_LARGEST, SEARCH_MAGIC_WORD_RECENT } from "../lib/commons";
 import { Link } from "react-router-dom";
+import { search2Cwd } from "./commons";
 
 
 export default function AdminDialog({
   currentDir,
   open,
   onClose,
+  setCwd,
+  setSearch,
   setGlobalConfig,
 }: {
   currentDir: string;
   open: boolean;
   onClose: () => void;
+  setCwd: (cwd: string) => void;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
   setGlobalConfig: React.Dispatch<React.SetStateAction<GlobalConfig>>
 }) {
   const [tab, setTab] = useState(0);
@@ -68,8 +73,16 @@ export default function AdminDialog({
           </Typography>
           <Typography >
             <ul>
-              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_LARGEST}>Largest files</Link></li>
-              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_RECENT}>Recent files</Link></li>
+              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_LARGEST} onClick={e => {
+                e.preventDefault();
+                setSearch(SEARCH_MAGIC_WORD_LARGEST);
+                setCwd(search2Cwd(SEARCH_MAGIC_WORD_LARGEST));
+              }}>Largest files</Link></li>
+              <li><Link to={"/" + KEY_PART_SEARCH + "/" + SEARCH_MAGIC_WORD_RECENT} onClick={e => {
+                e.preventDefault();
+                setSearch(SEARCH_MAGIC_WORD_RECENT);
+                setCwd(search2Cwd(SEARCH_MAGIC_WORD_RECENT));
+              }}>Recent files</Link></li>
             </ul>
           </Typography>
         </Box>

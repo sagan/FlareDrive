@@ -8,7 +8,10 @@ import {
   Link,
   Typography,
 } from "@mui/material"
-import Editor, { EditorProps } from '@monaco-editor/react';
+import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
+import { loadLanguage, LanguageName } from '@uiw/codemirror-extensions-langs';
+import { EditorView } from '@codemirror/view';
+
 import SaveIcon from '@mui/icons-material/Save';
 import RestoreIcon from '@mui/icons-material/Restore';
 import EditIcon from '@mui/icons-material/Edit';
@@ -34,8 +37,8 @@ enum State {
   Saving,
 }
 
-const extLanguages: Record<string, string> = {
-  "": "plain", // fallback
+// Map extensions to CodeMirror LanguageNames
+const extToCodeMirrorLang: Record<string, string> = {
   ".c": "c",
   ".cs": "csharp",
   ".cpp": "cpp",
@@ -55,19 +58,33 @@ const extLanguages: Record<string, string> = {
   ".ts": 'typescript',
   ".yaml": "yaml",
   ".xml": "xml",
+  // Additions/Fallbacks
+  ".sh": "shell",
+  ".sql": "sql",
 }
 
 export default function EditorDialog({ filekey, open, close, setError }: FileViewerProps) {
   const globalConfig = useGlobalConfig();
   const { auth, effectiveAuth, authSearchParams, expires, editorPrompt, fullControl,
     setEditorPrompt, editorReadOnly, setEditorReadOnly } = useConfig();
-  const language = extLanguages[extname(filekey)] || extLanguages[""];
+
   const [state, setState] = useState<State>(State.Idle);
   const [contents, setContents] = useState<string | undefined>(undefined);
   const [changed, setChanged] = useState(false);
   const [ts, setTs] = useState(+new Date);
-  const editorRef = useRef<Parameters<Exclude<EditorProps["onMount"], undefined>>[0] | null>(null);
+
+  // Ref to access the CodeMirror instance imperatively
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
+
   const [permission] = useMemo(() => getFilePermission(filekey, globalConfig), [filekey, globalConfig]);
+
+  // Determine CodeMirror language extension
+  const extension = useMemo(() => {
+    const ext = extname(filekey);
+    const langName = extToCodeMirrorLang[ext];
+    return langName ? loadLanguage(langName as LanguageName) : null;
+  }, [filekey]);
+
   const fileLink = useMemo(() => fileUrl({
     key: filekey,
     auth,
@@ -91,12 +108,17 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
         if (size > EDIT_FILE_SIZE_LIMIT) {
           throw new Error(`file is too large: ${humanReadableSize(size)}`)
         }
-        const contents = await res.text()
-        setContents(contents)
+        const text = await res.text()
+        setContents(text)
         setChanged(false)
         setState(State.Editing)
-        if (editorRef.current) {
-          editorRef.current.setValue(contents)
+
+        // Update Editor Content manually if it's already mounted
+        if (editorRef.current?.view) {
+          const view = editorRef.current.view;
+          view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: text }
+          });
         }
       } catch (err) {
         setError(err)
@@ -109,7 +131,8 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     onLoad()
   }, [onLoad]);
 
-  const onChange: EditorProps["onChange"] = useCallback((value: string | undefined) => {
+  const onChange = useCallback((value: string) => {
+    // Only flag as changed if it actually differs from loaded contents
     setChanged(value !== contents)
   }, [contents])
 
@@ -136,7 +159,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   }, [close, changed])
 
   const onSave = useCallback(async () => {
-    if (!editorRef.current) {
+    if (!editorRef.current?.view) {
       return
     }
     if (editorPrompt && !confirm("Save changes?")) {
@@ -144,9 +167,11 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
     }
     try {
       setState(State.Saving)
-      const contents = editorRef.current.getValue()
-      await putFile({ key: filekey, auth: effectiveAuth, body: contents })
-      setContents(contents)
+      // Get value from CodeMirror View
+      const currentContent = editorRef.current.view.state.doc.toString();
+
+      await putFile({ key: filekey, auth: effectiveAuth, body: currentContent })
+      setContents(currentContent)
       setChanged(false)
       setTs(+new Date)
     } catch (err) {
@@ -156,19 +181,23 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   }, [editorPrompt, filekey, effectiveAuth, setError])
 
   const onReset = useCallback(() => {
-    if (!editorRef.current) {
+    if (!editorRef.current?.view) {
       return
     }
     if (editorPrompt && !confirm("Reset to original contents? all changes will be lost.")) {
       return
     }
-    editorRef.current.setValue(contents || "")
+    // Set value in CodeMirror View
+    const view = editorRef.current.view;
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: contents || "" }
+    });
   }, [contents, editorPrompt])
 
   const handleKeyDown: React.KeyboardEventHandler<unknown> = function (event) {
     // ctrl + s
     if ((event.ctrlKey || event.metaKey) && event.key === "s") {
-      event.preventDefault(); // Prevent the default browser behavior (saving the webpage)
+      event.preventDefault();
       if (state === State.Editing) {
         void onSave();
       }
@@ -179,7 +208,7 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
   const roMode = !permitWrite || !!editorReadOnly || state !== State.Editing
 
   return <Dialog open={open} onClose={onCloseNoPrompt} fullScreen>
-    <DialogTitle component={Typography} className='single-line' sx={{ p: 1 }}>
+    <DialogTitle component={Typography} className='single-line' sx={{ p: 1, pb: 0 }}>
       <IconButton title="Close" color='secondary' disabled={state !== State.Editing && state !== State.Idle}
         onClick={onClose}><CloseIcon /></IconButton>
       {({
@@ -191,8 +220,8 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
       <PriorityHighIcon fontSize='small' titleAccess="Unsaved" sx={{ visibility: changed ? "visible" : "hidden" }} />
       <Link href={viewLink}><span title={filekey}>{filekey}</span></Link>
     </DialogTitle>
-    <DialogContent onKeyDown={handleKeyDown}>
-      <Typography className="single-line">
+    <DialogContent onKeyDown={handleKeyDown} sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Typography className="single-line" sx={{ p: 2, pt: 0 }}>
         {permitWrite && <>
           <IconButton title={roMode ? "View Mode" : "Edit Mode"} color="secondary"
             disabled={changed || state !== State.Editing} onClick={() => setEditorReadOnly(v => +!v)}>
@@ -213,30 +242,45 @@ export default function EditorDialog({ filekey, open, close, setError }: FileVie
           </IconButton>
         </>}
         <CopyButton isIcon color="secondary" disabled={state === State.Loading} text={() => {
-          if (!editorRef.current) {
+          if (!editorRef.current?.view) {
             return ""
           }
-          return editorRef.current.getValue()
+          return editorRef.current.view.state.doc.toString()
         }}><ContentCopyIcon /></CopyButton>
         <IconButton title="Refresh" color='secondary' onClick={onLoad}
           disabled={changed || (state !== State.Editing && state !== State.Idle)}>
           <RefreshIcon />
         </IconButton>
       </Typography>
-      {/*
-      DialogTitle height: 40px + 16px (padding-top + padding-bottom ) = 56px
-      Toolbar height: 40px
-      DialogContent padding-bottom: 20px
-      */}
-      <Box sx={{ minHeight: "50vh", height: "calc(100vh - 116px)" }}>
-        {contents !== undefined && <Editor
-          key={filekey}
-          defaultLanguage={language}
-          defaultValue={contents}
-          onChange={onChange}
-          options={{ readOnly: roMode, domReadOnly: roMode, wordWrap: "on" }}
-          onMount={(editor) => editorRef.current = editor}
-        />}
+
+      {/* Editor Container */}
+      <Box sx={{
+        flexGrow: 1,
+        overflow: 'auto',
+        mt: 1,
+        borderTop: '1px solid rgba(0,0,0,0.12)',
+        fontSize: '14px'
+      }}>
+        {contents !== undefined && (
+          <CodeMirror
+            ref={editorRef}
+            value={contents}
+            height="100%"
+            extensions={[
+              EditorView.lineWrapping,
+              ...(extension ? [extension] : [])
+            ]}
+            onChange={onChange}
+            readOnly={roMode}
+            theme="light" // or 'dark'
+            basicSetup={{
+              foldGutter: true,
+              dropCursor: true,
+              allowMultipleSelections: true,
+              indentOnInput: true,
+            }}
+          />
+        )}
       </Box>
     </DialogContent>
   </Dialog >;

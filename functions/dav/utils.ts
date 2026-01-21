@@ -16,18 +16,6 @@ export interface RequestHandlerParams {
   authed?: boolean;
 }
 
-export const ROOT_OBJECT: R2ObjectAlike = {
-  key: "",
-  uploaded: new Date(),
-  httpMetadata: {
-    contentType: MIME_DIR,
-  },
-  checksums: {},
-  customMetadata: undefined,
-  size: 0,
-  etag: "",
-};
-
 /**
  * Test a R2 key has strict prefix.
  * "foo/bar" and "foo" has "foo" prefix, but "foobar" doesn't.
