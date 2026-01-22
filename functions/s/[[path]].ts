@@ -13,6 +13,7 @@ import {
   EXT_CGI,
   MIME_DEFAULT,
   FALLBACK_CGI,
+  FALLBACK_HTML,
   trimPrefix,
   ShareRefererMode,
   trimSuffix,
@@ -23,6 +24,8 @@ import {
   removeZeroFields,
   str2Html,
   getR2FileMd5,
+  trimPrefixSuffix,
+  basename,
 } from "../../lib/commons";
 import { isDirectory, isUrlFile } from "../../lib/mime";
 import {
@@ -135,7 +138,13 @@ export const onRequestDelete: FdCfFunc = async function (context) {
 
 export const onRequestGet: FdCfFunc = async function (context) {
   const { request, env, params } = context;
-  return handleGetShare({ request, env, path: getPathArray(context).join("/") });
+  const url = new URL(request.url);
+
+  let path = getPathArray(context).join("/");
+  if (path != "" && !path.endsWith("/") && url.pathname.endsWith("/")) {
+    path += "/";
+  }
+  return handleGetShare({ request, env, path });
 };
 
 // GET: request a shared file meta or contents
@@ -145,7 +154,7 @@ export const handleGetShare = async function ({
   path,
 }: {
   /**
-   * E.g. "foo/bar.txt". Each part already url decoded.
+   * E.g. "foo/bar.txt" or "foo/". Each part already url decoded.
    */
   path: string;
   /**
@@ -171,12 +180,16 @@ export const handleGetShare = async function ({
     }
   }
 
-  const pathParams = path.split("/");
+  const pathParams = trimPrefixSuffix(path, "/").split("/");
   if (requestMeta ? pathParams?.length != 1 : pathParams?.length < 1) {
     return responseBadRequest();
   }
   const sharekey = pathParams[0];
-  const relpath = pathParams.slice(1).join("/");
+  let relpath = pathParams.slice(1).join("/");
+  if (relpath && path.endsWith("/")) {
+    relpath += "/";
+  }
+
   const data = (await env.KV.get(SHARE_KEY_PREFIX + sharekey, "json")) as ShareObject | null;
   if (requestMeta) {
     return jsonResponse(data);
@@ -216,25 +229,41 @@ export const handleGetShare = async function ({
     return responseNotFound();
   }
 
-  const filekey = trimSuffix(data.key, "/") + (relpath ? "/" + relpath : "");
+  const fullHtml = !!data.fullHtml;
+  const cors = !!data.cors;
+  const html = !!str2int(searchParams.get(HTML_VARIABLE));
+  const raw = !!str2int(searchParams.get(RAW_VARIABLE));
+
+  const filekey = data.key + relpath;
   if (!data.cgi && filekey.endsWith(EXT_CGI)) {
     return responseForbidden();
   }
-  const obj = await bucket.get(filekey, {
+  let obj = await bucket.get(filekey, {
     onlyIf: request.headers,
     range: request.headers,
   });
+  if (!obj && filekey.endsWith("/")) {
+    // be compatible with prior v0.1.17: dir object doesn't end with "/".
+    obj = await bucket.get(filekey.slice(0, -1), {
+      onlyIf: request.headers,
+      range: request.headers,
+    });
+  }
   if (!obj) {
-    if (data.cgi && data.key.endsWith("/") && relpath) {
-      const fallbackCgi = await bucket.get(data.key + FALLBACK_CGI);
-      if (fallbackCgi) {
-        return executeCgi(request, await fallbackCgi.text(), data.fullHtml, data.env);
+    if (data.key.endsWith("/") && relpath) {
+      if (data.cgi) {
+        const fallbackCgi = await bucket.get(data.key + FALLBACK_CGI);
+        if (fallbackCgi) {
+          return executeCgi(request, await fallbackCgi.text(), data.fullHtml, data.env);
+        }
+      }
+      const fallbackHtml = await bucket.get(data.key + FALLBACK_HTML);
+      if (fallbackHtml) {
+        return outputR2Object({ obj: fallbackHtml, fullHtml, cors, html, raw });
       }
     }
     return responseNotFound();
   }
-  const fullHtml = !!data.fullHtml;
-  const cors = !!data.cors;
 
   if (isDirectory(obj)) {
     if (!url.pathname.endsWith("/")) {
@@ -242,16 +271,18 @@ export const handleGetShare = async function ({
       return responseRedirect(url.href);
     }
     if (data.cgi) {
-      const indexCgiObj = (await bucket.get(filekey + "/" + INDEX_CGI)) || (await bucket.get(data.key + FALLBACK_CGI));
+      const indexCgiObj =
+        (await bucket.get(filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_CGI)) ||
+        (await bucket.get(data.key + FALLBACK_CGI));
       if (indexCgiObj) {
         return executeCgi(request, await indexCgiObj.text(), data.fullHtml, data.env);
       }
     }
-    const indexHtmlObj = await bucket.get(filekey + "/" + INDEX_FILE, {
-      onlyIf: request.headers,
-      range: request.headers,
-    });
-
+    const indexHtmlObj =
+      (await bucket.get(filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_FILE, {
+        onlyIf: request.headers,
+        range: request.headers,
+      })) || (await bucket.get(data.key + FALLBACK_HTML));
     if (indexHtmlObj) {
       return outputR2Object({ obj: indexHtmlObj, cors, fullHtml });
     }
@@ -260,7 +291,7 @@ export const handleGetShare = async function ({
 
     let readme = "";
     for (const readmeFileName of README_FILES) {
-      const readmeFileKey = `${obj.key}/${readmeFileName}`;
+      const readmeFileKey = `${obj.key}${!obj.key.endsWith("/") ? "/" : ""}${readmeFileName}`;
       const readmeFile = await bucket.get(readmeFileKey);
       if (readmeFile) {
         const contents = await readmeFile.text();
@@ -322,13 +353,7 @@ export const handleGetShare = async function ({
     return executeCgi(request, await obj.text(), data.fullHtml, data.env);
   }
 
-  return outputR2Object({
-    obj,
-    fullHtml,
-    cors,
-    html: !!str2int(searchParams.get(HTML_VARIABLE)),
-    raw: !!str2int(searchParams.get(RAW_VARIABLE)),
-  });
+  return outputR2Object({ obj, fullHtml, cors, html, raw });
 };
 
 export const onRequestHead = getOnRequestHead(onRequestGet);
@@ -381,7 +406,7 @@ function indexPage(
 
   const tableRowsHtml = items
     .map((item) => {
-      const name = item.key.split("/").pop()!;
+      const name = basename(item.key);
       const isDir = isDirectory(item);
       const href =
         isUrlFile(item) && item.customMetadata?.url

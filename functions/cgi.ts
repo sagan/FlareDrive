@@ -12,12 +12,12 @@ import {
   HEADER_PREFIX_FLAREDRIVE,
   HEADER_REFERRER_POLICY,
   METHODS,
-  METHOD_GET,
   MIME_TXT,
   REFERRER_POLICY_NOREFERRER,
   STRONG_PASSWORD_LENGTH,
   hmacSha256Sign,
   normalizeHeaderName,
+  toArrayBuffer,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 import { generatePassword } from "@/src/commons";
@@ -153,17 +153,20 @@ engine.registerFilter("query_string", (input: string | Record<string, string>, k
   return Object.fromEntries(searchParams);
 });
 
+// {{ 30 | random_string %}}
+engine.registerFilter("random_string", (length, digitOnly?: boolean) =>
+  generatePassword(parseInt(length) || STRONG_PASSWORD_LENGTH, digitOnly)
+);
+
 // {{ "123456" | md5sum }}
-engine.registerFilter("md5sum", (str, binaryString?: boolean) => {
+engine.registerFilter("md5sum", (input, binaryString?: boolean) => {
   const spark = new SparkMD5();
-  spark.append(str);
+  spark.append(input); // it fails to do with ArrayBuffer
   return spark.end(binaryString);
 });
 
-engine.registerFilter("sha1sum", async (str, binaryString?: boolean) => {
-  const textEncoder = new TextEncoder();
-  const data = textEncoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+engine.registerFilter("sha1sum", async (input: unknown, binaryString?: boolean) => {
+  const hashBuffer = await crypto.subtle.digest("SHA-1", toArrayBuffer(input));
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   if (binaryString) {
     return String.fromCharCode(...hashArray);
@@ -171,10 +174,8 @@ engine.registerFilter("sha1sum", async (str, binaryString?: boolean) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 });
 
-engine.registerFilter("sha256sum", async (str, binaryString?: boolean) => {
-  const textEncoder = new TextEncoder();
-  const data = textEncoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+engine.registerFilter("sha256sum", async (input: unknown, binaryString?: boolean) => {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", toArrayBuffer(input));
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   if (binaryString) {
     return String.fromCharCode(...hashArray);
@@ -182,7 +183,7 @@ engine.registerFilter("sha256sum", async (str, binaryString?: boolean) => {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 });
 
-engine.registerFilter("hmac_sha256_sign", async (payload: string, key: string) => {
+engine.registerFilter("hmac_sha256_sign", async (payload: unknown, key: string) => {
   const sign = await hmacSha256Sign(key, payload);
   return sign;
 });
@@ -215,29 +216,36 @@ engine.registerTag("fetch", {
     const variableName = `${yield evalToken(args[0], ctx)}`;
     const url = new URL(`${yield evalToken(args[1], ctx)}`, selfRequest.url);
 
-    let method = METHOD_GET;
-    let requestBody: string | undefined;
     let nobodyMode = false;
-    const headers: Record<string, string> = {};
+    const request: RequestInit = {};
+    const headers = new Headers();
     const optionArgs = args.slice(2);
     for (const arg of optionArgs) {
-      const token = `${yield evalToken(arg, ctx)}`;
-      if ((METHODS as readonly string[]).includes(token)) {
-        method = token;
-      } else if (token === TPL_FETCH_NOBODY) {
-        nobodyMode = true;
-      } else if (token.startsWith("@")) {
-        requestBody = token.slice(1);
+      const value = yield evalToken(arg, ctx);
+      if (typeof value === "object") {
+        Object.assign(request, value);
       } else {
-        const index = token.indexOf(":");
-        if (index != -1) {
-          // A "Content-Type: application/json" style header
-          headers[normalizeHeaderName(token.slice(0, index).trim())] = token.slice(index + 1).trim();
+        const valueStr = `${value}`;
+        if ((METHODS as readonly string[]).includes(valueStr)) {
+          request.method = valueStr;
+        } else if (valueStr === TPL_FETCH_NOBODY) {
+          nobodyMode = true;
+        } else if (valueStr.startsWith("@")) {
+          request.body = valueStr.slice(1);
+        } else {
+          const index = valueStr.indexOf(":");
+          if (index != -1) {
+            // A "Content-Type: application/json" style header
+            headers.set(valueStr.slice(0, index).trim(), valueStr.slice(index + 1).trim());
+          }
         }
       }
     }
+    const finalHeaders = new Headers(request.headers);
+    headers.forEach((value, key) => finalHeaders.set(key, value));
+    request.headers = finalHeaders;
 
-    const res: Response = yield fetch(url, { method, headers, body: requestBody });
+    const res: Response = yield fetch(url, request);
     let body: ReadableStream | string | null = res.body;
     let data = null;
     if (!nobodyMode) {
@@ -259,25 +267,6 @@ engine.registerTag("fetch", {
     // Save to context
     const bottom = ctx.bottom() as Record<string, unknown>;
     bottom[variableName] = response;
-  },
-});
-
-// {%- random_string [length] -%}
-engine.registerTag("random_string", {
-  parse: function (tagToken) {
-    this.args = parseArgs(tagToken.args);
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  *render(ctx, emitter): Generator<unknown, any, any> {
-    const selfRequest = ctx.getSync([TPL_CONTEXT_KEY_REQUEST]) as SelfRequest;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const args = this.args as any[];
-    let length = STRONG_PASSWORD_LENGTH;
-    if (args.length > 0) {
-      length = parseInt(yield evalToken(args[0], ctx)) || STRONG_PASSWORD_LENGTH;
-    }
-    const str = generatePassword(length);
-    emitter.write(str);
   },
 });
 
@@ -353,8 +342,11 @@ engine.registerTag("set_body", {
   },
 });
 
-// Sample template:
 /*
+Sample templates.
+
+-----
+
 <h1>Async Fetch Test</h1>
 {% fetch "todoItem" "https://jsonplaceholder.typicode.com/todos/1" %}
 <div class="card">
@@ -362,6 +354,13 @@ engine.registerTag("set_body", {
     <p>Title: {{ todoItem.data.title }}</p>
     <p>Completed: {{ todoItem.data.completed }}</p>
 </div>
+
+-----
+
+{%- fetch "res" "https://raw.githubusercontent.com/pdx-cs-sound/wavs/refs/heads/main/car-horn.wav" "NOBODY" -%}
+
+{%- set_header "Content-Type" res.headers["Content-Type"] -%}
+{%- set_body res.body -%}
 */
 
 /**

@@ -299,7 +299,7 @@ export function jsonResponse(
 export function htmlResponse(html: string) {
   return new Response(html, {
     headers: {
-      [HEADER_CONTENT_TYPE]: MIME_MARKDOWN,
+      [HEADER_CONTENT_TYPE]: MIME_HTML,
     },
   });
 }

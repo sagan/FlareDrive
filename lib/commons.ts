@@ -459,6 +459,8 @@ export const INDEX_FILE = "index.html";
 
 export const INDEX_CGI = "index.cgi";
 
+export const FALLBACK_HTML = "404.html";
+
 export const FALLBACK_CGI = "404.cgi";
 
 /**
@@ -826,9 +828,23 @@ async function getHMACKey(key: string): Promise<CryptoKey> {
   return cryptokey;
 }
 
-export async function hmacSha256Sign(key: string, payload: string): Promise<string> {
+export function toArrayBuffer(input: unknown): ArrayBuffer {
+  if (input instanceof ArrayBuffer) {
+    return input;
+  } else if (input instanceof Uint8Array) {
+    return input.buffer as ArrayBuffer;
+  } else {
+    if (typeof input !== "string") {
+      input = JSON.stringify(input);
+    }
+    const textEncoder = new TextEncoder();
+    return textEncoder.encode(input as string).buffer;
+  }
+}
+
+export async function hmacSha256Sign(key: string, payload: unknown): Promise<string> {
   const singkey = await getHMACKey(key);
-  const signature = await crypto.subtle.sign("HMAC", singkey, new TextEncoder().encode(payload));
+  const signature = await crypto.subtle.sign("HMAC", singkey, toArrayBuffer(payload));
   return encodeHex(new Uint8Array(signature));
 }
 
@@ -837,13 +853,13 @@ export function hmacSha256SignSync(key: string, payload: string): string {
   return encodeHex(signature);
 }
 
-export async function hmacSha256Verify(key: string, signature: string, payload: string): Promise<boolean> {
+export async function hmacSha256Verify(key: string, signature: string, payload: unknown): Promise<boolean> {
   const singkey = await getHMACKey(key);
   const verified = await crypto.subtle.verify(
     "HMAC",
     singkey,
     decodeHex(signature) as BufferSource,
-    new TextEncoder().encode(payload)
+    toArrayBuffer(payload)
   );
   return verified;
 }
