@@ -18,6 +18,10 @@ import {
   HEADER_SOURCE_URL,
   HEADER_SOURCE_ASYNC,
   MIME_DEFAULT,
+  MIME_MP4,
+  MIME_PDF,
+  MIME_JSON,
+  MIME_CAT_IMAGE_PREFIX,
   HEADER_IF_UNMODIFIED_SINCE,
   HEADER_CONTENT_LENGTH,
   PART_NUMBER_VARIABLE,
@@ -177,7 +181,7 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
     contentType = mime.getType(url) || "";
   }
 
-  if (contentType.startsWith("image/")) {
+  if (contentType.startsWith(MIME_CAT_IMAGE_PREFIX)) {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
@@ -190,7 +194,7 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
     canvas.width = thumbWidth;
     canvas.height = thumbHeight;
     ctx.drawImage(image, 0, 0, thumbWidth, thumbHeight);
-  } else if (contentType === "video/mp4") {
+  } else if (contentType === MIME_MP4) {
     const video = await createAndLoadVideo(url);
     const scale = THUMBNAIL_SIZE / Math.max(video.videoWidth, video.videoHeight);
     const thumbWidth = video.videoWidth * scale;
@@ -198,7 +202,7 @@ export async function generateThumbnailFromUrl(url: string, contentType?: string
     canvas.width = thumbWidth;
     canvas.height = thumbHeight;
     ctx.drawImage(video, 0, 0, thumbWidth, thumbHeight);
-  } else if (contentType === "application/pdf") {
+  } else if (contentType === MIME_PDF) {
     const pdf = await pdfjs.getDocument(url).promise;
     const page = await pdf.getPage(1);
     const { width, height } = page.getViewport({ scale: 1 });
@@ -504,7 +508,7 @@ export async function processTransferTask({
   console.log("upload", task);
   if (
     isBasicAuthHeader(auth) &&
-    (file.type.startsWith("image/") || file.type === "video/mp4" || file.type === "application/pdf")
+    (file.type.startsWith(MIME_CAT_IMAGE_PREFIX) || file.type === MIME_MP4 || file.type === MIME_PDF)
   ) {
     try {
       const thumbnailBlob = await generateThumbnailFromFile(file);
@@ -581,7 +585,7 @@ export async function generateThumbnailsServerSide(
   const res = await fetch(THUMBNAIL_API + (force ? "?force=1" : ""), {
     method: METHOD_POST,
     headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
+      [HEADER_CONTENT_TYPE]: MIME_JSON,
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
     body: JSON.stringify({ keys }),

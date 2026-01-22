@@ -1,4 +1,4 @@
-import { HEADER_CONTENT_TYPE } from "../../lib/commons";
+import { CLEAR_SITE_DATA_ALL, HEADER_CLEAR_SITE_DATA, HEADER_CONTENT_TYPE, MIME_MARKDOWN } from "../../lib/commons";
 import { FdCfFunc } from "../commons";
 import buildVariables from "../../build_config.json";
 
@@ -23,8 +23,8 @@ export const onRequestGet: FdCfFunc = async function (context) {
     {
       status: 200,
       headers: {
-        [HEADER_CONTENT_TYPE]: "text/html",
-        "Clear-Site-Data": `"*"`,
+        [HEADER_CONTENT_TYPE]: MIME_MARKDOWN,
+        [HEADER_CLEAR_SITE_DATA]: CLEAR_SITE_DATA_ALL,
       },
     }
   );

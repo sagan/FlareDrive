@@ -8,30 +8,25 @@ import {
   HEADER_SOURCE_URL_OPTIONS,
   KEY_PREFIX_PRIVATE,
   KEY_PREFIX_THUMBNAIL,
-  MIME_DEFAULT,
   PART_NUMBER_VARIABLE,
   THUMBNAIL_VARIABLE,
   UPLOAD_ID_VARIABLE,
   HEADER_NO_THUMBNAIL,
+  MIME_DEFAULT,
   MIME_URL,
   URL_VARIABLE,
   COMMENT_VARIABLE,
   HEADER_LOCATION,
   SCOPE_GLOBAL,
   MD5_VARIABLE,
-  ROOT_OBJECT,
-  ThumbnailObject,
+  HEADER_ETAG,
   humanReadableSize,
   mimeType,
   sha256,
   str2int,
-  dirname,
-  isImage,
   validateAndGetSafeUrl,
-  isDirectory,
-  R2ObjectAlike,
 } from "../../lib/commons";
-import mime, { parseUrlFile } from "../../lib/mime";
+import mime, { parseUrlFile, isDirectory, isImage } from "../../lib/mime";
 import {
   checkConflict,
   checkInvalidUserFileKey,
@@ -65,11 +60,10 @@ async function handleRequestPutMultipart({ bucket, path, request }: RequestHandl
   const partNumber = parseInt(partNumberStr);
   const uploadedPart = await multipartUpload.uploadPart(partNumber, request.body);
 
-  // 2025-06 test: CF ignore application-set ETag header, so put result in response body
-  return new Response(JSON.stringify(uploadedPart), {
+  // 2025-06 test: CF ignores application-set ETag header, so also put result in response body
+  return jsonResponse(uploadedPart, {
     headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
-      // [HEADER_ETAG]: uploadedPart.etag,
+      [HEADER_ETAG]: uploadedPart.etag,
     },
   });
 }
@@ -98,7 +92,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
     if (digest === object.customMetadata?.thumbnail) {
       const currentThumbnailObj = await bucket.head(KEY_PREFIX_THUMBNAIL + digest);
       if (currentThumbnailObj) {
-        return jsonResponse<ThumbnailObject>({ digest });
+        return jsonResponse({ digest });
       }
     }
     await bucket.put(KEY_PREFIX_THUMBNAIL + digest, blob, {
@@ -121,7 +115,7 @@ export async function handleRequestPut({ context, bucket, path, request, scope }
         }
       }
     }
-    return jsonResponse<ThumbnailObject>({ digest });
+    return jsonResponse({ digest });
   }
 
   if (searchParams.has(UPLOAD_ID_VARIABLE)) {

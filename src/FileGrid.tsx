@@ -8,8 +8,9 @@ import {
 import MimeIcon from "./MimeIcon";
 import {
   EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE,
-  fileUrl, humanReadableSize, basename, str2int, isDirectory, isUrlFile, validateAndGetSafeUrl,
+  fileUrl, humanReadableSize, basename, str2int, validateAndGetSafeUrl,
 } from "../lib/commons";
+import { isDirectory, isUrlFile } from "../lib/mime";
 import { ViewProps, useConfig } from "./commons";
 
 

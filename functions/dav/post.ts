@@ -6,8 +6,8 @@ import {
   THUMBNAIL_VARIABLE,
   UPLOADS_VARIABLE,
   UPLOAD_ID_VARIABLE,
-  isImage,
 } from "../../lib/commons";
+import { isImage } from "../../lib/mime";
 import {
   checkInvalidUserFileKey,
   generateFileThumbnail,
@@ -18,6 +18,7 @@ import {
 import { upsertDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";
 
+// chunked uploads: initiate upload request
 export async function handleRequestPostCreateMultipart({ bucket, path, request }: RequestHandlerParams) {
   const searchParams = new URLSearchParams(new URL(request.url).search);
   const thumbnail = request.headers.get(HEADER_FD_THUMBNAIL);
@@ -39,6 +40,7 @@ export async function handleRequestPostCreateMultipart({ bucket, path, request }
   return new Response(JSON.stringify({ key, uploadId }));
 }
 
+// standard chunked uploads: finish request.
 export async function handleRequestPostCompleteMultipart({ context, bucket, path, request }: RequestHandlerParams) {
   const url = new URL(request.url);
   const uploadId = new URLSearchParams(url.search).get(UPLOAD_ID_VARIABLE);
@@ -84,11 +86,13 @@ export const handleRequestPost = async function ({ bucket, path, request, contex
     return invalidPathResponse;
   }
 
+  // chunked uploads: initiate upload request
   if (searchParams.has(UPLOADS_VARIABLE)) {
     return handleRequestPostCreateMultipart({ bucket, path, request, context, scope });
   }
 
   if (searchParams.has(UPLOAD_ID_VARIABLE)) {
+    // chunked uploads: finish request.
     return handleRequestPostCompleteMultipart({ bucket, path, request, context, scope });
   }
 

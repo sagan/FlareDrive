@@ -1,4 +1,5 @@
-import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL, isDirectory } from "../../lib/commons";
+import { KEY_PREFIX_PRIVATE, KEY_PREFIX_THUMBNAIL } from "../../lib/commons";
+import { isDirectory } from "../../lib/mime";
 import { listAll, responseNoContent, responseNotFound } from "../commons";
 import { deleteDbFile } from "../db";
 import { RequestHandlerParams } from "./utils";

@@ -12,11 +12,11 @@ import {
   TOKEN_VARIABLE,
   fileUrl,
   humanReadableSize,
-  isDirectory,
   basename,
   str2int,
   newFileName,
 } from "../lib/commons";
+import { isDirectory } from "../lib/mime";
 import { downloadFile, FileItem, useConfig } from "./commons";
 import { fetchPath } from "./app/transfer";
 

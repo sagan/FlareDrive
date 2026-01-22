@@ -14,8 +14,8 @@ import {
   EXPIRES_VARIABLE, SCOPE_VARIABLE, TOKEN_VARIABLE,
   dirname, fileUrl, parseFilePath, str2int
 } from '../lib/commons';
-import { FileViewerProps, dataUrltoBlob, useConfig } from './commons';
 import { putFile } from './app/transfer';
+import { FileViewerProps, dataUrltoBlob, useConfig } from './commons';
 
 export default function ImageEditorDialog({ filekey, open, close, setError }: FileViewerProps) {
   const { auth, effectiveAuth, authSearchParams, expires, fullControl } = useConfig()

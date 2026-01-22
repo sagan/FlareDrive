@@ -2,12 +2,12 @@ import { SyntheticEvent } from "react";
 import {
   KEY_PART_SEARCH,
   KEY_PART_SEARCH_FULL,
-  MIME_DEFAULT,
+  MIME_CAT_IMAGE_PREFIX,
+  HEADER_CONTENT_TYPE,
   SEARCH_MAGIC_WORD_LARGEST,
   SEARCH_MAGIC_WORD_RECENT,
   MD5_REGEXP,
   QUERY_META_REGEXP,
-  TXT_MIMES,
   Permission,
   mimeType,
   GlobalConfig,
@@ -119,19 +119,6 @@ export interface FileViewerProps {
   open: boolean;
   close: () => void;
   setError: React.Dispatch<React.SetStateAction<unknown>>;
-}
-
-export function isThumbnailPossible(file: FileItem) {
-  const ct = file.httpMetadata?.contentType;
-  return ct && (ct.startsWith("image/") || ct === "video/mp4" || ct === "application/pdf");
-}
-
-export function isTextual(file: FileItem): boolean {
-  const [mime] = mimeType(file.httpMetadata.contentType);
-  if (!mime || mime === MIME_DEFAULT) {
-    return file.size <= 1024 * 1024;
-  }
-  return mime.startsWith("text/") || TXT_MIMES.includes(mime);
 }
 
 export function downloadFile(url: string, filename = "") {
@@ -324,7 +311,7 @@ export function cwd2Search(cwd: string): [isSearch: boolean, keyword: string, op
  * @param res
  */
 export async function response2Html(res: Response): Promise<string> {
-  const [mime] = mimeType(res.headers.get("Content-Type"));
+  const [mime] = mimeType(res.headers.get(HEADER_CONTENT_TYPE));
   const text = await res.text();
   const html = await str2Html(text, mime);
   return html;
@@ -385,7 +372,7 @@ export async function getTransferFiles(items: DataTransferItemList): Promise<Rec
         if (ext) {
           ext = "." + ext;
         }
-        if (file.type.startsWith("image/")) {
+        if (file.type.startsWith(MIME_CAT_IMAGE_PREFIX)) {
           filename = `image-${Date.now()}${ext}`;
         } else {
           filename = `file-${Date.now()}${ext}`;

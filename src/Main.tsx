@@ -15,19 +15,16 @@ import Share from "yet-another-react-lightbox/plugins/share";
 import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
-  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, MIME_DIR, MIME_PDF, MIME_MARKDOWN, HTML_VARIABLE, MIME_URL,
+  TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, HTML_VARIABLE,
+  MIME_DIR, MIME_PDF, MIME_MARKDOWN, MIME_URL, MIME_DOCX,
   Permission, basename, cleanDirPath, compareBoolean, compareString, fileUrl, humanReadableSize,
-  trimPrefixSuffix, str2int, dirname, extname, appendQueryStringToUrl, isDirectory, isImage,
-  isUrlFile,
-  validateAndGetSafeUrl,
-  isAudio,
-  MIME_DOCX,
-  trimSuffix,
+  str2int, dirname, extname, appendQueryStringToUrl, validateAndGetSafeUrl,
 } from "../lib/commons";
+import { isDirectory, isImage, isUrlFile, isAudio, isTextual, fileMime } from "../lib/mime";
 import {
   EDIT_FILE_SIZE_LIMIT,
   EditingItem,
-  FileItem, FileViewerProps, Sort, ViewMode, ViewProps, downloadFile, getTransferFiles, isTextual, useConfig,
+  FileItem, FileViewerProps, Sort, ViewMode, ViewProps, downloadFile, getTransferFiles, useConfig,
 } from "./commons";
 import FileGrid from "./FileGrid";
 import FileAlbum from "./FileAlbum";
@@ -386,19 +383,20 @@ export default function Main({
     click: toggleLightboxControls,
     // custom callbacks:
     edit: (file) => {
-      if (file.httpMetadata.contentType === MIME_PDF) {
+      const mimeType = fileMime(file);
+      if (mimeType === MIME_PDF) {
         setEditing({ file, key: file.key, kind: "pdf" });
-      } else if (file.httpMetadata.contentType === MIME_DOCX) {
+      } else if (mimeType === MIME_DOCX) {
         setEditing({ file, key: file.key, kind: "docx" });
-      } else if (isUrlFile(file) && (file.customMetadata?.url || file.size === 0)) {
+      } else if (isUrlFile(file)) {
         setEditing({ file, key: file.key, kind: "url" });
       } else if (isTextual(file)) {
         setEditing({ file, key: file.key, kind: "text" });
       } else if (isImage(file)) {
         setEditing({ file, key: file.key, kind: "image" });
       } else {
-        setError(`View of ${file.httpMetadata.contentType} type file is not supported`)
-        return
+        setError(`View of ${mimeType} type file is not supported`);
+        return;
       }
       setSlideIndex(-1);
       setSharing("");

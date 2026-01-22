@@ -9,12 +9,12 @@ import {
   WEBDAV_ENDPOINT,
   ROOT_OBJECT,
   isHttpsOrLocalUrl,
-  isDirectory,
   getR2FileMd5,
   getR2FileSha1,
   getR2FileSha256,
   R2ObjectAlike,
 } from "../../lib/commons";
+import { isDirectory } from "../../lib/mime";
 import { findChildren, responseNotFound } from "../commons";
 import { RequestHandlerParams } from "./utils";
 

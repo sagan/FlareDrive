@@ -10,8 +10,8 @@ import ShareIcon from '@mui/icons-material/Share';
 import { ShareObject } from "../lib/commons";
 import { Centered } from "./components";
 import { getShare } from "./app/share";
-import ShareDialog from "./ShareDialog";
 import { useConfig } from "./commons";
+import ShareDialog from "./ShareDialog";
 
 export default function ShareManager({ search, shares, loading, shareObject, setShareObject, fetchFiles, setError }: {
   search: string;

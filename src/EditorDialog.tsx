@@ -11,7 +11,6 @@ import {
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { loadLanguage, LanguageName } from '@uiw/codemirror-extensions-langs';
 import { EditorView } from '@codemirror/view';
-
 import SaveIcon from '@mui/icons-material/Save';
 import RestoreIcon from '@mui/icons-material/Restore';
 import EditIcon from '@mui/icons-material/Edit';

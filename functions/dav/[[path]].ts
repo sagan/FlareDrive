@@ -1,4 +1,16 @@
-import { METHOD_OPTIONS } from "../../lib/commons";
+import {
+  METHOD_COPY,
+  METHOD_DELETE,
+  METHOD_GET,
+  METHOD_HEAD,
+  METHOD_MKCOL,
+  METHOD_MOVE,
+  METHOD_OPTIONS,
+  METHOD_POST,
+  METHOD_PROPFIND,
+  METHOD_PROPPATCH,
+  METHOD_PUT,
+} from "../../lib/commons";
 import { FdCfFunc, checkAuthFailure, getPathArray, responseMethodNotAllowed } from "../commons";
 import { handleRequestCopy } from "./copy";
 import { handleRequestDelete } from "./delete";
@@ -7,6 +19,7 @@ import { handleRequestHead } from "./head";
 import { handleRequestMkcol } from "./mkcol";
 import { handleRequestMove } from "./move";
 import { handleRequestPropfind } from "./propfind";
+import { handleRequestProppatch } from "./proppatch";
 import { handleRequestPut } from "./put";
 import { RequestHandlerParams, isOpenRequest } from "./utils";
 import { handleRequestPost } from "./post";
@@ -22,15 +35,16 @@ async function handleRequestOptions() {
 }
 
 const HANDLERS: Record<string, (context: RequestHandlerParams) => Promise<Response>> = {
-  PROPFIND: handleRequestPropfind,
-  MKCOL: handleRequestMkcol,
-  HEAD: handleRequestHead,
-  GET: handleRequestGet,
-  POST: handleRequestPost,
-  PUT: handleRequestPut,
-  COPY: handleRequestCopy,
-  MOVE: handleRequestMove,
-  DELETE: handleRequestDelete,
+  [METHOD_PROPFIND]: handleRequestPropfind,
+  [METHOD_PROPPATCH]: handleRequestProppatch,
+  [METHOD_MKCOL]: handleRequestMkcol,
+  [METHOD_HEAD]: handleRequestHead,
+  [METHOD_GET]: handleRequestGet,
+  [METHOD_POST]: handleRequestPost,
+  [METHOD_PUT]: handleRequestPut,
+  [METHOD_COPY]: handleRequestCopy,
+  [METHOD_MOVE]: handleRequestMove,
+  [METHOD_DELETE]: handleRequestDelete,
 };
 
 export const onRequest: FdCfFunc = async function (context) {
@@ -56,7 +70,7 @@ export const onRequest: FdCfFunc = async function (context) {
   if (path != "" && !path.endsWith("/") && url.pathname.endsWith("/")) {
     path += "/";
   }
-  const method: string = (context.request as Request).method;
+  const method: string = context.request.method;
   const handler = HANDLERS[method] ?? responseMethodNotAllowed;
   return handler({ context, path, request: context.request, scope, authed: !authFailResponse, bucket });
 };

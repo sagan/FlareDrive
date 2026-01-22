@@ -7,14 +7,16 @@ import {
   Tab,
   Tabs,
   Typography,
+  TextField,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import CloseIcon from '@mui/icons-material/Close';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReindexerAdmin from './components/ReindexerAdmin';
 import GlobalConfigAdmin from "./components/GlobalConfigAdmin";
 import StatisticsAdmin from "./components/StatisticsAdmin";
 import packageInfo from "../package.json";
-import { GlobalConfig, KEY_PART_SEARCH, SEARCH_MAGIC_WORD_LARGEST, SEARCH_MAGIC_WORD_RECENT } from "../lib/commons";
+import { GlobalConfig, KEY_PART_SEARCH, SEARCH_MAGIC_WORD_LARGEST, SEARCH_MAGIC_WORD_RECENT, WEBDAV_ENDPOINT } from "../lib/commons";
 import { Link } from "react-router-dom";
 import { search2Cwd } from "./commons";
 
@@ -35,6 +37,16 @@ export default function AdminDialog({
   setGlobalConfig: React.Dispatch<React.SetStateAction<GlobalConfig>>
 }) {
   const [tab, setTab] = useState(0);
+
+  const rcloneWebdavConfig = useMemo(() => {
+    return `[${window.__SITENAME__}]
+url = ${location.origin}${WEBDAV_ENDPOINT}
+user = root # WEBDAV_USERNAME
+pass = obscured_password # rclone obscure <WEBDAV_PASSWORD>
+vendor = owncloud
+type = webdav
+encoding = None`;
+  }, []);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth fullScreen>
@@ -85,6 +97,27 @@ export default function AdminDialog({
               }}>Recent files</Link></li>
             </ul>
           </Typography>
+          <Typography variant="h5" gutterBottom>
+            rclone WebDAV config
+          </Typography>
+          <TextField disabled label={`rclone config`}
+            fullWidth multiline value={rcloneWebdavConfig} rows={5}
+            helperText={<>
+              See <a href="https://github.com/rclone/rclone" rel="noopener noreferrer">rclone</a> and&nbsp;
+              <a href="https://rclone.org/webdav/" rel="noopener noreferrer">WebDAV</a> document.
+            </>}
+            InputProps={{
+              endAdornment: <>
+                <IconButton
+                  disabled={false}
+                  onClick={() => void navigator.clipboard.writeText(rcloneWebdavConfig)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+              </>
+            }} />
         </Box>
         <Box hidden={tab !== 4} sx={{ pt: 1 }}>
           <Typography variant="h5" gutterBottom>

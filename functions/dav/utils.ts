@@ -1,4 +1,4 @@
-import { METHODS_READ_DIR, MIME_DIR, SYSFILES, R2ObjectAlike, basename } from "../../lib/commons";
+import { METHODS_READ_DIR, SYSFILES, basename } from "../../lib/commons";
 import { type FdCfFuncContext, getGlobalConfig, getPathArray } from "../commons";
 
 export interface RequestHandlerParams {
@@ -44,7 +44,7 @@ export async function isOpenRequest(context: FdCfFuncContext): Promise<[open: bo
   const { env, params } = context;
   const key = getPathArray(context).join("/");
   const globalConfig = await getGlobalConfig(env);
-  if (key && !SYSFILES.includes(basename(key))) {
+  if (key && !(SYSFILES as readonly string[]).includes(basename(key))) {
     let prefix: string;
     prefix = testKeyHasPrefix(key, globalConfig.publicPrefix, true);
     if (prefix) {

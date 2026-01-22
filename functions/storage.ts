@@ -1,6 +1,10 @@
 import { Env } from "./commons";
 import { S3Bucket } from "./s3";
 
+/**
+ * get storage instance from request env.
+ * It supports native Cloudflare R2 binding (BUCKET) and S3_ENDPOINT defined s3 storage.
+ */
 export function getStorage(env: Env): R2Bucket {
   if (env.S3_ENDPOINT) {
     return new S3Bucket({

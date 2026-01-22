@@ -9,6 +9,7 @@ import {
   HEADER_CONTENT_SECURITY_POLICY,
   HEADER_CONTENT_TYPE,
   HEADER_CONTENT_TYPE_OPTIONS,
+  HEADER_PREFIX_FLAREDRIVE,
   HEADER_REFERRER_POLICY,
   METHODS,
   METHOD_GET,
@@ -16,6 +17,7 @@ import {
   REFERRER_POLICY_NOREFERRER,
   STRONG_PASSWORD_LENGTH,
   hmacSha256Sign,
+  normalizeHeaderName,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 import { generatePassword } from "@/src/commons";
@@ -73,22 +75,22 @@ function parseArgs(str: string): unknown[] {
 }
 
 /**
- * "content-type" => "Content-Type".
- */
-function normalizeHeaderName(name: string): string {
-  return name
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("-");
-}
-
-/**
  * Convert Headers to Record. Since liquidjs template can't handle Headers type.
+ * Headers in stripHeaders are stripped; if an element ends with "-", it's treated as a prefix.
  */
-function headers2Record(headers: Headers): Record<string, string> {
+function headers2Record(headers: Headers, stripHeaders?: string[]): Record<string, string> {
   const record: Record<string, string> = {};
   headers.forEach((value, key) => {
-    record[normalizeHeaderName(key)] = value;
+    key = normalizeHeaderName(key);
+    if (
+      stripHeaders?.some((pattern) => {
+        pattern = normalizeHeaderName(pattern);
+        return pattern.endsWith("-") ? key.startsWith(pattern) : key === pattern;
+      })
+    ) {
+      return;
+    }
+    record[key] = value;
   });
   return record;
 }
@@ -373,7 +375,7 @@ export async function executeCgi(
 ): Promise<Response> {
   try {
     const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
-    const requestHeaders = headers2Record(request.headers);
+    const requestHeaders = headers2Record(request.headers, [HEADER_PREFIX_FLAREDRIVE]);
     const req: SelfRequest = {
       url: request.url,
       method: request.method,

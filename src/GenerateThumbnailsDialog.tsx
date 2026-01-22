@@ -14,10 +14,10 @@ import {
   IconButton
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
-import { fileUrl, isImage } from '../lib/commons';
-import { FileItem, useConfig } from './commons';
+import { fileUrl } from '../lib/commons';
+import { isImage } from "../lib/mime";
 import { generateThumbnailFromUrl, generateThumbnailsServerSide, putThumbnail } from './app/transfer';
-
+import { FileItem, useConfig } from './commons';
 
 export default function GenerateThumbnailsDialog({ open, onClose, onDone, ...others }: {
   open: boolean;

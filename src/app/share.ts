@@ -5,6 +5,7 @@ import {
   METHOD_POST,
   METHOD_PUT,
   METHOD_DELETE,
+  MIME_JSON,
   ShareObject,
   key2Path,
 } from "../../lib/commons";
@@ -30,7 +31,7 @@ export async function createShare(key: string, share: ShareObject, auth: string)
   const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
     method: METHOD_PUT,
     headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
+      [HEADER_CONTENT_TYPE]: MIME_JSON,
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },
     body: JSON.stringify(share),

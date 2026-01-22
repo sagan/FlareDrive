@@ -31,12 +31,13 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import InputAdornment from '@mui/material/InputAdornment';
 import {
-  SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, PAST_TIMESTAMP,
+  WEBDAV_ENDPOINT, HEADER_AUTHORIZATION, SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, PAST_TIMESTAMP,
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
-  Permission, humanReadableSize, isDirectory, validateAndGetSafeUrl,
+  Permission, humanReadableSize, validateAndGetSafeUrl, key2Path,
 } from '../lib/commons';
-import { FileItem, generatePassword, getFilePermission, useConfig, useGlobalConfig } from './commons';
+import { isDirectory } from '../lib/mime';
 import { createShare, deleteShare } from './app/share';
+import { FileItem, generatePassword, getFilePermission, useConfig, useGlobalConfig } from './commons';
 import { CopyButton } from './components';
 
 enum Status {
@@ -142,7 +143,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
       setError(`${e}`);
       setStatus(previousStatus);
     }
-  }, [status, shareObject, ttl, referer, shareKey, auth, setError]);
+  }, [status, shareObject, ttl, referer, envText, shareKey, auth, setError]);
 
   const isOpen = permission == Permission.OpenRwDir || permission == Permission.OpenDir ||
     (!targetIsDir && permission === Permission.OpenFile);
@@ -161,6 +162,22 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
     scope: targetIsDir ? fileKeyWithDirSlash : undefined,
     isDir: targetIsDir,
   }), [fileKey, auth, linkTtl, linkTs, linkFullControl, targetIsDir, fileKeyWithDirSlash]);
+
+  const rcloneWebdavConfig = useMemo(() => {
+    if (!linkUrl || !targetIsDir) {
+      return "";
+    }
+    const url = new URL(linkUrl);
+    return `[${window.__SITENAME__}-${name}]
+# ${linkFullControl ? "full control" : "read only"}. ${linkTtl
+        ? `expires on ${new Date(linkTs + linkTtl * 1000).toISOString().slice(0, 19) + "Z"}`
+        : "never expires"}
+url = ${location.origin}${WEBDAV_ENDPOINT}${key2Path(fileKey)}/
+type = webdav
+vendor = owncloud
+encoding = None
+headers = "${HEADER_AUTHORIZATION}","?${url.searchParams.toString()}"`;
+  }, [fileKey, linkFullControl, linkTs, linkTtl, linkUrl, name, targetIsDir]);
 
   const shareObjectExpired = useMemo(() => {
     if (shareObject.expiration && shareObject.expiration < Date.now()) {
@@ -417,16 +434,33 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
               </>
             }} />
         </Box>
+        {targetIsDir && <Box sx={{ mt: 1 }}>
+          <TextField disabled label={`rclone webdav config (${linkFullControl ? "full control" : "read only"})`}
+            fullWidth multiline value={rcloneWebdavConfig} rows={2}
+            InputProps={{
+              endAdornment: <>
+                <IconButton
+                  disabled={false}
+                  onClick={() => void navigator.clipboard.writeText(rcloneWebdavConfig)}
+                  title={`Copy`}
+                  edge="end"
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+              </>
+            }} />
+        </Box>}
         {linkTtl ? <Typography>
-          Link expires on {new Date(linkTs + linkTtl * 1000).toISOString().slice(0, 19) + "Z"}, or until the admin password changed
+          Access expires on {new Date(linkTs + linkTtl * 1000).toISOString().slice(0, 19) + "Z"},
+          or until the admin password changed.
         </Typography> : <Typography sx={{ color: "red" }}>
-          Link will never expire (unless the admin password is changed)
+          Access will never expire (unless the admin password is changed).
         </Typography>}
         {linkFullControl && <Typography sx={{ color: "red" }}>
           {
             targetIsDir
-              ? `Link has write access, can manage files in folder`
-              : `Link has write access, send a "PUT" request to update the file contents.`
+              ? `Access has full control, can manage files in folder.`
+              : `Access has full control, send a "PUT" request to update the file contents.`
           }
         </Typography>}
       </>}

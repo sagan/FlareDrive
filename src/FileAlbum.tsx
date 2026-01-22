@@ -1,15 +1,13 @@
 import React from "react";
 import Link from '@mui/material/Link';
-import {
-  Box,
-  Grid,
-} from "@mui/material";
-import MimeIcon from "./MimeIcon";
+import { Box, Grid } from "@mui/material";
 import {
   THUMBNAIL_SIZE, TOKEN_VARIABLE, EXPIRES_VARIABLE, SCOPE_VARIABLE,
-  basename, fileUrl, humanReadableSize, isUrlFile, str2int, validateAndGetSafeUrl, isDirectory,
+  basename, fileUrl, humanReadableSize, str2int, validateAndGetSafeUrl,
 } from "../lib/commons";
+import { isUrlFile, isDirectory } from "../lib/mime";
 import { ViewProps, useConfig } from "./commons";
+import MimeIcon from "./MimeIcon";
 
 
 export default function FileAlbum({

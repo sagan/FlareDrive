@@ -30,6 +30,9 @@ import {
   HEADER_CONTENT_TYPE_OPTIONS,
   CONTENT_SECURITY_POLICY_SANDBOX,
   CONTENT_TYPE_OPTIONS_NOSNIFF,
+  METHODS_WITH_BODY,
+  HEADER_CONTENT_DISPOSITION,
+  CONTENT_DISPOSITION_ATTACHMENT,
   REFERRER_POLICY_NOREFERRER,
   SCOPE_GLOBAL,
   KEY_PART_SEARCH,
@@ -45,8 +48,6 @@ import {
   constantTimeCompare,
   path2Key,
   trimPrefixSuffix,
-  corsHeaders,
-  isImage,
   fileDepth,
   PublicConfig,
   GlobalConfig,
@@ -54,9 +55,9 @@ import {
   isHtml,
   R2ObjectAlike,
   dirname,
-  METHODS_WITH_BODY,
+  applyCorsHeaders,
 } from "../lib/commons";
-import { parseUrlFile } from "../lib/mime";
+import { parseUrlFile, isImage } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
 // build_config.json is generated / updated at build time
 import buildConfig from "../build_config.json";
@@ -272,21 +273,22 @@ export function responseMethodNotAllowed(msg = "", headers?: HeadersInit): Respo
  * @param status
  * @returns
  */
-export function jsonResponse<T = unknown>(
-  obj: T,
+export function jsonResponse(
+  obj: unknown,
   {
     status = 200,
     cors = false,
+    headers: headersInit,
   }: {
     status?: number;
     cors?: boolean;
+    headers?: HeadersInit;
   } = {}
 ) {
-  const headers = new Headers({ [HEADER_CONTENT_TYPE]: "application/json" });
+  const headers = new Headers(headersInit);
+  headers.set(HEADER_CONTENT_TYPE, MIME_JSON);
   if (cors) {
-    for (const [key, value] of Object.entries(corsHeaders)) {
-      headers.set(key, value);
-    }
+    applyCorsHeaders(headers);
   }
   return new Response(JSON.stringify(obj), {
     status,
@@ -297,7 +299,7 @@ export function jsonResponse<T = unknown>(
 export function htmlResponse(html: string) {
   return new Response(html, {
     headers: {
-      [HEADER_CONTENT_TYPE]: "text/html",
+      [HEADER_CONTENT_TYPE]: MIME_MARKDOWN,
     },
   });
 }
@@ -357,12 +359,22 @@ export async function checkAuthFailure(
   }
 
   const url = new URL(request.url);
-  const searchParams = url.searchParams;
-  const auth = searchParams.get(AUTH_VARIABLE) || request.headers.get(HEADER_AUTHORIZATION);
-  const token = searchParams.get(TOKEN_VARIABLE);
+  let searchParams = url.searchParams;
+  let auth = searchParams.get(AUTH_VARIABLE) || request.headers.get(HEADER_AUTHORIZATION);
+  let token = searchParams.get(TOKEN_VARIABLE);
   const expectedAuth = basicAuthorizationHeader(user, pass);
   let authed = false;
   let scope: string | undefined | null = undefined;
+
+  // auth header is "?expires=123456&scope=files%2F&token=xxx" format
+  if (auth?.startsWith("?")) {
+    searchParams = new URLSearchParams(auth.slice(1));
+    token = searchParams.get(TOKEN_VARIABLE);
+    auth = "";
+    if (!token) {
+      return [responseUnauthorized(), ""];
+    }
+  }
 
   if (auth) {
     authed = constantTimeCompare(auth, expectedAuth);
@@ -588,7 +600,7 @@ export async function generateFileThumbnailWithWorker({
   const thumbResponse = await fetch(workerUrl, {
     method: METHOD_POST,
     headers: {
-      [HEADER_CONTENT_TYPE]: "application/json",
+      [HEADER_CONTENT_TYPE]: MIME_JSON,
     },
     body: JSON.stringify({
       token: workerToken,
@@ -676,12 +688,10 @@ export async function outputR2Object({
   const headers = new Headers();
   writeR2ObjectHeaders(obj, headers);
   if (download) {
-    headers.set("Content-Disposition", "attachment");
+    headers.set(HEADER_CONTENT_DISPOSITION, CONTENT_DISPOSITION_ATTACHMENT);
   }
   if (cors) {
-    for (const [key, value] of Object.entries(corsHeaders)) {
-      headers.set(key, value);
-    }
+    applyCorsHeaders(headers);
   }
   if (!raw && obj.httpMetadata?.contentType == MIME_URL) {
     if (obj.customMetadata?.url) {

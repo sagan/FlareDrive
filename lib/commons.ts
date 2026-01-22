@@ -137,6 +137,7 @@ export const METHOD_PATCH = "PATCH";
 
 // webdav extend methods
 export const METHOD_PROPFIND = "PROPFIND";
+export const METHOD_PROPPATCH = "PROPPATCH";
 export const METHOD_MKCOL = "MKCOL";
 export const METHOD_COPY = "COPY";
 export const METHOD_MOVE = "MOVE";
@@ -152,7 +153,14 @@ export const METHODS_READ_DIR = [METHOD_GET, METHOD_HEAD, METHOD_OPTIONS, METHOD
  */
 export const METHODS_READ = [METHOD_GET, METHOD_HEAD, METHOD_OPTIONS] as const;
 
-export const METHODS_WITH_BODY = [METHOD_POST, METHOD_PUT, METHOD_DELETE, METHOD_PATCH, METHOD_MKCOL] as const;
+export const METHODS_WITH_BODY = [
+  METHOD_POST,
+  METHOD_PUT,
+  METHOD_DELETE,
+  METHOD_PATCH,
+  METHOD_PROPPATCH,
+  METHOD_MKCOL,
+] as const;
 
 /**
  * http methods
@@ -167,6 +175,7 @@ export const METHODS = [
   METHOD_PATCH,
 
   METHOD_PROPFIND,
+  METHOD_PROPPATCH,
   METHOD_MKCOL,
   METHOD_COPY,
   METHOD_MOVE,
@@ -215,6 +224,8 @@ export const KEY_PART_SEARCH = ".search";
 
 export const KEY_PART_SEARCH_FULL = ".full";
 
+export const HEADER_PREFIX_FLAREDRIVE = "X-FlareDrive-";
+
 /**
  * ".flaredrive/thumbnails/"
  */
@@ -245,6 +256,14 @@ export const EXT_WEBLOC = ".webloc";
  */
 export const EXT_CGI = ".cgi";
 
+export const MIME_CAT_TEXT_PREFIX = "text/";
+
+export const MIME_CAT_IMAGE_PREFIX = "image/";
+
+export const MIME_CAT_VIDEO_PREFIX = "video/";
+
+export const MIME_CAT_AUDIO_PREFIX = "audio/";
+
 /**
  * Used for "url" files, such as Windows .url files, MacOS .webloc files.
  * This MIME is introduced by NextCloud.
@@ -269,6 +288,8 @@ export const MIME_TXT = "text/plain";
 
 export const MIME_PDF = "application/pdf";
 
+export const MIME_MP4 = "video/mp4";
+
 export const MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export const MIME_SH = "application/x-sh";
@@ -286,10 +307,9 @@ export const MIME_YAML = "application/yaml";
 export const MIME_TOML = "application/toml";
 
 /**
- * Textual mimes besides "txt/*": ["application/xml", "application/javascript", "application/json",
- *   "application/x-sh","application/yaml", "application/toml", "application/x-mswinurl"]
+ * Textual mimes besides "txt/*".
  */
-export const TXT_MIMES: readonly string[] = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL];
+export const TXT_MIMES = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL] as const;
 
 export const HEADER_PREFIX_X_AMAZON_META = "x-amz-meta-";
 
@@ -333,7 +353,15 @@ export const HEADER_FD_THUMBNAIL = "X-Fd-Thumbnail";
 
 export const HEADER_AUTHORIZATION = "Authorization";
 
+export const HEADER_CLEAR_SITE_DATA = "Clear-Site-Data";
+
+export const CLEAR_SITE_DATA_ALL = `"*"`;
+
 export const HEADER_CONTENT_TYPE = "Content-Type";
+
+export const HEADER_TRANSFER_ENCODING = "Transfer-Encoding";
+
+export const TRANSFER_ENCODING_CHUNKED = "chunked";
 
 export const HEADER_CONTENT_LANGUAGE = "Content-Language";
 
@@ -363,6 +391,8 @@ export const CACHE_CONTROL_CACHE_LONGTIME = "max-age=31536000";
 
 export const CONTENT_TYPE_OPTIONS_NOSNIFF = "nosniff";
 
+export const CONTENT_DISPOSITION_ATTACHMENT = "attachment";
+
 /**
  * A restrictive Content-Security-Policy for serving user-provided content.
  * It uses 'sandbox' to prevent script execution, form submission, etc.
@@ -384,6 +414,10 @@ export const HEADER_LAST_MODIFIED = "Last-Modified";
 export const HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
 
 export const HEADER_REFERER = "Referer";
+
+export const HEADER_ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+
+export const ACCESS_CONTROL_ALLOW_ORIGIN_ALL = "*";
 
 export const HEADER_REFERRER_POLICY = "Referrer-Policy";
 
@@ -431,7 +465,7 @@ export const FALLBACK_CGI = "404.cgi";
  * System files which only admin can manage / write / update:
  * [].
  */
-export const SYSFILES: readonly string[] = [];
+export const SYSFILES = [] as const;
 
 /**
  * Dir access permission.
@@ -543,9 +577,26 @@ export interface ThumbnailObject {
   digest: string;
 }
 
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-};
+/**
+ * Apply cors allow-all headers.
+ */
+export function applyCorsHeaders(headers: HeadersInit) {
+  if (headers instanceof Headers) {
+    headers.set(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL);
+  } else if (Array.isArray(headers)) {
+    for (const header of headers) {
+      if (Array.isArray(header)) {
+        if (header[0].toLowerCase() === HEADER_ACCESS_CONTROL_ALLOW_ORIGIN.toLowerCase()) {
+          header[1] = ACCESS_CONTROL_ALLOW_ORIGIN_ALL;
+          return;
+        }
+      }
+    }
+    headers.push([HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL]);
+  } else {
+    headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = ACCESS_CONTROL_ALLOW_ORIGIN_ALL;
+  }
+}
 
 export function dirname(path: string): string {
   path = trimPrefixSuffix(path, "/");
@@ -1134,34 +1185,6 @@ export function getR2FileSha256(object: R2ObjectAlike): string {
 }
 
 /**
- * Return whether the R2Object is a image file
- */
-export function isImage(object: R2ObjectAlike): boolean {
-  return object.httpMetadata?.contentType?.startsWith("image/") || false;
-}
-
-/**
- * Return whether the R2Object is a audio file
- */
-export function isAudio(object: R2ObjectAlike): boolean {
-  return object.httpMetadata?.contentType?.startsWith("audio/") || false;
-}
-
-/**
- * Return whether an R2Object or alike is a dir
- */
-export function isDirectory(object: R2ObjectAlike): boolean {
-  return (object.size === 0 && object.key.endsWith("/")) || object.httpMetadata?.contentType === MIME_DIR;
-}
-
-/**
- * Return whether an R2Object or alike is a url (internet shortcut) file
- */
-export function isUrlFile(object: R2ObjectAlike): boolean {
-  return object.httpMetadata?.contentType === MIME_URL;
-}
-
-/**
  * Return depth of R2 file key.
  * E.g. "foo" => 0; "foo/bar" => 1.
  */
@@ -1445,3 +1468,13 @@ export const MD5_REGEXP = /^[a-f0-9]{32}$/i;
  * - \3 : optional meta value (may be empty).
  */
 export const QUERY_META_REGEXP = /^meta:(.+?)(?:(\^|\$|\*)?=(.*))?$/;
+
+/**
+ * "content-type" => "Content-Type".
+ */
+export function normalizeHeaderName(name: string): string {
+  return name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("-");
+}

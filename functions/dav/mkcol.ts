@@ -1,4 +1,5 @@
-import { HEADER_DIR_EXISTS, KEY_PREFIX_PRIVATE, MIME_DIR, isDirectory } from "../../lib/commons";
+import { HEADER_DIR_EXISTS, KEY_PREFIX_PRIVATE, MIME_DIR } from "../../lib/commons";
+import { isDirectory } from "../../lib/mime";
 import {
   checkInvalidUserFileKey,
   getParent,

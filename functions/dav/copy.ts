@@ -10,8 +10,8 @@ import {
   ROOT_OBJECT,
   basename,
   dirname,
-  isDirectory,
 } from "../../lib/commons";
+import { isDirectory } from "../../lib/mime";
 import {
   checkInvalidUserFileKey,
   listAll,
@@ -59,7 +59,7 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
   }
   if (
     (scope && scope !== SCOPE_GLOBAL && !destination.startsWith(scope + "/")) ||
-    (!authed && SYSFILES.includes(basename(destination)))
+    (!authed && (SYSFILES as readonly string[]).includes(basename(destination)))
   ) {
     return responseForbidden();
   }
@@ -71,7 +71,10 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
   }
   // Make sure destination parent dir exists.
   const destinationParent = dirname(destination);
-  const destinationParentDir = destinationParent == "" ? ROOT_OBJECT : await bucket.head(destinationParent);
+  const destinationParentDir =
+    destinationParent === "" || destinationParent === "/"
+      ? ROOT_OBJECT
+      : (await bucket.head(destinationParent + "/")) || (await bucket.head(destinationParent));
   if (destinationParentDir === null) {
     return responseConflict();
   }

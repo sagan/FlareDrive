@@ -18,11 +18,10 @@ import {
   basename,
   fileUrl,
   humanReadableSize,
-  isDirectory,
-  isUrlFile,
   str2int,
   validateAndGetSafeUrl,
 } from "../lib/commons";
+import { isDirectory, isUrlFile } from "../lib/mime";
 import { useConfig, ViewProps } from "./commons";
 
 export default function FileDetailsList({
