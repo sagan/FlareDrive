@@ -2,7 +2,7 @@
 import { matchPattern } from "browser-extension-url-match";
 import {
   type ShareObject,
-  META_VARIABLE,
+  SHARE_META_VARIABLE,
   HEADER_REFERER,
   HTML_VARIABLE,
   INDEX_FILE,
@@ -14,6 +14,20 @@ import {
   MIME_DEFAULT,
   FALLBACK_CGI,
   FALLBACK_HTML,
+  METHOD_POST,
+  METHOD_GET,
+  METHOD_DELETE,
+  METHOD_PUT,
+  METHOD_OPTIONS,
+  HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
+  HEADER_ACCESS_CONTROL_ALLOW_METHODS,
+  HEADER_ACCESS_CONTROL_ALLOW_HEADERS,
+  HEADER_ACCESS_CONTROL_MAX_AGE,
+  ACCESS_CONTROL_MAX_AGE_MAXIMUM,
+  ACCESS_CONTROL_ALLOW_ORIGIN_ALL,
+  ACCESS_CONTROL_ALLOW_METHODS_ALL,
+  ACCESS_CONTROL_ALLOW_HEADERS_ALL,
+  ACCESS_CONTROL_ALLOW_METHODS_READ,
   trimPrefix,
   ShareRefererMode,
   trimSuffix,
@@ -24,12 +38,10 @@ import {
   removeZeroFields,
   str2Html,
   getR2FileMd5,
-  trimPrefixSuffix,
   basename,
 } from "../../lib/commons";
 import { isDirectory, isUrlFile } from "../../lib/mime";
 import {
-  FdCfFunc,
   checkAuthFailure,
   jsonResponse,
   responseNotFound,
@@ -42,9 +54,10 @@ import {
   outputR2Object,
   FdCfFuncContextEnv,
   FdCfFuncContextRequest,
-  getOnRequestHead,
-  getGlobalConfig,
   getPathArray,
+  responseMethodNotAllowed,
+  getOnRequestHead,
+  FdCfFuncContext,
 } from "../commons";
 import buildVariables from "../../build_config.json";
 import { README_FILES } from "../../src/commons";
@@ -62,154 +75,137 @@ pre {
 }
 `;
 
-// POST: list shares. optional, pass a prefix as path
-export const onRequestPost: FdCfFunc = async function (context) {
-  const { request, env, params } = context;
-  if (!env.KV) {
-    return responseNotFound();
-  }
-  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  if (failResponse) {
-    return failResponse;
-  }
+/**
+ * Share administration handlers
+ */
+export interface ShareHandlerContext {
+  env: FdCfFuncContextEnv & { KV: KVNamespace }; // here the KV always exists
+  request: FdCfFuncContextRequest;
+  shareKey: string;
+}
 
-  const pathParams = getPathArray(context);
-  if (pathParams.length > 1) {
-    return responseBadRequest();
-  }
-  const sharekeyPrefix = pathParams[0] || "";
-  const data = await env.KV.list({ prefix: SHARE_KEY_PREFIX + sharekeyPrefix });
-
+// POST: list shares. shareKey (can be "") as prefix.
+async function handlePostShare({ env, shareKey }: ShareHandlerContext) {
+  const data = await env.KV.list({ prefix: SHARE_KEY_PREFIX + shareKey });
   const shares = data.keys.map(({ name }) => trimPrefix(name, SHARE_KEY_PREFIX));
   return jsonResponse(shares);
-};
+}
 
 // PUT: add a new or update a existing share
-export const onRequestPut: FdCfFunc = async function (context) {
-  const { request, env, params } = context;
-  if (!env.KV) {
-    return responseNotFound();
-  }
-  const globalConfig = await getGlobalConfig(env);
-  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  if (failResponse) {
-    return failResponse;
-  }
-  const shareObject = removeZeroFields(await request.json<ShareObject>());
-  if (!shareObject.key) {
+async function handlePutShare({ env, request, shareKey }: ShareHandlerContext) {
+  const newShare = removeZeroFields(await request.json<ShareObject>());
+  if (!newShare.key) {
     return responseBadRequest();
   }
-
-  const pathParams = getPathArray(context);
-  if (pathParams.length != 1) {
+  if (!shareKey) {
     return responseBadRequest();
   }
-  const sharekey = pathParams[0];
-  if (!sharekey) {
-    return responseBadRequest();
-  }
-
   const options: KVNamespacePutOptions = {};
-  if (shareObject.autoDelete && shareObject.expiration && shareObject.expiration !== PAST_TIMESTAMP) {
-    options.expiration = Math.round(shareObject.expiration / 1000);
+  if (newShare.autoDelete && newShare.expiration && newShare.expiration !== PAST_TIMESTAMP) {
+    options.expiration = Math.round(newShare.expiration / 1000);
   }
-  await env.KV.put(SHARE_KEY_PREFIX + sharekey, JSON.stringify(shareObject), options);
+  await env.KV.put(SHARE_KEY_PREFIX + shareKey, JSON.stringify(newShare), options);
   return responseNoContent();
-};
+}
 
 // DELETE: delete a new share
-export const onRequestDelete: FdCfFunc = async function (context) {
-  const { request, env, params } = context;
-  if (!env.KV) {
-    return responseNotFound();
-  }
-  const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-  if (failResponse) {
-    return failResponse;
-  }
-  const pathParams = getPathArray(context);
-  if (pathParams.length != 1) {
-    return responseBadRequest();
-  }
-  const sharekey = pathParams[0];
-  await env.KV.delete(SHARE_KEY_PREFIX + sharekey);
+async function handleDeleteShare({ env, shareKey }: ShareHandlerContext): Promise<Response> {
+  await env.KV.delete(SHARE_KEY_PREFIX + shareKey);
   return responseNoContent();
+}
+
+// GET (with meta=1 query param): get share object.
+async function handleGetShareMeta({ env, shareKey }: ShareHandlerContext): Promise<Response> {
+  const share = (await env.KV.get(SHARE_KEY_PREFIX + shareKey, "json")) as ShareObject | null;
+  return jsonResponse(share);
+}
+
+const HANDLERS: Record<string, (context: ShareHandlerContext) => Promise<Response>> = {
+  [METHOD_GET]: handleGetShareMeta,
+  [METHOD_POST]: handlePostShare,
+  [METHOD_PUT]: handlePutShare,
+  [METHOD_DELETE]: handleDeleteShare,
 };
 
-export const onRequestGet: FdCfFunc = async function (context) {
-  const { request, env, params } = context;
-  const url = new URL(request.url);
-
-  let path = getPathArray(context).join("/");
-  if (path != "" && !path.endsWith("/") && url.pathname.endsWith("/")) {
-    path += "/";
-  }
-  return handleGetShare({ request, env, path });
-};
-
-// GET: request a shared file meta or contents
-export const handleGetShare = async function ({
-  request,
-  env,
-  path,
-}: {
-  /**
-   * E.g. "foo/bar.txt" or "foo/". Each part already url decoded.
-   */
-  path: string;
-  /**
-   * Original request
-   */
-  request: FdCfFuncContextRequest;
-  env: FdCfFuncContextEnv;
-}) {
+export async function onRequest(context: FdCfFuncContext): Promise<Response> {
+  const { request, env } = context;
   if (!env.KV) {
     return responseNotFound();
   }
+  const url = new URL(request.url);
   const bucket = getStorage(env);
 
-  const url = new URL(request.url);
   const searchParams = new URLSearchParams(url.search);
-  const requestMeta = !!str2int(searchParams.get(META_VARIABLE));
-  const requestJson = !!str2int(searchParams.get(JSON_VARIABLE));
+  const requestMeta = !!str2int(searchParams.get(SHARE_META_VARIABLE));
 
-  if (requestMeta) {
-    const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
-    if (failResponse) {
-      return failResponse;
-    }
+  const pathParams = getPathArray(context);
+  let path = pathParams.join("/");
+  if (path && url.pathname.endsWith("/")) {
+    path += "/";
   }
-
-  const pathParams = trimPrefixSuffix(path, "/").split("/");
-  if (requestMeta ? pathParams?.length != 1 : pathParams?.length < 1) {
-    return responseBadRequest();
-  }
-  const sharekey = pathParams[0];
+  const shareKey = pathParams[0] || "";
   let relpath = pathParams.slice(1).join("/");
   if (relpath && path.endsWith("/")) {
     relpath += "/";
   }
-
-  const data = (await env.KV.get(SHARE_KEY_PREFIX + sharekey, "json")) as ShareObject | null;
-  if (requestMeta) {
-    return jsonResponse(data);
+  // only admin POST (list share) request allow empty shareKey.
+  if (!shareKey && (!requestMeta || request.method !== METHOD_POST)) {
+    return responseBadRequest();
   }
-  if (!data || !data.key || (data.expiration && data.expiration < Date.now())) {
+
+  // share administration
+  if (!relpath && requestMeta) {
+    const [failResponse] = await checkAuthFailure(request, env.WEBDAV_USERNAME, env.WEBDAV_PASSWORD);
+    if (failResponse) {
+      return failResponse;
+    }
+    const handler = HANDLERS[request.method];
+    if (handler) {
+      return handler({ env: env as ShareHandlerContext["env"], request, shareKey });
+    }
+    return responseMethodNotAllowed();
+  }
+
+  const share = (await env.KV.get(SHARE_KEY_PREFIX + shareKey, "json")) as ShareObject | null;
+  if (requestMeta) {
+    return jsonResponse(share);
+  }
+
+  return handleShare({ env: env as ShareHandlerContext["env"], request, shareKey, bucket, url, relpath, share });
+}
+
+export async function handleShare({
+  env,
+  request,
+  shareKey,
+  url,
+  bucket,
+  relpath,
+  share,
+}: ShareHandlerContext & { url: URL; bucket: R2Bucket; relpath: string; share?: ShareObject | null }) {
+  const requestJson = !!str2int(url.searchParams.get(JSON_VARIABLE));
+  const requestHtml = !!str2int(url.searchParams.get(HTML_VARIABLE));
+  const requestRaw = !!str2int(url.searchParams.get(RAW_VARIABLE));
+
+  if (share === undefined) {
+    share = (await env.KV.get(SHARE_KEY_PREFIX + shareKey, "json")) as ShareObject | null;
+  }
+  if (!share?.key || (share.expiration && share.expiration < Date.now())) {
     return responseNotFound();
   }
-  if (data.auth) {
-    const [user, pass] = cut(data.auth, ":");
-    const [failRespose] = await checkAuthFailure(request, user, pass, `Share/${sharekey}`);
+  if (share.auth) {
+    const [user, pass] = cut(share.auth, ":");
+    const [failRespose] = await checkAuthFailure(request, user, pass, `Share/${shareKey}`);
     if (failRespose) {
       return failRespose;
     }
   }
-  if (data.refererMode) {
-    const referList = data.refererList || [];
+  if (share.refererMode) {
+    const referList = share.refererList || [];
     const referer = request.headers.get(HEADER_REFERER) || "";
-    const referMatch = referer ? matchPatternsWithUrl(referList, referer) : !!data.refererModeEmpty;
+    const referMatch = referer ? matchPatternsWithUrl(referList, referer) : !!share.refererModeEmpty;
     let block = false;
-    switch (data.refererMode) {
+    switch (share.refererMode) {
       case ShareRefererMode.WhitelistMode:
         block = !referMatch;
         break;
@@ -225,17 +221,30 @@ export const handleGetShare = async function ({
     }
   }
 
-  if (!data.key.endsWith("/") && relpath) {
+  if (!share.key.endsWith("/") && relpath) {
     return responseNotFound();
   }
 
-  const fullHtml = !!data.fullHtml;
-  const cors = !!data.cors;
-  const html = !!str2int(searchParams.get(HTML_VARIABLE));
-  const raw = !!str2int(searchParams.get(RAW_VARIABLE));
+  const fullHtml = !!share.fullHtml;
+  const cors = !!share.cors;
 
-  const filekey = data.key + relpath;
-  if (!data.cgi && filekey.endsWith(EXT_CGI)) {
+  if (request.method === METHOD_OPTIONS) {
+    return responseNoContent({
+      [HEADER_ACCESS_CONTROL_ALLOW_METHODS]: share.cgi
+        ? ACCESS_CONTROL_ALLOW_METHODS_ALL
+        : ACCESS_CONTROL_ALLOW_METHODS_READ,
+      ...(cors
+        ? {
+            [HEADER_ACCESS_CONTROL_ALLOW_ORIGIN]: ACCESS_CONTROL_ALLOW_ORIGIN_ALL,
+            [HEADER_ACCESS_CONTROL_ALLOW_HEADERS]: ACCESS_CONTROL_ALLOW_HEADERS_ALL,
+            [HEADER_ACCESS_CONTROL_MAX_AGE]: ACCESS_CONTROL_MAX_AGE_MAXIMUM,
+          }
+        : {}),
+    });
+  }
+
+  const filekey = share.key + relpath;
+  if (!share.cgi && filekey.endsWith(EXT_CGI)) {
     return responseForbidden();
   }
   let obj = await bucket.get(filekey, {
@@ -250,16 +259,18 @@ export const handleGetShare = async function ({
     });
   }
   if (!obj) {
-    if (data.key.endsWith("/") && relpath) {
-      if (data.cgi) {
-        const fallbackCgi = await bucket.get(data.key + FALLBACK_CGI);
+    if (share.key.endsWith("/") && relpath) {
+      if (share.cgi) {
+        const fallbackCgi = await bucket.get(share.key + FALLBACK_CGI);
         if (fallbackCgi) {
-          return executeCgi(request, await fallbackCgi.text(), data.fullHtml, data.env);
+          return executeCgi(request, await fallbackCgi.text(), fullHtml, cors, share.env);
         }
       }
-      const fallbackHtml = await bucket.get(data.key + FALLBACK_HTML);
-      if (fallbackHtml) {
-        return outputR2Object({ obj: fallbackHtml, fullHtml, cors, html, raw });
+      if (request.method === METHOD_GET) {
+        const fallbackHtml = await bucket.get(share.key + FALLBACK_HTML);
+        if (fallbackHtml) {
+          return outputR2Object({ obj: fallbackHtml, fullHtml, cors, html: requestHtml, raw: requestRaw });
+        }
       }
     }
     return responseNotFound();
@@ -270,24 +281,29 @@ export const handleGetShare = async function ({
       url.pathname += "/";
       return responseRedirect(url.href);
     }
-    if (data.cgi) {
+    if (share.cgi) {
       const indexCgiObj =
         (await bucket.get(filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_CGI)) ||
-        (await bucket.get(data.key + FALLBACK_CGI));
+        (await bucket.get(share.key + FALLBACK_CGI));
       if (indexCgiObj) {
-        return executeCgi(request, await indexCgiObj.text(), data.fullHtml, data.env);
+        return executeCgi(request, await indexCgiObj.text(), fullHtml, cors, share.env);
       }
     }
+
+    if (request.method !== METHOD_GET) {
+      return responseNotFound();
+    }
+
     const indexHtmlObj =
       (await bucket.get(filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_FILE, {
         onlyIf: request.headers,
         range: request.headers,
-      })) || (await bucket.get(data.key + FALLBACK_HTML));
+      })) || (await bucket.get(share.key + FALLBACK_HTML));
     if (indexHtmlObj) {
       return outputR2Object({ obj: indexHtmlObj, cors, fullHtml });
     }
     const sitename = buildVariables.sitename;
-    const description = data.desc || "";
+    const description = share.desc || "";
 
     let readme = "";
     for (const readmeFileName of README_FILES) {
@@ -299,11 +315,11 @@ export const handleGetShare = async function ({
         break;
       }
     }
-    if (data.noindex) {
+    if (share.noindex) {
       if (relpath) {
         return responseNotFound();
       } else {
-        return htmlResponse(noindexPage(sitename, description, sharekey, readme));
+        return htmlResponse(noindexPage(sitename, description, shareKey, readme));
       }
     }
     let files = await findChildren({
@@ -337,26 +353,28 @@ export const handleGetShare = async function ({
     });
 
     if (requestJson) {
-      const prefix = trimSuffix(data.key, "/") + "/";
+      const prefix = trimSuffix(share.key, "/") + "/";
       const items = files.map((file) => ({ ...file, key: trimPrefix(file.key, prefix) }));
       return jsonResponse({ sitename, description, files: items, readme }, { cors });
     }
     return htmlResponse(
-      indexPage(sitename, description, sharekey + (relpath ? "/" + relpath : ""), !relpath, files, readme)
+      indexPage(sitename, description, shareKey + (relpath ? "/" + relpath : ""), !relpath, files, readme)
     );
   } else if (url.pathname.endsWith("/")) {
     // target is file, but the request path ends with "/"
     return responseNotFound();
   }
 
-  if (data.cgi && filekey.endsWith(EXT_CGI) && "body" in obj) {
-    return executeCgi(request, await obj.text(), data.fullHtml, data.env);
+  if (share.cgi && filekey.endsWith(EXT_CGI) && "body" in obj) {
+    return executeCgi(request, await obj.text(), fullHtml, cors, share.env);
   }
 
-  return outputR2Object({ obj, fullHtml, cors, html, raw });
-};
+  if (request.method !== METHOD_GET) {
+    return responseNotFound();
+  }
 
-export const onRequestHead = getOnRequestHead(onRequestGet);
+  return outputR2Object({ obj, fullHtml, cors, html: requestHtml, raw: requestRaw });
+}
 
 function noindexPage(sitename: string, desc: string, dir: string, readme: string): string {
   const title = `${dir} - ${sitename}`;
@@ -624,6 +642,8 @@ ${readme ? `<h2>README</h2><div>${readme}</div>` : ""}
 </html>
 `;
 }
+
+export const onRequestHead = getOnRequestHead(onRequest);
 
 function encodeHtml(str: string): string {
   const map: Record<string, string> = {

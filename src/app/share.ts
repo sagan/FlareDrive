@@ -6,6 +6,7 @@ import {
   METHOD_PUT,
   METHOD_DELETE,
   MIME_JSON,
+  SHARE_META_VARIABLE,
   ShareObject,
   key2Path,
 } from "../../lib/commons";
@@ -14,7 +15,7 @@ import {
  * @returns share project keys
  */
 export async function listShares(auth: string): Promise<string[]> {
-  const res = await fetch(`${SHARE_ENDPOINT}`, {
+  const res = await fetch(`${SHARE_ENDPOINT}?${SHARE_META_VARIABLE}=1`, {
     method: METHOD_POST,
     headers: {
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
@@ -28,7 +29,7 @@ export async function listShares(auth: string): Promise<string[]> {
 }
 
 export async function createShare(key: string, share: ShareObject, auth: string): Promise<void> {
-  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
+  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?${SHARE_META_VARIABLE}=1`, {
     method: METHOD_PUT,
     headers: {
       [HEADER_CONTENT_TYPE]: MIME_JSON,
@@ -43,7 +44,7 @@ export async function createShare(key: string, share: ShareObject, auth: string)
 }
 
 export async function deleteShare(key: string, auth: string): Promise<void> {
-  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}`, {
+  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?${SHARE_META_VARIABLE}=1`, {
     method: METHOD_DELETE,
     headers: {
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
@@ -56,7 +57,7 @@ export async function deleteShare(key: string, auth: string): Promise<void> {
 }
 
 export async function getShare(key: string, auth: string): Promise<ShareObject> {
-  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?meta=1`, {
+  const res = await fetch(`${SHARE_ENDPOINT}${key2Path(key)}?${SHARE_META_VARIABLE}=1`, {
     headers: {
       ...(auth ? { [HEADER_AUTHORIZATION]: auth } : {}),
     },

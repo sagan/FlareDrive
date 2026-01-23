@@ -552,6 +552,9 @@ export default function Main({
   }, [cwd, effectiveAuth, setError, setShowProgressDialog, setTip, uploadEnqueue]);
 
   useEffect(() => {
+    if (sharing || editing || slideIndex >= 0) {
+      return;
+    }
     const handle = (event: ClipboardEvent) => {
       if (preparingUploads || !permitWrite) {
         return;
@@ -579,7 +582,7 @@ export default function Main({
     return () => {
       window.removeEventListener("paste", handle);
     }
-  }, [doUpload, permitWrite, preparingUploads, setError, setTip]);
+  }, [doUpload, permitWrite, preparingUploads, setError, setTip, sharing, editing, slideIndex]);
 
   return (
     <>

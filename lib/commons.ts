@@ -92,6 +92,8 @@ export const DOWNLOAD_VARIABLE = "download";
 
 export const META_VARIABLE = "meta";
 
+export const SHARE_META_VARIABLE = "_meta";
+
 export const FULL_CONTROL_VARIABLE = "fullControl";
 
 /**
@@ -417,7 +419,41 @@ export const HEADER_REFERER = "Referer";
 
 export const HEADER_ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 
+export const HEADER_ACCESS_CONTROL_ALLOW_METHODS = "Access-Control-Allow-Methods";
+
+export const HEADER_ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+
+export const HEADER_ACCESS_CONTROL_MAX_AGE = "Access-Control-Max-Age";
+
+export const HEADER_ACCESS_CONTROL_REQUEST_METHOD = "Access-Control-Request-Method";
+
+export const HEADER_ACCESS_CONTROL_REQUEST_HEADERS = "Access-Control-Request-Headers";
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin .
+ * For requests without credentials, the literal value * can be specified as a wildcard.
+ * Attempting to use the wildcard with credentials results in an error.
+ */
 export const ACCESS_CONTROL_ALLOW_ORIGIN_ALL = "*";
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Headers .
+ * The value * only counts as a special wildcard value for requests without credentials
+ * (requests without HTTP cookies or HTTP authentication information).
+ * In requests with credentials, it is treated as the literal header name * without special semantics.
+ */
+export const ACCESS_CONTROL_ALLOW_HEADERS_ALL = "*";
+
+export const ACCESS_CONTROL_ALLOW_METHODS_READ = `GET,HEAD,OPTIONS`;
+
+export const ACCESS_CONTROL_ALLOW_METHODS_ALL = `GET,HEAD,POST,PUT,DELETE,OPTIONS,PROPFIND,PROPPATCH,MKCOL,COPY,MOVE`;
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Max-Age .
+ * Maximum number of seconds for which the results can be cached as an unsigned non-negative integer.
+ * Firefox caps this at 24 hours (86400 seconds). Other browsers cap it at even smaller value.
+ */
+export const ACCESS_CONTROL_MAX_AGE_MAXIMUM = "86400";
 
 export const HEADER_REFERRER_POLICY = "Referrer-Policy";
 
@@ -580,26 +616,9 @@ export interface ThumbnailObject {
 }
 
 /**
- * Apply cors allow-all headers.
+ * Return dirname of path. It removes the starting / trailing slash of path first.
+ * E.g. "/foo/bar/", "foo/bar" => "foo"; "/" => "".
  */
-export function applyCorsHeaders(headers: HeadersInit) {
-  if (headers instanceof Headers) {
-    headers.set(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL);
-  } else if (Array.isArray(headers)) {
-    for (const header of headers) {
-      if (Array.isArray(header)) {
-        if (header[0].toLowerCase() === HEADER_ACCESS_CONTROL_ALLOW_ORIGIN.toLowerCase()) {
-          header[1] = ACCESS_CONTROL_ALLOW_ORIGIN_ALL;
-          return;
-        }
-      }
-    }
-    headers.push([HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL]);
-  } else {
-    headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = ACCESS_CONTROL_ALLOW_ORIGIN_ALL;
-  }
-}
-
 export function dirname(path: string): string {
   path = trimPrefixSuffix(path, "/");
   return path.split(/[\\/]/).slice(0, -1).join("/");
@@ -607,7 +626,7 @@ export function dirname(path: string): string {
 
 /**
  * Return basename of path. It removes the starting / trailing slash of path first.
- * Both "foo/bar" and "foo/bar/" => "bar". "/" => "".
+ * E.g. "/foo/bar/", "foo/bar" => "bar"; "/" => "".
  */
 export function basename(path: string): string {
   path = trimPrefixSuffix(path, "/");

@@ -2,9 +2,11 @@ import { Liquid, Tokenizer, evalToken } from "liquidjs";
 import JSOX from "jsox";
 import SparkMD5 from "spark-md5";
 import {
+  ACCESS_CONTROL_ALLOW_ORIGIN_ALL,
   CACHE_CONTROL_NO_CACHE,
   CONTENT_SECURITY_POLICY_SANDBOX,
   CONTENT_TYPE_OPTIONS_NOSNIFF,
+  HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
   HEADER_CACHE_CONTROL,
   HEADER_CONTENT_SECURITY_POLICY,
   HEADER_CONTENT_TYPE,
@@ -52,6 +54,7 @@ export interface SelfRequest {
   url: string;
   method: string;
   headers: Record<string, string>;
+  body?: ReadableStream | null;
 }
 
 export interface FetchResponse {
@@ -97,6 +100,8 @@ function headers2Record(headers: Headers, stripHeaders?: string[]): Record<strin
 
 // Initialize the template engine
 const engine = new Liquid({
+  // https://liquidjs.com/tutorials/truthy-and-falsy.html
+  jsTruthy: true,
   relativeReference: false,
   // https://github.com/harttle/liquidjs/issues/131
   fs: {
@@ -270,6 +275,46 @@ engine.registerTag("fetch", {
   },
 });
 
+// {% fail [err] %}
+engine.registerTag("fail", {
+  parse: function (tagToken) {
+    this.args = parseArgs(tagToken.args);
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  *render(ctx, emitter): Generator<unknown, any, any> {
+    let err: unknown;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = this.args as any[];
+    if (args.length > 0) {
+      err = yield evalToken(args[0], ctx);
+    }
+    throw new Error(`fail called with err: ${err}`);
+  },
+});
+
+// {% read_body "variableName" body %}
+// {% read_body "variableName" body "json" %}
+engine.registerTag("read_body", {
+  parse: function (tagToken) {
+    this.args = parseArgs(tagToken.args);
+    if (this.args.length < 2) {
+      throw new Error("fetch tag requires at least 2 arguments: variableName and body");
+    }
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  *render(ctx, emitter): Generator<unknown, any, any> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = this.args as any[];
+    const variableName = `${yield evalToken(args[0], ctx)}`;
+    const body = yield evalToken(args[1], ctx);
+    const as = args.length > 2 ? `${yield evalToken(args[2], ctx)}` : "";
+
+    const data = yield readStream(body, as);
+    const bottom = ctx.bottom() as Record<string, unknown>;
+    bottom[variableName] = data;
+  },
+});
+
 /*
 {% set_header "Content-Type" "text/plain" %}
 {% set_header "Content-Type: text/plain" %}
@@ -370,6 +415,7 @@ export async function executeCgi(
   request: Request,
   template: string,
   fullHtml = false,
+  cors = false,
   env: Record<string, string> = {}
 ): Promise<Response> {
   try {
@@ -379,6 +425,7 @@ export async function executeCgi(
       url: request.url,
       method: request.method,
       headers: requestHeaders,
+      body: request.body,
     };
     const data: Record<string, unknown> = {};
     const context: Record<string, unknown> = {
@@ -411,6 +458,9 @@ export async function executeCgi(
     if (!actualHeaders.has(HEADER_CACHE_CONTROL)) {
       actualHeaders.set(HEADER_CACHE_CONTROL, CACHE_CONTROL_NO_CACHE);
     }
+    if (cors && !actualHeaders.has(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN)) {
+      actualHeaders.set(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL);
+    }
     if (!fullHtml) {
       actualHeaders.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     }
@@ -422,4 +472,17 @@ export async function executeCgi(
     console.log("cgi error", err);
     return responseInternalServerError();
   }
+}
+
+async function readStream(stream: ReadableStream, as?: string): Promise<unknown> {
+  if (as) {
+    switch (as) {
+      case "json":
+        return new Response(stream).json();
+      case "arraybuffer":
+      case "binary":
+        return new Response(stream).arrayBuffer();
+    }
+  }
+  return new Response(stream).text();
 }

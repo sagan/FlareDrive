@@ -34,6 +34,7 @@ import {
   WEBDAV_ENDPOINT, HEADER_AUTHORIZATION, SHARE_ENDPOINT, STRONG_PASSWORD_LENGTH, THIRTEEN_MONTHS_DAYS, PAST_TIMESTAMP,
   ShareObject, ShareRefererMode, basename, cut, dirname, fileUrl, trimPrefixSuffix, dirUrlPath,
   Permission, humanReadableSize, validateAndGetSafeUrl, key2Path,
+  extname,
 } from '../lib/commons';
 import { isDirectory } from '../lib/mime';
 import { createShare, deleteShare } from './app/share';
@@ -489,7 +490,17 @@ headers = "${HEADER_AUTHORIZATION}","?${url.searchParams.toString()}"`;
                 </IconButton>
                 <IconButton
                   disabled={status !== Status.Creating}
-                  onClick={() => setSharekey(generatePassword(STRONG_PASSWORD_LENGTH))}
+                  onClick={() => {
+                    let shareKey = "";
+                    const password = generatePassword(STRONG_PASSWORD_LENGTH);
+                    if (targetIsDir) {
+                      shareKey = name + "-" + password;
+                    } else {
+                      const ext = extname(name);
+                      shareKey = name.slice(0, name.length - ext.length) + "-" + password + ext;
+                    }
+                    setSharekey(shareKey);
+                  }}
                   title="Random secure link"
                   edge="end"
                 >

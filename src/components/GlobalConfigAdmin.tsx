@@ -134,7 +134,7 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
             <li><code>publicDirPrefix</code>: An array of path prefixes. Directories under these paths are publicly listable. This implies files are also readable.</li>
             <li><code>publicRwdirPrefix</code>: An array of path prefixes. Directories under these paths are publicly writable (upload/modify/delete). This implies directory listing and file reading.</li>
             <li>Each one of the above lists must not be empty and do not start or end with white space or &quot;/&quot;.</li>
-            <li><code>mappings</code>: Record&lt;string,string&gt;. Map path prefix to share name. E.g. <code>foo/bar</code> =&gt; <code>tmp</code>, then <code>/foo/bar</code> url is equal with <code>/s/tmp</code> url. Require prefixes in build time wrangler <a href="https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first">run_worker_first</a> config.</li>
+            <li><code>mappings</code>: Record&lt;string,string&gt;. Map path prefix to share name. E.g. <code>foo/bar</code> =&gt; <code>tmp</code>, then <code>/foo/bar</code> url is equal with <code>/s/tmp</code> url. Require build time <code>run_worker_first</code> config is <code>true</code> or includes path prefix.</li>
           </ul>
         </Typography>
       </Box>
@@ -156,7 +156,10 @@ export default function GlobalConfigAdmin({ setGlobalConfig }: {
           <strong>To modify build-time configuration:</strong>
           <ul>
             <li><code>run_worker_first</code>: Use <code>RUN_WORKER_FIRST</code> env (JSON string).
-              E.g. <code>[&quot;/foo/*&quot;]</code>.
+              E.g. <code>true</code>, <code>[&quot;/foo/*&quot;]</code>.
+              See <a rel="noopener noreferrer"
+                href="https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first">
+                Cloudflare document</a>.
             </li>
           </ul>
         </Typography>

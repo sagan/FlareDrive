@@ -34,9 +34,12 @@ import {
   HEADER_CONTENT_DISPOSITION,
   CONTENT_DISPOSITION_ATTACHMENT,
   REFERRER_POLICY_NOREFERRER,
+  HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
+  ACCESS_CONTROL_ALLOW_ORIGIN_ALL,
   SCOPE_GLOBAL,
   KEY_PART_SEARCH,
   METHOD_POST,
+  METHOD_GET,
   ROOT_OBJECT,
   sha256,
   hmacSha256Verify,
@@ -55,7 +58,6 @@ import {
   isHtml,
   R2ObjectAlike,
   dirname,
-  applyCorsHeaders,
 } from "../lib/commons";
 import { parseUrlFile, isImage } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
@@ -210,8 +212,8 @@ export function responseConflict(msg?: string): Response {
 /**
  * Return 204 No Content response
  */
-export function responseNoContent(): Response {
-  return new Response(null, { status: 204 });
+export function responseNoContent(headers?: HeadersInit): Response {
+  return new Response(null, { status: 204, headers });
 }
 
 /**
@@ -288,8 +290,9 @@ export function jsonResponse(
   const headers = new Headers(headersInit);
   headers.set(HEADER_CONTENT_TYPE, MIME_JSON);
   if (cors) {
-    applyCorsHeaders(headers);
+    headers.set(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL);
   }
+
   return new Response(JSON.stringify(obj), {
     status,
     headers,
@@ -691,7 +694,7 @@ export async function outputR2Object({
     headers.set(HEADER_CONTENT_DISPOSITION, CONTENT_DISPOSITION_ATTACHMENT);
   }
   if (cors) {
-    applyCorsHeaders(headers);
+    headers.set(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_ORIGIN_ALL);
   }
   if (!raw && obj.httpMetadata?.contentType == MIME_URL) {
     if (obj.customMetadata?.url) {
@@ -855,6 +858,10 @@ export function getPublicConfig(globalConfig: GlobalConfig): PublicConfig {
  */
 export function getOnRequestHead(onRequestGet: FdCfFunc): FdCfFunc {
   return async function (context) {
+    context.request = new Request(context.request.url, {
+      method: METHOD_GET,
+      headers: context.request.headers,
+    }) as (typeof context)["request"];
     const res = await onRequestGet(context);
     return new Response(null, {
       status: res.status,
@@ -866,7 +873,7 @@ export function getOnRequestHead(onRequestGet: FdCfFunc): FdCfFunc {
 /**
  * get actual path array from Cloudflare worker [[id]].ts style file system routing path params.
  * which may be indeed undefined if user visit root url like "/s/" of "/s/[id].ts" routing.
- * Each element of returned array is url decoded and normalized.
+ * Each element of returned array is not empty, url decoded and normalized and doesn't start or end with slash.
  */
 export function getPathArray(context: FdCfFuncContext): string[] {
   const pathParam = context.params.path;
