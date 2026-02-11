@@ -67,7 +67,7 @@ export default function ShareDialog({ open, onClose, setError, setSlideIndex, po
   const { auth, expires } = useConfig();
   const [tab, setTab] = useState("shareKey" in otherProps ? 1 : 0);
   const fileKeyWithDirSlash = "shareKey" in otherProps ? otherProps.shareObject.key :
-    (otherProps.file.key + (isDirectory(otherProps.file) ? "/" : ""));
+    (otherProps.file.key + (isDirectory(otherProps.file) && !otherProps.file.key.endsWith("/") ? "/" : ""));
   const fileKey = trimPrefixSuffix(fileKeyWithDirSlash, "/");
   const name = basename(fileKey);
   const [shareKey, setSharekey] = useState("shareKey" in otherProps ? otherProps.shareKey : name);

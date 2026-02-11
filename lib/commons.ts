@@ -294,6 +294,8 @@ export const MIME_MP4 = "video/mp4";
 
 export const MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+export const MIME_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
 export const MIME_SH = "application/x-sh";
 
 export const MIME_JS = "application/javascript";
@@ -312,6 +314,8 @@ export const MIME_TOML = "application/toml";
  * Textual mimes besides "txt/*".
  */
 export const TXT_MIMES = [MIME_XML, MIME_JS, MIME_JSON, MIME_SH, MIME_YAML, MIME_TOML, MIME_URL] as const;
+
+export const OPENABLE_MIMES = [MIME_PDF, MIME_DOCX, MIME_XLSX] as const;
 
 export const HEADER_PREFIX_X_AMAZON_META = "x-amz-meta-";
 

@@ -16,7 +16,7 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import {
   TOKEN_VARIABLE, SCOPE_VARIABLE, EXPIRES_VARIABLE, HTML_VARIABLE,
-  MIME_DIR, MIME_PDF, MIME_MARKDOWN, MIME_URL, MIME_DOCX,
+  MIME_DIR, MIME_PDF, MIME_MARKDOWN, MIME_URL, MIME_DOCX, MIME_XLSX, OPENABLE_MIMES,
   Permission, basename, cleanDirPath, compareBoolean, compareString, fileUrl, humanReadableSize,
   str2int, dirname, extname, appendQueryStringToUrl, validateAndGetSafeUrl,
 } from "../lib/commons";
@@ -41,6 +41,7 @@ import PdfDialog from "./PdfDialog";
 import ImageEditorDialog from "./ImageEditorDialog";
 import UrlFileEditorDialog from "./UrlFileEditorDialog";
 import DocxDialog from "./DocxDialog";
+import XlsxDialog from "./XlsxDialog";
 
 function DropZone({ disabled, children, onDrop }:
   { disabled: boolean, children: React.ReactNode; onDrop: (files: Record<string, File>) => void }) {
@@ -131,8 +132,8 @@ function SlideRender({ slide, rect }: RenderSlideProps) {
       }}>
         Download
       </Button>
-      {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) || file.httpMetadata.contentType === MIME_PDF
-        || file.httpMetadata.contentType === MIME_DOCX) && <Button
+      {(file.size <= EDIT_FILE_SIZE_LIMIT && isTextual(file) ||
+        (OPENABLE_MIMES as readonly string[]).includes(file.httpMetadata.contentType)) && <Button
           variant="contained" color="secondary" startIcon={<FileOpenIcon />} onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -386,6 +387,8 @@ export default function Main({
       const mimeType = fileMime(file);
       if (mimeType === MIME_PDF) {
         setEditing({ file, key: file.key, kind: "pdf" });
+      } else if (mimeType === MIME_XLSX) {
+        setEditing({ file, key: file.key, kind: "xlsx" });
       } else if (mimeType === MIME_DOCX) {
         setEditing({ file, key: file.key, kind: "docx" });
       } else if (isUrlFile(file)) {
@@ -447,6 +450,8 @@ export default function Main({
       },
     };
     switch (editing.kind) {
+      case "xlsx":
+        return <XlsxDialog  {...fileViewerProps} />;
       case "docx":
         return <DocxDialog  {...fileViewerProps} />;
       case "pdf":
