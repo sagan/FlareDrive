@@ -35,6 +35,7 @@ import {
   CONTENT_DISPOSITION_ATTACHMENT,
   REFERRER_POLICY_NOREFERRER,
   HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
+  HEADER_LOCATION,
   ACCESS_CONTROL_ALLOW_ORIGIN_ALL,
   SCOPE_GLOBAL,
   KEY_PART_SEARCH,
@@ -256,7 +257,7 @@ export function responseRedirect(url: string, noreferer = false): Response {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: url,
+      [HEADER_LOCATION]: url,
       ...(noreferer ? { [HEADER_REFERRER_POLICY]: REFERRER_POLICY_NOREFERRER } : {}),
     },
   });

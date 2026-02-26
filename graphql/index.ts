@@ -1,6 +1,6 @@
 import { DocumentNode } from "graphql";
 import { print } from "graphql/language/printer.js";
-import { HEADER_CONTENT_TYPE, METHOD_POST, MIME_JSON } from "../lib/commons";
+import { HEADER_AUTHORIZATION, HEADER_CONTENT_TYPE, METHOD_POST, MIME_JSON } from "../lib/commons";
 import { getSdk } from "./generated/graphql";
 
 // Use Cloudflare GraphQL Analytics API
@@ -17,7 +17,7 @@ export function createSdk(token: string) {
       method: METHOD_POST,
       headers: {
         [HEADER_CONTENT_TYPE]: MIME_JSON,
-        Authorization: `Bearer ${token}`,
+        [HEADER_AUTHORIZATION]: `Bearer ${token}`,
       },
       body: JSON.stringify({ query, variables }),
     });

@@ -1,4 +1,5 @@
 import {
+  HEADER_ETAG,
   HEADER_FD_THUMBNAIL,
   HEADER_NO_THUMBNAIL,
   KEY_PREFIX_PRIVATE,
@@ -53,7 +54,9 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
   const completeBody = await request.json<{ parts: Array<any> }>();
 
   try {
-    const object = await multipartUpload.complete(completeBody.parts);
+    let object = await multipartUpload.complete(completeBody.parts);
+    // 2026-02 test: the object that multipartUpload.complete returns is incomplete? lack some properties
+    object = (await bucket.head(object.key))!;
     // generate thumbnail for uploaded file. Best effort
     if (context.env.IMAGES && !request.headers.has(HEADER_NO_THUMBNAIL) && isImage(object)) {
       try {
@@ -70,7 +73,7 @@ export async function handleRequestPostCompleteMultipart({ context, bucket, path
       }
     }
     return new Response(null, {
-      headers: { etag: object.httpEtag },
+      headers: { [HEADER_ETAG]: object.httpEtag },
     });
   } catch (err: unknown) {
     return responseBadRequest(`${err}}`);

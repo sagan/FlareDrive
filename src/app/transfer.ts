@@ -7,6 +7,7 @@ import {
   HEADER_AUTHED,
   HEADER_INAPP,
   HEADER_AUTH,
+  HEADER_DEPTH,
   HEADER_FD_THUMBNAIL,
   KEY_PREFIX_THUMBNAIL,
   MIME_XML,
@@ -88,7 +89,7 @@ export async function fetchPath(
     new Request(`${WEBDAV_ENDPOINT}${key2Path(path)}`, {
       method: METHOD_PROPFIND,
       headers: {
-        Depth: "1",
+        [HEADER_DEPTH]: "1",
         [HEADER_INAPP]: "1",
       },
     }),

@@ -391,6 +391,10 @@ export const HEADER_CACHE_CONTROL = `Cache-Control`;
 
 export const HEADER_CONTENT_TYPE_OPTIONS = "X-Content-Type-Options";
 
+export const HEADER_ALLOW = "Allow";
+
+export const HEADER_DAV = "DAV";
+
 export const CACHE_CONTROL_NO_CACHE = `no-cache, no-store, must-revalidate`;
 
 export const CACHE_CONTROL_CACHE_LONGTIME = "max-age=31536000";

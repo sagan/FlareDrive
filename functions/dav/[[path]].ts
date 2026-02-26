@@ -1,4 +1,6 @@
 import {
+  HEADER_ALLOW,
+  HEADER_DAV,
   METHOD_COPY,
   METHOD_DELETE,
   METHOD_GET,
@@ -28,8 +30,8 @@ import { getStorage } from "../storage";
 async function handleRequestOptions() {
   return new Response(null, {
     headers: {
-      Allow: Object.keys(HANDLERS).join(", "),
-      DAV: "1",
+      [HEADER_ALLOW]: Object.keys(HANDLERS).join(", "),
+      [HEADER_DAV]: "1",
     },
   });
 }
