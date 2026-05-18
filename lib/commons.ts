@@ -1,7 +1,25 @@
 import { z } from "zod";
 import { marked } from "marked";
-import sanitizeHtml from "sanitize-html";
+import { gfmHeadingId } from "marked-gfm-heading-id";
+import sanitizeHtml, { IOptions } from "sanitize-html";
 import { sha256 as sha256Internal, hmac_sha256 } from "./sha256";
+
+const sanitizeHtmlOptions: IOptions = {
+  // 1. Ensure headers and anchor tags are allowed
+  allowedTags: [...sanitizeHtml.defaults.allowedTags, "h1", "h2", "h3", "h4", "h5", "h6"],
+
+  // 2. Explicitly allow the 'id' attribute on headers and links
+  allowedAttributes: {
+    ...sanitizeHtml.defaults.allowedAttributes,
+    a: ["href", "name", "target", "id"], // Added 'id'
+    h1: ["id"],
+    h2: ["id"],
+    h3: ["id"],
+    h4: ["id"],
+    h5: ["id"],
+    h6: ["id"],
+  },
+};
 
 /**
  * The unix timestamp (milliseconds) of "past" time:
@@ -622,6 +640,8 @@ export interface ShareObject {
 export interface ThumbnailObject {
   digest: string;
 }
+
+marked.use(gfmHeadingId({}));
 
 /**
  * Return dirname of path. It removes the starting / trailing slash of path first.
@@ -1465,14 +1485,14 @@ export function removeZeroFields<T extends object>(obj: T): T {
 export async function str2Html(text: string, mime = ""): Promise<string> {
   if (mime === MIME_MARKDOWN) {
     const htmlOutput = await marked.parse(text);
-    const sanitizedHtml = sanitizeHtml(htmlOutput);
+    const sanitizedHtml = sanitizeHtml(htmlOutput, sanitizeHtmlOptions);
     return sanitizedHtml;
   } else if (!mime || mime === MIME_TXT) {
     // Simple text to HTML conversion, escaping HTML entities
     // Also, recognize "http(s)://..." urls and convert them to <a> links
     text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     text = text.replace(/https?:\/\/[^\s]+/g, (url) => `<a href="${url}" rel="noopener noreferrer">${url}</a>`);
-    text = sanitizeHtml(text);
+    text = sanitizeHtml(text, sanitizeHtmlOptions);
     return text;
   }
   return "";

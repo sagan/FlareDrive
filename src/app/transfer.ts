@@ -710,9 +710,15 @@ export async function prepareUploadFiles(
   const dirSet = new Set<string>();
 
   for (const [path, file] of Object.entries(files)) {
-    const basedir = joinPathes(cwd, dirname(path));
-    if (basedir !== cwd) {
-      dirSet.add(basedir);
+    const dir = dirname(path);
+    const basedir = joinPathes(cwd, dir);
+    if (dir) {
+      const dirItems = dir.split("/");
+      let currentDir = cwd;
+      for (const item of dirItems) {
+        currentDir = joinPathes(currentDir, item);
+        dirSet.add(currentDir);
+      }
     }
     fileList.push({ basedir, file });
   }

@@ -1,4 +1,3 @@
-import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import {
   KEY_PREFIX_PRIVATE,
@@ -59,6 +58,7 @@ import {
   isHtml,
   R2ObjectAlike,
   dirname,
+  str2Html,
 } from "../lib/commons";
 import { parseUrlFile, isImage } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
@@ -707,7 +707,7 @@ export async function outputR2Object({
   }
   if (html && obj.httpMetadata?.contentType === MIME_MARKDOWN) {
     const body = await obj.text();
-    const htmlOutput = await marked.parse(body);
+    const htmlOutput = await str2Html(body, MIME_MARKDOWN);
     const sanitizedHtml = sanitizeHtml(htmlOutput);
     headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
     headers.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);

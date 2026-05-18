@@ -276,7 +276,13 @@ export default function App() {
     }
     setReadmeStatus("loading");
     try {
-      const res = await fetch(fileUrl({ auth, key, expires: config.expires }), {
+      const res = await fetch(fileUrl({
+        auth,
+        key,
+        expires: auth ? expires : str2int(authSearchParams?.get(EXPIRES_VARIABLE)),
+        scope: auth ? "" : authSearchParams?.get(SCOPE_VARIABLE),
+        token: auth ? "" : authSearchParams?.get(TOKEN_VARIABLE),
+      }), {
         headers: {
           [HEADER_RANGE]: rangeHeader(0, 524287), // first 512KiB (524288)
         },
@@ -295,7 +301,7 @@ export default function App() {
         setReadmeError(e);
       }
     }
-  }, [auth, config.expires, readmeFile]);
+  }, [auth, authSearchParams, expires, readmeFile]);
 
   useEffect(() => {
     if (!readmeFile) {
