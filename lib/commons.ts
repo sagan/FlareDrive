@@ -302,6 +302,10 @@ export const MIME_XML = "application/xml";
 
 export const MIME_HTML = "text/html";
 
+export const CONTENT_TYPE_MIME_HTML = "text/html; charset=utf-8";
+
+export const CONTENT_TYPE_MIME_TXT = "text/plain; charset=utf-8";
+
 export const MIME_MARKDOWN = "text/markdown";
 
 export const MIME_TXT = "text/plain";

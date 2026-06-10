@@ -19,7 +19,6 @@ import {
   SCOPE_VARIABLE,
   WEBDAV_ENDPOINT,
   HEADER_CF_RESIZED,
-  MIME_HTML,
   MIME_MARKDOWN,
   MIME_JSON,
   MIME_URL,
@@ -59,6 +58,7 @@ import {
   R2ObjectAlike,
   dirname,
   str2Html,
+  CONTENT_TYPE_MIME_HTML,
 } from "../lib/commons";
 import { parseUrlFile, isImage } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
@@ -303,7 +303,7 @@ export function jsonResponse(
 export function htmlResponse(html: string) {
   return new Response(html, {
     headers: {
-      [HEADER_CONTENT_TYPE]: MIME_HTML,
+      [HEADER_CONTENT_TYPE]: CONTENT_TYPE_MIME_HTML,
     },
   });
 }
@@ -708,15 +708,14 @@ export async function outputR2Object({
   if (html && obj.httpMetadata?.contentType === MIME_MARKDOWN) {
     const body = await obj.text();
     const htmlOutput = await str2Html(body, MIME_MARKDOWN);
-    const sanitizedHtml = sanitizeHtml(htmlOutput);
-    headers.set(HEADER_CONTENT_TYPE, MIME_HTML);
+    headers.set(HEADER_CONTENT_TYPE, CONTENT_TYPE_MIME_HTML);
     headers.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);
     headers.set(HEADER_REFERRER_POLICY, REFERRER_POLICY_NOREFERRER);
     if (!fullHtml) {
       headers.set(HEADER_CONTENT_SECURITY_POLICY, CONTENT_SECURITY_POLICY_SANDBOX);
     }
     headers.delete(HEADER_CONTENT_LENGTH);
-    return new Response(sanitizedHtml, { headers });
+    return new Response(htmlOutput, { headers });
   }
   headers.set(HEADER_CONTENT_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS_NOSNIFF);
   headers.set(HEADER_REFERRER_POLICY, REFERRER_POLICY_NOREFERRER);
