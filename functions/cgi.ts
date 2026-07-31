@@ -23,6 +23,7 @@ import {
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 import { generatePassword } from "@/src/commons";
+import { dnsQuery } from "./dns";
 
 /**
  * Don't read fetch response body.
@@ -191,6 +192,11 @@ engine.registerFilter("sha256sum", async (input: unknown, binaryString?: boolean
 engine.registerFilter("hmac_sha256_sign", async (payload: unknown, key: string) => {
   const sign = await hmacSha256Sign(key, payload);
   return sign;
+});
+
+engine.registerFilter("nslookup", async (name: string, type?: string) => {
+  const result = await dnsQuery(name, type || "A");
+  return result;
 });
 
 /*
