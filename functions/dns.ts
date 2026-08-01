@@ -10,7 +10,7 @@ interface DnsResult {
     ttl: number; // Time to Live
     rawData: string; // The unparsed data string from the DNS server
     parsed: {
-      ip?: string; // Present for A/AAAA
+      ip?: string; // Present for A/AAAA/SRV
       target?: string; // Present for CNAME/SRV (trailing dot removed)
       priority?: number; // Present for SRV
       weight?: number; // Present for SRV
@@ -21,7 +21,7 @@ interface DnsResult {
   allFinalIps: string[]; // A convenient global list of all unique final IPs found
 }
 
-export async function dnsQuery(domain: string, type: string): Promise<DnsResult> {
+export async function dnsQuery(domain: string, type: string, failOk: boolean): Promise<DnsResult> {
   const baseUrl = "https://1.1.1.1/dns-query";
 
   // DNS Type mapper (expandable if you need TXT, MX, etc.)
@@ -80,7 +80,7 @@ export async function dnsQuery(domain: string, type: string): Promise<DnsResult>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawData: any = await fetchDns(domain, type);
 
-    const result = {
+    const result: DnsResult = {
       domain,
       type,
       status: statusMap[rawData.Status] || "UNKNOWN",
@@ -89,7 +89,13 @@ export async function dnsQuery(domain: string, type: string): Promise<DnsResult>
       allFinalIps: [] as string[],
     };
 
-    if (!rawData.Answer) return result;
+    if (!failOk && (result.status !== "NOERROR" || !rawData.Answer)) {
+      throw new Error(`status=${result.status}, answer_empty=${!!rawData.Answer}`);
+    }
+
+    if (!rawData.Answer) {
+      return result;
+    }
     const globalIps = new Set<string>();
 
     for (const ans of rawData.Answer) {
@@ -118,6 +124,7 @@ export async function dnsQuery(domain: string, type: string): Promise<DnsResult>
 
         const ips = await deepResolveIps(target);
         record.resolvedIps = ips;
+        record.parsed.ip = ips[0] || "";
         ips.forEach((ip) => globalIps.add(ip));
       }
 
@@ -134,6 +141,7 @@ export async function dnsQuery(domain: string, type: string): Promise<DnsResult>
 
           const ips = await deepResolveIps(target);
           record.resolvedIps = ips;
+          record.parsed.ip = ips[0] || "";
           ips.forEach((ip) => globalIps.add(ip));
         }
       }
@@ -143,13 +151,16 @@ export async function dnsQuery(domain: string, type: string): Promise<DnsResult>
 
     result.allFinalIps = Array.from(globalIps);
     return result;
-  } catch (error: unknown) {
-    return {
-      domain,
-      type,
-      status: "ERROR",
-      records: [],
-      allFinalIps: [],
-    };
+  } catch (err: unknown) {
+    if (failOk) {
+      return {
+        domain,
+        type,
+        status: "ERROR",
+        records: [],
+        allFinalIps: [],
+      };
+    }
+    throw err;
   }
 }

@@ -137,6 +137,9 @@ Available custom filters:
 - `json_parse`: Parse a string as JavaScript literal to object. The string doesn't need to be strict json. E.g. `{% assign my_obj = '{id: 1, name: "Item"}' | json_parse %}`.
 - `query_string` : Parse a url query string or a full url and return query variable value. E.g. `{% assign bar = 'https://example.com/?foo=a&bar=b' | query_string: "bar" %}`.
 - `{{ "123456" | md5sum }}` : Calculate the md5 sum.
+- `{{ "example.com" | nslookup}}` : Do a DNS query and return result object json. It accepts two optional parameters:
+  - type: defaults to `A`. E.g. `{{ "example.com" | nslookup: "AAAA"}}`.
+  - boolean flag to allow returning result (instead of throwing exception directly) even if the DNS query failed.
 
 Example `example.cgi` contents:
 
