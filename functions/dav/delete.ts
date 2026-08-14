@@ -11,7 +11,14 @@ import { RequestHandlerParams } from "./utils";
  * @returns deleted file meta object or null if file does not exists
  */
 export async function deleteFile(bucket: R2Bucket, key: string, keepThumbnail = false): Promise<R2Object | null> {
-  const file = await bucket.head(key);
+  let file = await bucket.head(key);
+  if (!file && !key.endsWith("/")) {
+    file = await bucket.head(key + "/");
+    if (file) key = key + "/";
+  } else if (!file && key.endsWith("/")) {
+    file = await bucket.head(key.slice(0, -1));
+    if (file) key = key.slice(0, -1);
+  }
   if (!file) {
     return null;
   }
@@ -32,6 +39,11 @@ export async function handleRequestDelete({ bucket, path, context }: RequestHand
     if (context.env.DB) {
       try {
         await deleteDbFile(context.env.DB, path);
+        if (path.endsWith("/")) {
+          await deleteDbFile(context.env.DB, path.slice(0, -1));
+        } else {
+          await deleteDbFile(context.env.DB, path + "/");
+        }
       } catch (e) {
         /* empty */
       }
@@ -44,8 +56,12 @@ export async function handleRequestDelete({ bucket, path, context }: RequestHand
     }
   }
 
-  const children = listAll(bucket, path === "" ? undefined : `${path}/`);
+  const prefix = path === "" ? undefined : path.endsWith("/") ? path : `${path}/`;
+  const children = listAll(bucket, prefix, true);
   for await (const child of children) {
+    if (child.key === path || (prefix && child.key === prefix)) {
+      continue;
+    }
     await deleteFile(bucket, child.key, keepThumbnail);
     if (context.env.DB) {
       try {

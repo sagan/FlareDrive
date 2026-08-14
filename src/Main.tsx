@@ -470,14 +470,18 @@ export default function Main({
   }, [editing, setError, setEditing, permitWrite, fetchFiles]);
 
   const onRename = async () => {
-    const oldName = basename(multiSelected[0]);
+    const targetKey = multiSelected[0];
+    const item = files.find((f) => f.key === targetKey);
+    const isDir = targetKey.endsWith("/") || (item ? isDirectory(item) : false);
+    const oldName = basename(targetKey);
     const newName = window.prompt("Rename to:", oldName);
     if (!newName || oldName === newName) {
       return;
     }
-    const dst = (cwd ? cwd + "/" : "") + newName + (multiSelected[0].endsWith("/") ? "/" : "");
+    const srcKey = targetKey + (isDir && !targetKey.endsWith("/") ? "/" : "");
+    const dstKey = (cwd ? cwd + "/" : "") + newName + (isDir ? "/" : "");
     try {
-      await copyPaste(multiSelected[0], dst, effectiveAuth, true);
+      await copyPaste(srcKey, dstKey, effectiveAuth, true);
       fetchFiles();
     } catch (e) {
       setError(e);
@@ -485,13 +489,16 @@ export default function Main({
   };
 
   const onDuplicate = async () => {
-    const newkey = prompt(`Create a copy of "${multiSelected[0]}" at path`,
-      getDuplicateName(multiSelected[0], files));
+    const targetKey = multiSelected[0];
+    const item = files.find((f) => f.key === targetKey);
+    const isDir = targetKey.endsWith("/") || (item ? isDirectory(item) : false);
+    const srcKey = targetKey + (isDir && !targetKey.endsWith("/") ? "/" : "");
+    const newkey = prompt(`Create a copy of "${srcKey}" at path`, getDuplicateName(srcKey, files));
     if (!newkey) {
       return;
     }
     try {
-      await copyPaste(multiSelected[0], newkey, effectiveAuth, false);
+      await copyPaste(srcKey, newkey, effectiveAuth, false);
       fetchFiles();
     } catch (e) {
       setError(e);
@@ -509,10 +516,13 @@ export default function Main({
     if (newdir == dir) {
       return;
     }
-    for (const file of multiSelected) {
-      const dst = newdir + basename(file) + (file.endsWith("/") ? "/" : "");
+    for (const fileKey of multiSelected) {
+      const item = files.find((f) => f.key === fileKey);
+      const isDir = fileKey.endsWith("/") || (item ? isDirectory(item) : false);
+      const srcKey = fileKey + (isDir && !fileKey.endsWith("/") ? "/" : "");
+      const dst = newdir + basename(fileKey) + (isDir ? "/" : "");
       try {
-        await copyPaste(file, dst, effectiveAuth, true);
+        await copyPaste(srcKey, dst, effectiveAuth, true);
       } catch (e) {
         setError(e);
       }

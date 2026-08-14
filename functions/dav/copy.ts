@@ -33,7 +33,12 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
     return responseBadRequest();
   }
 
-  const src = await bucket.get(path);
+  let src = await bucket.get(path);
+  if (src === null && !path.endsWith("/")) {
+    src = await bucket.get(path + "/");
+  } else if (src === null && path.endsWith("/")) {
+    src = await bucket.get(path.slice(0, -1));
+  }
   if (src === null) {
     return responseNotFound();
   }
@@ -44,12 +49,15 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
     return responseBadRequest();
   }
   const destination = decodedPathname.slice(WEBDAV_ENDPOINT.length);
+
+  const srcPrefix = path === "" || path.endsWith("/") ? path : `${path}/`;
+  const destPrefix = destination === "" || destination.endsWith("/") ? destination : `${destination}/`;
+
   if (
     !destination ||
     destination === path ||
-    destination === path + "/" ||
-    path === destination + "/" ||
-    (isDirectory(src) && destination.startsWith(path + "/"))
+    srcPrefix === destPrefix ||
+    (isDirectory(src) && destPrefix.startsWith(srcPrefix))
   ) {
     return responseBadRequest();
   }
@@ -65,7 +73,9 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
   }
 
   // Check if the destination already exists
-  const destinationExists = await bucket.head(destination);
+  const destinationExists =
+    (await bucket.head(destination)) ||
+    (destination.endsWith("/") ? await bucket.head(destination.slice(0, -1)) : await bucket.head(destination + "/"));
   if (dontOverwrite && destinationExists) {
     return responsePreconditionsFailed();
   }
@@ -97,20 +107,23 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
       case "0":
         break;
       case "infinity": {
-        const prefix = path + "/";
         const copy = async (object: R2Object) => {
-          const target = `${destination}/${object.key.slice(prefix.length)}`;
-          const src = await bucket.get(object.key);
-          if (src === null) {
+          if (object.key === srcPrefix || object.key === path) {
             return;
           }
-          const obj = await bucket.put(target, src.body, {
-            httpMetadata: object.httpMetadata,
-            customMetadata: object.customMetadata,
+          const subPath = object.key.slice(srcPrefix.length);
+          const targetKey = `${destPrefix}${subPath}`;
+          const childSrc = await bucket.get(object.key);
+          if (childSrc === null) {
+            return;
+          }
+          const childObj = await bucket.put(targetKey, childSrc.body, {
+            httpMetadata: childSrc.httpMetadata,
+            customMetadata: childSrc.customMetadata,
           });
-          if (context.env.DB && !obj.key.startsWith(KEY_PREFIX_PRIVATE)) {
+          if (context.env.DB && !childObj.key.startsWith(KEY_PREFIX_PRIVATE)) {
             try {
-              await upsertDbFile(context.env.DB, obj);
+              await upsertDbFile(context.env.DB, childObj);
             } catch (e) {
               console.log("failed to upsert file meta to db", e);
             }
@@ -118,7 +131,7 @@ export async function handleRequestCopy({ context, bucket, path, request, scope,
         };
         const limit = pLimit(5);
         const promises = [];
-        for await (const object of listAll(bucket, prefix, true)) {
+        for await (const object of listAll(bucket, srcPrefix, true)) {
           promises.push(limit(() => copy(object)));
         }
         await Promise.all(promises);

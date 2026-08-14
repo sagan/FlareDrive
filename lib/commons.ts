@@ -1191,9 +1191,9 @@ export interface R2ObjectAlike {
   };
   customMetadata?: Record<string, string>;
   checksums: {
-    md5?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
-    sha1?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
-    sha256?: ArrayBuffer | Uint8Array<ArrayBufferLike> | string;
+    md5?: ArrayBuffer | Uint8Array | string;
+    sha1?: ArrayBuffer | Uint8Array | string;
+    sha256?: ArrayBuffer | Uint8Array | string;
   };
 }
 

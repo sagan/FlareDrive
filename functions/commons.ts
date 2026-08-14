@@ -479,7 +479,7 @@ export async function findChildren({
   }
 
   const objects: Array<R2Object> = [];
-  const prefix = path === "" ? path : `${path}/`;
+  const prefix = path === "" || path.endsWith("/") ? path : `${path}/`;
   for await (const object of listAll(bucket, prefix, depth === "infinity")) {
     objects.push(object);
   }
