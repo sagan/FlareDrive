@@ -161,7 +161,7 @@ engine.registerFilter("query_string", (input: string | Record<string, string>, k
 
 // {{ 30 | random_string %}}
 engine.registerFilter("random_string", (length, digitOnly?: boolean) =>
-  generatePassword(parseInt(length) || STRONG_PASSWORD_LENGTH, digitOnly)
+  generatePassword(parseInt(length) || STRONG_PASSWORD_LENGTH, digitOnly),
 );
 
 // {{ "123456" | md5sum }}
@@ -170,6 +170,10 @@ engine.registerFilter("md5sum", (input, binaryString?: boolean) => {
   spark.append(input); // it fails to do with ArrayBuffer
   return spark.end(binaryString);
 });
+
+// Read a sream
+// {% assign data = body | read: "json" %}
+engine.registerFilter("read", readStream);
 
 engine.registerFilter("sha1sum", async (input: unknown, binaryString?: boolean) => {
   const hashBuffer = await crypto.subtle.digest("SHA-1", toArrayBuffer(input));
@@ -298,29 +302,6 @@ engine.registerTag("fail", {
   },
 });
 
-// {% read_body "variableName" body %}
-// {% read_body "variableName" body "json" %}
-engine.registerTag("read_body", {
-  parse: function (tagToken) {
-    this.args = parseArgs(tagToken.args);
-    if (this.args.length < 2) {
-      throw new Error("fetch tag requires at least 2 arguments: variableName and body");
-    }
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  *render(ctx, emitter): Generator<unknown, any, any> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const args = this.args as any[];
-    const variableName = `${yield evalToken(args[0], ctx)}`;
-    const body = yield evalToken(args[1], ctx);
-    const as = args.length > 2 ? `${yield evalToken(args[2], ctx)}` : "";
-
-    const data = yield readStream(body, as);
-    const bottom = ctx.bottom() as Record<string, unknown>;
-    bottom[variableName] = data;
-  },
-});
-
 /*
 {%- set_header "Content-Type" "text/plain" -%}
 {%- set_header "Content-Type: application/json" -%}
@@ -422,7 +403,7 @@ export async function executeCgi(
   template: string,
   fullHtml = false,
   cors = false,
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
 ): Promise<Response> {
   try {
     const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
@@ -480,14 +461,19 @@ export async function executeCgi(
   }
 }
 
-async function readStream(stream: ReadableStream, as?: string): Promise<unknown> {
+async function readStream(stream: BodyInit, as?: string): Promise<unknown> {
   if (as) {
     switch (as) {
       case "json":
         return new Response(stream).json();
+      case "formdata":
+        return new Response(stream).formData();
+      case "blob":
+        return new Response(stream).blob();
       case "arraybuffer":
-      case "binary":
         return new Response(stream).arrayBuffer();
+      default:
+        throw new Error(`unsupported content type: ${as}`);
     }
   }
   return new Response(stream).text();

@@ -1,24 +1,31 @@
 // Used by CGI feature
 
+interface DnsRecord {
+  name: string; // Record name
+  type: string; // Human-readable type ('SRV', 'CNAME', 'A', etc.)
+  ttl: number; // Time to Live
+  rawData: string; // The unparsed data string from the DNS server
+  parsed: {
+    ip?: string; // Present for A/AAAA/SRV
+    target?: string; // Present for CNAME/SRV (trailing dot removed)
+    priority?: number; // Present for SRV
+    weight?: number; // Present for SRV
+    port?: number; // Present for SRV
+  };
+  resolvedIps: string[]; // The final backend IPs crawled for this specific record
+}
+
 interface DnsResult {
   domain: string; // Original domain queried
   type: string; // Original type queried
   status: string; // DNS status (e.g., 'NOERROR')
-  records: Array<{
-    name: string; // Record name
-    type: string; // Human-readable type ('SRV', 'CNAME', 'A', etc.)
-    ttl: number; // Time to Live
-    rawData: string; // The unparsed data string from the DNS server
-    parsed: {
-      ip?: string; // Present for A/AAAA/SRV
-      target?: string; // Present for CNAME/SRV (trailing dot removed)
-      priority?: number; // Present for SRV
-      weight?: number; // Present for SRV
-      port?: number; // Present for SRV
-    };
-    resolvedIps: string[]; // The final backend IPs crawled for this specific record
-  }>;
+  records: DnsRecord[];
   allFinalIps: string[]; // A convenient global list of all unique final IPs found
+
+  // the first record parsed data
+  ip?: string;
+  target?: string;
+  port?: number;
 }
 
 export async function dnsQuery(domain: string, type: string, failOk: boolean): Promise<DnsResult> {
@@ -84,9 +91,8 @@ export async function dnsQuery(domain: string, type: string, failOk: boolean): P
       domain,
       type,
       status: statusMap[rawData.Status] || "UNKNOWN",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      records: [] as any[],
-      allFinalIps: [] as string[],
+      records: [],
+      allFinalIps: [],
     };
 
     if (!failOk && (result.status !== "NOERROR" || !rawData.Answer)) {
@@ -100,8 +106,7 @@ export async function dnsQuery(domain: string, type: string, failOk: boolean): P
 
     for (const ans of rawData.Answer) {
       const recordType = typeMap[ans.type] || `TYPE${ans.type}`;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const record: any = {
+      const record: DnsRecord = {
         name: ans.name,
         type: recordType,
         ttl: ans.TTL,
@@ -147,6 +152,11 @@ export async function dnsQuery(domain: string, type: string, failOk: boolean): P
       }
 
       result.records.push(record);
+      if (result.records.length === 1) {
+        result.ip = record.parsed.ip;
+        result.target = record.parsed.target;
+        result.port = record.parsed.port;
+      }
     }
 
     result.allFinalIps = Array.from(globalIps);
