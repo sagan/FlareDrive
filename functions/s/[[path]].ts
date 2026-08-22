@@ -261,9 +261,10 @@ export async function handleShare({
   if (!obj) {
     if (share.key.endsWith("/") && relpath) {
       if (share.cgi) {
-        const fallbackCgi = await bucket.get(share.key + FALLBACK_CGI);
+        const fallbackCgiKey = share.key + FALLBACK_CGI;
+        const fallbackCgi = await bucket.get(fallbackCgiKey);
         if (fallbackCgi) {
-          return executeCgi(request, await fallbackCgi.text(), fullHtml, cors, share.env);
+          return executeCgi(request, await fallbackCgi.text(), fullHtml, cors, share.env, fallbackCgiKey, bucket);
         }
       }
       if (request.method === METHOD_GET) {
@@ -282,11 +283,16 @@ export async function handleShare({
       return responseRedirect(url.href);
     }
     if (share.cgi) {
-      const indexCgiObj =
-        (await bucket.get(filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_CGI)) ||
-        (await bucket.get(share.key + FALLBACK_CGI));
+      let indexCgiObjKey: string;
+      let indexCgiObj: R2ObjectBody | null;
+      indexCgiObjKey = filekey + (!filekey.endsWith("/") ? "/" : "") + INDEX_CGI;
+      indexCgiObj = await bucket.get(indexCgiObjKey);
+      if (!indexCgiObj) {
+        indexCgiObjKey = share.key + FALLBACK_CGI;
+        indexCgiObj = await bucket.get(indexCgiObjKey);
+      }
       if (indexCgiObj) {
-        return executeCgi(request, await indexCgiObj.text(), fullHtml, cors, share.env);
+        return executeCgi(request, await indexCgiObj.text(), fullHtml, cors, share.env, indexCgiObjKey, bucket);
       }
     }
 
@@ -341,7 +347,7 @@ export async function handleShare({
             checksums: {},
             httpMetadata: { contentType: MIME_DEFAULT },
           } as R2Object)
-        : file
+        : file,
     );
     // Pre-sort files: directories first, then by name
     files.sort((a, b) => {
@@ -358,7 +364,7 @@ export async function handleShare({
       return jsonResponse({ sitename, description, files: items, readme }, { cors });
     }
     return htmlResponse(
-      indexPage(sitename, description, shareKey + (relpath ? "/" + relpath : ""), !relpath, files, readme)
+      indexPage(sitename, description, shareKey + (relpath ? "/" + relpath : ""), !relpath, files, readme),
     );
   } else if (url.pathname.endsWith("/")) {
     // target is file, but the request path ends with "/"
@@ -366,7 +372,7 @@ export async function handleShare({
   }
 
   if (share.cgi && filekey.endsWith(EXT_CGI) && "body" in obj) {
-    return executeCgi(request, await obj.text(), fullHtml, cors, share.env);
+    return executeCgi(request, await obj.text(), fullHtml, cors, share.env, filekey, bucket);
   }
 
   if (request.method !== METHOD_GET) {
@@ -408,7 +414,7 @@ function indexPage(
   dir: string,
   isRoot: boolean,
   items: R2Object[],
-  readme: string
+  readme: string,
 ): string {
   const title = `${dir} - ${sitename}`;
   // from Chrome file:// url dir index page
@@ -440,8 +446,8 @@ function indexPage(
       return `
         <tr>
           <td data-value="${encodeHtml(name)}"><a href="${href}" rel="noopener noreferrer" class="icon ${
-        isDir ? "dir" : "file"
-      }">${displayName}</a></td>
+            isDir ? "dir" : "file"
+          }">${displayName}</a></td>
           <td class="detailsColumn" data-value="${item.size}">${sizeDisplay}</td>
           <td class="detailsColumn" data-value="${+item.uploaded}">${dateDisplay}</td>
           <td class="detailsColumn" data-value="${mimeDisplay}">${mimeDisplay}</td>

@@ -1,4 +1,4 @@
-import { Liquid, Tokenizer, evalToken } from "liquidjs";
+import { Liquid, Tokenizer, evalToken, type Context } from "liquidjs";
 import JSOX from "jsox";
 import SparkMD5 from "spark-md5";
 import {
@@ -17,9 +17,12 @@ import {
   MIME_TXT,
   REFERRER_POLICY_NOREFERRER,
   STRONG_PASSWORD_LENGTH,
+  dirname,
   hmacSha256Sign,
+  joinPathes,
   normalizeHeaderName,
   toArrayBuffer,
+  trimPrefix,
 } from "../lib/commons";
 import { responseInternalServerError } from "./commons";
 import { generatePassword } from "@/src/commons";
@@ -46,6 +49,12 @@ const TPL_CONTEXT_KEY_DATA = "_data";
 const TPL_CONTEXT_KEY_REQUEST = "request";
 
 const TPL_CONTEXT_KEY_ENV = "env";
+
+const TPL_CONTEXT_KEY_FILENAME = "__filename";
+
+const TPL_CONTEXT_KEY_DIRNAME = "__dirname";
+
+const TPL_CONTEXT_KEY_BUCKET = "__bucket";
 
 const TPL_CONTEXT_KEY_HEADERS_STATUS = "Status"; // in compliance with CGI
 
@@ -204,43 +213,32 @@ engine.registerFilter("nslookup", async (name: string, type?: string, failOk?: b
 });
 
 /*
-{% fetch "variableName" "url" %}
+{%- assign res = "https://example.com/" | fetch -%}
 
-{% fetch "variableName" "url" "POST" "@foo=1&bar=2" %}
+{%- assign res = "https://example.com/" | fetch: "POST", "@foo=1&bar=2" -%}
 
-The first two args are variableName & url. Afterwards are optional flags which could be any of:
+Optional flags after url which could be any of:
 
 - "GET" / "POST" / "PUT"...: http method name, default to GET.
 - "Content-Type: application/json" : request header.
 - "@..." : http request body, prefixed with "@".
+- "NOBODY" : don't read fetch response body.
+- object : RequestInit object merged into fetch options.
 */
-engine.registerTag("fetch", {
-  parse: function (tagToken) {
-    this.args = parseArgs(tagToken.args);
-    if (this.args.length < 2) {
-      throw new Error("fetch tag requires at least 2 arguments: variableName and url");
-    }
-  },
-  // https://liquidjs.com/tutorials/parse-parameters.html
-  // Just use yield instead await on promise.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  *render(ctx, emitter): Generator<unknown, any, any> {
-    const selfRequest = ctx.getSync([TPL_CONTEXT_KEY_REQUEST]) as SelfRequest;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const args = this.args as any[];
-    const variableName = `${yield evalToken(args[0], ctx)}`;
-    const url = new URL(`${yield evalToken(args[1], ctx)}`, selfRequest.url);
+engine.registerFilter(
+  "fetch",
+  async function (this: { context: Context }, urlInput: string, ...optionArgs: unknown[]): Promise<FetchResponse> {
+    const selfRequest = this.context?.getSync([TPL_CONTEXT_KEY_REQUEST]) as SelfRequest | undefined;
+    const url = new URL(`${urlInput}`, selfRequest?.url);
 
     let nobodyMode = false;
     const request: RequestInit = {};
     const headers = new Headers();
-    const optionArgs = args.slice(2);
     for (const arg of optionArgs) {
-      const value = yield evalToken(arg, ctx);
-      if (typeof value === "object") {
-        Object.assign(request, value);
-      } else {
-        const valueStr = `${value}`;
+      if (typeof arg === "object" && arg !== null) {
+        Object.assign(request, arg);
+      } else if (arg !== undefined && arg !== null) {
+        const valueStr = `${arg}`;
         if ((METHODS as readonly string[]).includes(valueStr)) {
           request.method = valueStr;
         } else if (valueStr === TPL_FETCH_NOBODY) {
@@ -260,30 +258,27 @@ engine.registerTag("fetch", {
     headers.forEach((value, key) => finalHeaders.set(key, value));
     request.headers = finalHeaders;
 
-    const res: Response = yield fetch(url, request);
+    const res = await fetch(url, request);
     let body: ReadableStream | string | null = res.body;
     let data = null;
     if (!nobodyMode) {
-      body = (yield res.text()) as string;
+      body = await res.text();
       data = null;
       try {
         data = JSON.parse(body);
-      } catch (e) {
+      } catch {
         /* empty */
       }
     }
 
-    const response: FetchResponse = {
+    return {
       status: res.status,
       headers: headers2Record(res.headers),
       body,
       data,
     };
-    // Save to context
-    const bottom = ctx.bottom() as Record<string, unknown>;
-    bottom[variableName] = response;
   },
-});
+);
 
 // {% fail [err] %}
 engine.registerTag("fail", {
@@ -374,13 +369,21 @@ engine.registerTag("set_body", {
   },
 });
 
+engine.registerFilter("get_file", async function (path: string) {
+  const bucket = this.context.getSync([TPL_CONTEXT_KEY_BUCKET]) as R2Bucket;
+  const dir = this.context.getSync([TPL_CONTEXT_KEY_DIRNAME]) as string;
+  const key = path[0] === "/" ? path.slice(1) : joinPathes(dir, trimPrefix(path, "./"));
+  const obj = await bucket.get(key);
+  return obj;
+});
+
 /*
 Sample templates.
 
 -----
 
 <h1>Async Fetch Test</h1>
-{% fetch "todoItem" "https://jsonplaceholder.typicode.com/todos/1" %}
+{%- assign todoItem = "https://jsonplaceholder.typicode.com/todos/1" | fetch -%}
 <div class="card">
     <h3>Todo ID: {{ todoItem.data.id }}</h3>
     <p>Title: {{ todoItem.data.title }}</p>
@@ -389,7 +392,7 @@ Sample templates.
 
 -----
 
-{%- fetch "res" "https://raw.githubusercontent.com/pdx-cs-sound/wavs/refs/heads/main/car-horn.wav" "NOBODY" -%}
+{%- assign res = "https://raw.githubusercontent.com/pdx-cs-sound/wavs/refs/heads/main/car-horn.wav" | fetch: "NOBODY" -%}
 
 {%- set_header "Content-Type" res.headers["Content-Type"] -%}
 {%- set_body res.body -%}
@@ -397,6 +400,7 @@ Sample templates.
 
 /**
  * Render an LiquidJs template
+ * @param self: self cgi R2 object key (e.g. "foo/bar.cgi")
  */
 export async function executeCgi(
   request: Request,
@@ -404,6 +408,8 @@ export async function executeCgi(
   fullHtml = false,
   cors = false,
   env: Record<string, string> = {},
+  self: string,
+  bucket: R2Bucket,
 ): Promise<Response> {
   try {
     const headers: Record<string, string> = { [HEADER_CONTENT_TYPE]: MIME_TXT };
@@ -420,6 +426,9 @@ export async function executeCgi(
       [TPL_CONTEXT_KEY_HEADERS]: headers,
       [TPL_CONTEXT_KEY_DATA]: data,
       [TPL_CONTEXT_KEY_ENV]: env,
+      [TPL_CONTEXT_KEY_FILENAME]: self,
+      [TPL_CONTEXT_KEY_DIRNAME]: dirname(self),
+      [TPL_CONTEXT_KEY_BUCKET]: bucket,
     };
     const tpl = engine.parse(template);
     const html = await engine.render(tpl, context);
@@ -461,7 +470,10 @@ export async function executeCgi(
   }
 }
 
-async function readStream(stream: BodyInit, as?: string): Promise<unknown> {
+async function readStream(stream: BodyInit | { body: BodyInit }, as?: string): Promise<unknown> {
+  if (stream && typeof stream === "object" && "body" in stream) {
+    stream = stream.body;
+  }
   if (as) {
     switch (as) {
       case "json":
