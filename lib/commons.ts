@@ -306,6 +306,8 @@ export const CONTENT_TYPE_MIME_HTML = "text/html; charset=utf-8";
 
 export const CONTENT_TYPE_MIME_TXT = "text/plain; charset=utf-8";
 
+export const CONTENT_TYPE_OPTION_UTF8 = "charset=utf-8";
+
 export const MIME_MARKDOWN = "text/markdown";
 
 export const MIME_TXT = "text/plain";
@@ -830,7 +832,7 @@ export function compareBoolean(a: boolean | undefined, b: boolean | undefined): 
  * - otherwise: return the string representation.
  */
 export function toString(
-  input: ArrayBuffer | ArrayBufferView | Uint8Array | string | null | undefined | number
+  input: ArrayBuffer | ArrayBufferView | Uint8Array | string | null | undefined | number,
 ): string {
   if (!input) {
     return "";
@@ -874,7 +876,7 @@ async function getHMACKey(key: string): Promise<CryptoKey> {
       hash: { name: "SHA-256" },
     },
     false,
-    ["sign", "verify"]
+    ["sign", "verify"],
   );
   return cryptokey;
 }
@@ -910,7 +912,7 @@ export async function hmacSha256Verify(key: string, signature: string, payload: 
     "HMAC",
     singkey,
     decodeHex(signature) as BufferSource,
-    toArrayBuffer(payload)
+    toArrayBuffer(payload),
   );
   return verified;
 }
@@ -1350,7 +1352,7 @@ export const GlobalConfigSchema = PublicConfigSchema.extend({
   mappings: z
     .record(
       z.string().refine(validatePrefix, { message: INVALID_PREFIX_MESSAGE }),
-      z.string().refine(validateShareName, { message: INVALID_SHARE_NAME_MESSAGE })
+      z.string().refine(validateShareName, { message: INVALID_SHARE_NAME_MESSAGE }),
     )
     .default({}),
 

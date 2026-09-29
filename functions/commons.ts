@@ -59,6 +59,8 @@ import {
   dirname,
   str2Html,
   CONTENT_TYPE_MIME_HTML,
+  CONTENT_TYPE_OPTION_UTF8,
+  MIME_CAT_TEXT_PREFIX,
 } from "../lib/commons";
 import { parseUrlFile, isImage } from "../lib/mime";
 import { dbFile2R2Object, queryDbFiles, upsertDbFile } from "./db";
@@ -286,7 +288,7 @@ export function jsonResponse(
     status?: number;
     cors?: boolean;
     headers?: HeadersInit;
-  } = {}
+  } = {},
 ) {
   const headers = new Headers(headersInit);
   headers.set(HEADER_CONTENT_TYPE, MIME_JSON);
@@ -356,7 +358,7 @@ export async function checkAuthFailure(
   request: Request,
   user: string,
   pass: string,
-  realm = "WebDAV"
+  realm = "WebDAV",
 ): Promise<[failResponse: Response | null, scope: string | undefined | null]> {
   if (!user && !pass) {
     return [responseForbidden(), undefined];
@@ -660,6 +662,10 @@ export function writeR2ObjectHeaders(obj: R2Object, headers: Headers) {
   if (obj.httpEtag) {
     headers.set(HEADER_ETAG, obj.httpEtag);
   }
+  const contentType = obj.httpMetadata?.contentType;
+  if (contentType && contentType.startsWith(MIME_CAT_TEXT_PREFIX) && !contentType.includes(";")) {
+    headers.set(HEADER_CONTENT_TYPE, contentType + "; " + CONTENT_TYPE_OPTION_UTF8);
+  }
 }
 
 /**
@@ -750,7 +756,7 @@ export function checkConflict(request: Request, object?: R2Object | null | undef
 export function requestJson(
   url: string | URL,
   payload: unknown,
-  method: (typeof METHODS_WITH_BODY)[number] = METHOD_POST
+  method: (typeof METHODS_WITH_BODY)[number] = METHOD_POST,
 ): Request {
   if (url instanceof URL) {
     url = url.href;
